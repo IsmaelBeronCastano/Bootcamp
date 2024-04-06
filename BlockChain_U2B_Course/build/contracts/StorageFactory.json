@@ -1,0 +1,749 @@
+{
+  "contractName": "StorageFactory",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "simpleStorage",
+      "outputs": [
+        {
+          "internalType": "contract SimpleStorage",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "createSimpleStorageContract",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "metadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"createSimpleStorageContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"simpleStorage\",\"outputs\":[{\"internalType\":\"contract SimpleStorage\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"project:/contracts/StorageFactory.sol\":\"StorageFactory\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"project:/contracts/SimpleStorage.sol\":{\"keccak256\":\"0xa0d98feed8e0192ecceca5dba8cc0b08e491d10b3c56a18af72905510cabf6c1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5335e0fcc0df3ee1e482e18e86f3b78fad49179ce2cc124b437397d0d2760a0f\",\"dweb:/ipfs/QmTkjSRXaJ6xQpD5phcBr369djG3VHqPraD47VKcNQX5sr\"]},\"project:/contracts/StorageFactory.sol\":{\"keccak256\":\"0x97710253b1ff9698b9b4933b41a8850d27da15541f65b1b2ae21c0de3f6be539\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9ae656b461ff3c0e6c17c4f3a95cea5e1a6d91780789af93ee367f16932ef340\",\"dweb:/ipfs/QmYM2fZkWfR5XaTzyVAFwxWo39A1LoiULpbCThdZyjXpVA\"]}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610d96806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80631dda65411461003b5780636be0d6bf14610045575b600080fd5b610043610063565b005b61004d6100cd565b60405161005a919061017d565b60405180910390f35b60405161006f906100f1565b604051809103906000f08015801561008b573d6000803e3d6000fd5b506000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550565b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b610bc88061019983390190565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600061014361013e610139846100fe565b61011e565b6100fe565b9050919050565b600061015582610128565b9050919050565b60006101678261014a565b9050919050565b6101778161015c565b82525050565b6000602082019050610192600083018461016e565b9291505056fe608060405234801561001057600080fd5b50610ba8806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80632e64cec11461005c5780634f995d081461007a5780636f760f4114610098578063827a5de3146100b45780639e7a13ad146100e4575b600080fd5b610064610115565b60405161007191906103a5565b60405180910390f35b61008261011e565b60405161008f919061055e565b60405180910390f35b6100b260048036038101906100ad91906106f5565b610219565b005b6100ce60048036038101906100c99190610751565b6102a2565b6040516100db91906103a5565b60405180910390f35b6100fe60048036038101906100f9919061079a565b6102d0565b60405161010c929190610811565b60405180910390f35b60008054905090565b60606002805480602002602001604051908101604052809291908181526020016000905b82821015610210578382906000526020600020906002020160405180604001604052908160008201805461017590610870565b80601f01602080910402602001604051908101604052809291908181526020018280546101a190610870565b80156101ee5780601f106101c3576101008083540402835291602001916101ee565b820191906000526020600020905b8154815290600101906020018083116101d157829003601f168201915b5050505050815260200160018201548152505081526020019060010190610142565b50505050905090565b60026040518060400160405280848152602001838152509080600181540180825580915050600190039060005260206000209060020201600090919091909150600082015181600001908161026e9190610a4d565b506020820151816001015550508060018360405161028c9190610b5b565b9081526020016040518091039020819055505050565b6001818051602081018201805184825260208301602085012081835280955050505050506000915090505481565b600281815481106102e057600080fd5b906000526020600020906002020160009150905080600001805461030390610870565b80601f016020809104026020016040519081016040528092919081815260200182805461032f90610870565b801561037c5780601f106103515761010080835404028352916020019161037c565b820191906000526020600020905b81548152906001019060200180831161035f57829003601f168201915b5050505050908060010154905082565b6000819050919050565b61039f8161038c565b82525050565b60006020820190506103ba6000830184610396565b92915050565b600081519050919050565b600082825260208201905092915050565b6000819050602082019050919050565b600081519050919050565b600082825260208201905092915050565b60005b8381101561042657808201518184015260208101905061040b565b60008484015250505050565b6000601f19601f8301169050919050565b600061044e826103ec565b61045881856103f7565b9350610468818560208601610408565b61047181610432565b840191505092915050565b6104858161038c565b82525050565b600060408301600083015184820360008601526104a88282610443565b91505060208301516104bd602086018261047c565b508091505092915050565b60006104d4838361048b565b905092915050565b6000602082019050919050565b60006104f4826103c0565b6104fe81856103cb565b935083602082028501610510856103dc565b8060005b8581101561054c578484038952815161052d85826104c8565b9450610538836104dc565b925060208a01995050600181019050610514565b50829750879550505050505092915050565b6000602082019050818103600083015261057881846104e9565b905092915050565b6000604051905090565b600080fd5b600080fd5b600080fd5b600080fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6105d682610432565b810181811067ffffffffffffffff821117156105f5576105f461059e565b5b80604052505050565b6000610608610580565b905061061482826105cd565b919050565b600067ffffffffffffffff8211156106345761063361059e565b5b61063d82610432565b9050602081019050919050565b82818337600083830152505050565b600061066c61066784610619565b6105fe565b90508281526020810184848401111561068857610687610599565b5b61069384828561064a565b509392505050565b600082601f8301126106b0576106af610594565b5b81356106c0848260208601610659565b91505092915050565b6106d28161038c565b81146106dd57600080fd5b50565b6000813590506106ef816106c9565b92915050565b6000806040838503121561070c5761070b61058a565b5b600083013567ffffffffffffffff81111561072a5761072961058f565b5b6107368582860161069b565b9250506020610747858286016106e0565b9150509250929050565b6000602082840312156107675761076661058a565b5b600082013567ffffffffffffffff8111156107855761078461058f565b5b6107918482850161069b565b91505092915050565b6000602082840312156107b0576107af61058a565b5b60006107be848285016106e0565b91505092915050565b600082825260208201905092915050565b60006107e3826103ec565b6107ed81856107c7565b93506107fd818560208601610408565b61080681610432565b840191505092915050565b6000604082019050818103600083015261082b81856107d8565b905061083a6020830184610396565b9392505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052602260045260246000fd5b6000600282049050600182168061088857607f821691505b60208210810361089b5761089a610841565b5b50919050565b60008190508160005260206000209050919050565b60006020601f8301049050919050565b600082821b905092915050565b6000600883026109037fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff826108c6565b61090d86836108c6565b95508019841693508086168417925050509392505050565b6000819050919050565b600061094a6109456109408461038c565b610925565b61038c565b9050919050565b6000819050919050565b6109648361092f565b61097861097082610951565b8484546108d3565b825550505050565b600090565b61098d610980565b61099881848461095b565b505050565b5b818110156109bc576109b1600082610985565b60018101905061099e565b5050565b601f821115610a01576109d2816108a1565b6109db846108b6565b810160208510156109ea578190505b6109fe6109f6856108b6565b83018261099d565b50505b505050565b600082821c905092915050565b6000610a2460001984600802610a06565b1980831691505092915050565b6000610a3d8383610a13565b9150826002028217905092915050565b610a56826103ec565b67ffffffffffffffff811115610a6f57610a6e61059e565b5b610a798254610870565b610a848282856109c0565b600060209050601f831160018114610ab75760008415610aa5578287015190505b610aaf8582610a31565b865550610b17565b601f198416610ac5866108a1565b60005b82811015610aed57848901518255600182019150602085019450602081019050610ac8565b86831015610b0a5784890151610b06601f891682610a13565b8355505b6001600288020188555050505b505050505050565b600081905092915050565b6000610b35826103ec565b610b3f8185610b1f565b9350610b4f818560208601610408565b80840191505092915050565b6000610b678284610b2a565b91508190509291505056fea26469706673582212207b1365fe39937286b9847503f9f2e62d4bb22df7fb099c9be49337189bda686064736f6c63430008130033a264697066735822122081a536c9e4c0c8f57b00a7380ab70a3cfc88054711804a3f527b680501cc784a64736f6c63430008130033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100365760003560e01c80631dda65411461003b5780636be0d6bf14610045575b600080fd5b610043610063565b005b61004d6100cd565b60405161005a919061017d565b60405180910390f35b60405161006f906100f1565b604051809103906000f08015801561008b573d6000803e3d6000fd5b506000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550565b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b610bc88061019983390190565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600061014361013e610139846100fe565b61011e565b6100fe565b9050919050565b600061015582610128565b9050919050565b60006101678261014a565b9050919050565b6101778161015c565b82525050565b6000602082019050610192600083018461016e565b9291505056fe608060405234801561001057600080fd5b50610ba8806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80632e64cec11461005c5780634f995d081461007a5780636f760f4114610098578063827a5de3146100b45780639e7a13ad146100e4575b600080fd5b610064610115565b60405161007191906103a5565b60405180910390f35b61008261011e565b60405161008f919061055e565b60405180910390f35b6100b260048036038101906100ad91906106f5565b610219565b005b6100ce60048036038101906100c99190610751565b6102a2565b6040516100db91906103a5565b60405180910390f35b6100fe60048036038101906100f9919061079a565b6102d0565b60405161010c929190610811565b60405180910390f35b60008054905090565b60606002805480602002602001604051908101604052809291908181526020016000905b82821015610210578382906000526020600020906002020160405180604001604052908160008201805461017590610870565b80601f01602080910402602001604051908101604052809291908181526020018280546101a190610870565b80156101ee5780601f106101c3576101008083540402835291602001916101ee565b820191906000526020600020905b8154815290600101906020018083116101d157829003601f168201915b5050505050815260200160018201548152505081526020019060010190610142565b50505050905090565b60026040518060400160405280848152602001838152509080600181540180825580915050600190039060005260206000209060020201600090919091909150600082015181600001908161026e9190610a4d565b506020820151816001015550508060018360405161028c9190610b5b565b9081526020016040518091039020819055505050565b6001818051602081018201805184825260208301602085012081835280955050505050506000915090505481565b600281815481106102e057600080fd5b906000526020600020906002020160009150905080600001805461030390610870565b80601f016020809104026020016040519081016040528092919081815260200182805461032f90610870565b801561037c5780601f106103515761010080835404028352916020019161037c565b820191906000526020600020905b81548152906001019060200180831161035f57829003601f168201915b5050505050908060010154905082565b6000819050919050565b61039f8161038c565b82525050565b60006020820190506103ba6000830184610396565b92915050565b600081519050919050565b600082825260208201905092915050565b6000819050602082019050919050565b600081519050919050565b600082825260208201905092915050565b60005b8381101561042657808201518184015260208101905061040b565b60008484015250505050565b6000601f19601f8301169050919050565b600061044e826103ec565b61045881856103f7565b9350610468818560208601610408565b61047181610432565b840191505092915050565b6104858161038c565b82525050565b600060408301600083015184820360008601526104a88282610443565b91505060208301516104bd602086018261047c565b508091505092915050565b60006104d4838361048b565b905092915050565b6000602082019050919050565b60006104f4826103c0565b6104fe81856103cb565b935083602082028501610510856103dc565b8060005b8581101561054c578484038952815161052d85826104c8565b9450610538836104dc565b925060208a01995050600181019050610514565b50829750879550505050505092915050565b6000602082019050818103600083015261057881846104e9565b905092915050565b6000604051905090565b600080fd5b600080fd5b600080fd5b600080fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6105d682610432565b810181811067ffffffffffffffff821117156105f5576105f461059e565b5b80604052505050565b6000610608610580565b905061061482826105cd565b919050565b600067ffffffffffffffff8211156106345761063361059e565b5b61063d82610432565b9050602081019050919050565b82818337600083830152505050565b600061066c61066784610619565b6105fe565b90508281526020810184848401111561068857610687610599565b5b61069384828561064a565b509392505050565b600082601f8301126106b0576106af610594565b5b81356106c0848260208601610659565b91505092915050565b6106d28161038c565b81146106dd57600080fd5b50565b6000813590506106ef816106c9565b92915050565b6000806040838503121561070c5761070b61058a565b5b600083013567ffffffffffffffff81111561072a5761072961058f565b5b6107368582860161069b565b9250506020610747858286016106e0565b9150509250929050565b6000602082840312156107675761076661058a565b5b600082013567ffffffffffffffff8111156107855761078461058f565b5b6107918482850161069b565b91505092915050565b6000602082840312156107b0576107af61058a565b5b60006107be848285016106e0565b91505092915050565b600082825260208201905092915050565b60006107e3826103ec565b6107ed81856107c7565b93506107fd818560208601610408565b61080681610432565b840191505092915050565b6000604082019050818103600083015261082b81856107d8565b905061083a6020830184610396565b9392505050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052602260045260246000fd5b6000600282049050600182168061088857607f821691505b60208210810361089b5761089a610841565b5b50919050565b60008190508160005260206000209050919050565b60006020601f8301049050919050565b600082821b905092915050565b6000600883026109037fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff826108c6565b61090d86836108c6565b95508019841693508086168417925050509392505050565b6000819050919050565b600061094a6109456109408461038c565b610925565b61038c565b9050919050565b6000819050919050565b6109648361092f565b61097861097082610951565b8484546108d3565b825550505050565b600090565b61098d610980565b61099881848461095b565b505050565b5b818110156109bc576109b1600082610985565b60018101905061099e565b5050565b601f821115610a01576109d2816108a1565b6109db846108b6565b810160208510156109ea578190505b6109fe6109f6856108b6565b83018261099d565b50505b505050565b600082821c905092915050565b6000610a2460001984600802610a06565b1980831691505092915050565b6000610a3d8383610a13565b9150826002028217905092915050565b610a56826103ec565b67ffffffffffffffff811115610a6f57610a6e61059e565b5b610a798254610870565b610a848282856109c0565b600060209050601f831160018114610ab75760008415610aa5578287015190505b610aaf8582610a31565b865550610b17565b601f198416610ac5866108a1565b60005b82811015610aed57848901518255600182019150602085019450602081019050610ac8565b86831015610b0a5784890151610b06601f891682610a13565b8355505b6001600288020188555050505b505050505050565b600081905092915050565b6000610b35826103ec565b610b3f8185610b1f565b9350610b4f818560208601610408565b80840191505092915050565b6000610b678284610b2a565b91508190509291505056fea26469706673582212207b1365fe39937286b9847503f9f2e62d4bb22df7fb099c9be49337189bda686064736f6c63430008130033a264697066735822122081a536c9e4c0c8f57b00a7380ab70a3cfc88054711804a3f527b680501cc784a64736f6c63430008130033",
+  "immutableReferences": {},
+  "generatedSources": [],
+  "deployedGeneratedSources": [
+    {
+      "ast": {
+        "nodeType": "YulBlock",
+        "src": "0:1079:2",
+        "statements": [
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "52:81:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "62:65:2",
+                  "value": {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "nodeType": "YulIdentifier",
+                        "src": "77:5:2"
+                      },
+                      {
+                        "kind": "number",
+                        "nodeType": "YulLiteral",
+                        "src": "84:42:2",
+                        "type": "",
+                        "value": "0xffffffffffffffffffffffffffffffffffffffff"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "and",
+                      "nodeType": "YulIdentifier",
+                      "src": "73:3:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "73:54:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "cleaned",
+                      "nodeType": "YulIdentifier",
+                      "src": "62:7:2"
+                    }
+                  ]
+                }
+              ]
+            },
+            "name": "cleanup_t_uint160",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "34:5:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "cleaned",
+                "nodeType": "YulTypedName",
+                "src": "44:7:2",
+                "type": ""
+              }
+            ],
+            "src": "7:126:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "171:28:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "181:12:2",
+                  "value": {
+                    "name": "value",
+                    "nodeType": "YulIdentifier",
+                    "src": "188:5:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "ret",
+                      "nodeType": "YulIdentifier",
+                      "src": "181:3:2"
+                    }
+                  ]
+                }
+              ]
+            },
+            "name": "identity",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "157:5:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "ret",
+                "nodeType": "YulTypedName",
+                "src": "167:3:2",
+                "type": ""
+              }
+            ],
+            "src": "139:60:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "265:82:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "275:66:2",
+                  "value": {
+                    "arguments": [
+                      {
+                        "arguments": [
+                          {
+                            "arguments": [
+                              {
+                                "name": "value",
+                                "nodeType": "YulIdentifier",
+                                "src": "333:5:2"
+                              }
+                            ],
+                            "functionName": {
+                              "name": "cleanup_t_uint160",
+                              "nodeType": "YulIdentifier",
+                              "src": "315:17:2"
+                            },
+                            "nodeType": "YulFunctionCall",
+                            "src": "315:24:2"
+                          }
+                        ],
+                        "functionName": {
+                          "name": "identity",
+                          "nodeType": "YulIdentifier",
+                          "src": "306:8:2"
+                        },
+                        "nodeType": "YulFunctionCall",
+                        "src": "306:34:2"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "cleanup_t_uint160",
+                      "nodeType": "YulIdentifier",
+                      "src": "288:17:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "288:53:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "converted",
+                      "nodeType": "YulIdentifier",
+                      "src": "275:9:2"
+                    }
+                  ]
+                }
+              ]
+            },
+            "name": "convert_t_uint160_to_t_uint160",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "245:5:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "converted",
+                "nodeType": "YulTypedName",
+                "src": "255:9:2",
+                "type": ""
+              }
+            ],
+            "src": "205:142:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "413:66:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "423:50:2",
+                  "value": {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "nodeType": "YulIdentifier",
+                        "src": "467:5:2"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "convert_t_uint160_to_t_uint160",
+                      "nodeType": "YulIdentifier",
+                      "src": "436:30:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "436:37:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "converted",
+                      "nodeType": "YulIdentifier",
+                      "src": "423:9:2"
+                    }
+                  ]
+                }
+              ]
+            },
+            "name": "convert_t_uint160_to_t_address",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "393:5:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "converted",
+                "nodeType": "YulTypedName",
+                "src": "403:9:2",
+                "type": ""
+              }
+            ],
+            "src": "353:126:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "565:66:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "575:50:2",
+                  "value": {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "nodeType": "YulIdentifier",
+                        "src": "619:5:2"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "convert_t_uint160_to_t_address",
+                      "nodeType": "YulIdentifier",
+                      "src": "588:30:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "588:37:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "converted",
+                      "nodeType": "YulIdentifier",
+                      "src": "575:9:2"
+                    }
+                  ]
+                }
+              ]
+            },
+            "name": "convert_t_contract$_SimpleStorage_$58_to_t_address",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "545:5:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "converted",
+                "nodeType": "YulTypedName",
+                "src": "555:9:2",
+                "type": ""
+              }
+            ],
+            "src": "485:146:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "722:86:2",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "name": "pos",
+                        "nodeType": "YulIdentifier",
+                        "src": "739:3:2"
+                      },
+                      {
+                        "arguments": [
+                          {
+                            "name": "value",
+                            "nodeType": "YulIdentifier",
+                            "src": "795:5:2"
+                          }
+                        ],
+                        "functionName": {
+                          "name": "convert_t_contract$_SimpleStorage_$58_to_t_address",
+                          "nodeType": "YulIdentifier",
+                          "src": "744:50:2"
+                        },
+                        "nodeType": "YulFunctionCall",
+                        "src": "744:57:2"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "mstore",
+                      "nodeType": "YulIdentifier",
+                      "src": "732:6:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "732:70:2"
+                  },
+                  "nodeType": "YulExpressionStatement",
+                  "src": "732:70:2"
+                }
+              ]
+            },
+            "name": "abi_encode_t_contract$_SimpleStorage_$58_to_t_address_fromStack",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "value",
+                "nodeType": "YulTypedName",
+                "src": "710:5:2",
+                "type": ""
+              },
+              {
+                "name": "pos",
+                "nodeType": "YulTypedName",
+                "src": "717:3:2",
+                "type": ""
+              }
+            ],
+            "src": "637:171:2"
+          },
+          {
+            "body": {
+              "nodeType": "YulBlock",
+              "src": "932:144:2",
+              "statements": [
+                {
+                  "nodeType": "YulAssignment",
+                  "src": "942:26:2",
+                  "value": {
+                    "arguments": [
+                      {
+                        "name": "headStart",
+                        "nodeType": "YulIdentifier",
+                        "src": "954:9:2"
+                      },
+                      {
+                        "kind": "number",
+                        "nodeType": "YulLiteral",
+                        "src": "965:2:2",
+                        "type": "",
+                        "value": "32"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "add",
+                      "nodeType": "YulIdentifier",
+                      "src": "950:3:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "950:18:2"
+                  },
+                  "variableNames": [
+                    {
+                      "name": "tail",
+                      "nodeType": "YulIdentifier",
+                      "src": "942:4:2"
+                    }
+                  ]
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "name": "value0",
+                        "nodeType": "YulIdentifier",
+                        "src": "1042:6:2"
+                      },
+                      {
+                        "arguments": [
+                          {
+                            "name": "headStart",
+                            "nodeType": "YulIdentifier",
+                            "src": "1055:9:2"
+                          },
+                          {
+                            "kind": "number",
+                            "nodeType": "YulLiteral",
+                            "src": "1066:1:2",
+                            "type": "",
+                            "value": "0"
+                          }
+                        ],
+                        "functionName": {
+                          "name": "add",
+                          "nodeType": "YulIdentifier",
+                          "src": "1051:3:2"
+                        },
+                        "nodeType": "YulFunctionCall",
+                        "src": "1051:17:2"
+                      }
+                    ],
+                    "functionName": {
+                      "name": "abi_encode_t_contract$_SimpleStorage_$58_to_t_address_fromStack",
+                      "nodeType": "YulIdentifier",
+                      "src": "978:63:2"
+                    },
+                    "nodeType": "YulFunctionCall",
+                    "src": "978:91:2"
+                  },
+                  "nodeType": "YulExpressionStatement",
+                  "src": "978:91:2"
+                }
+              ]
+            },
+            "name": "abi_encode_tuple_t_contract$_SimpleStorage_$58__to_t_address__fromStack_reversed",
+            "nodeType": "YulFunctionDefinition",
+            "parameters": [
+              {
+                "name": "headStart",
+                "nodeType": "YulTypedName",
+                "src": "904:9:2",
+                "type": ""
+              },
+              {
+                "name": "value0",
+                "nodeType": "YulTypedName",
+                "src": "916:6:2",
+                "type": ""
+              }
+            ],
+            "returnVariables": [
+              {
+                "name": "tail",
+                "nodeType": "YulTypedName",
+                "src": "927:4:2",
+                "type": ""
+              }
+            ],
+            "src": "814:262:2"
+          }
+        ]
+      },
+      "contents": "{\n\n    function cleanup_t_uint160(value) -> cleaned {\n        cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffff)\n    }\n\n    function identity(value) -> ret {\n        ret := value\n    }\n\n    function convert_t_uint160_to_t_uint160(value) -> converted {\n        converted := cleanup_t_uint160(identity(cleanup_t_uint160(value)))\n    }\n\n    function convert_t_uint160_to_t_address(value) -> converted {\n        converted := convert_t_uint160_to_t_uint160(value)\n    }\n\n    function convert_t_contract$_SimpleStorage_$58_to_t_address(value) -> converted {\n        converted := convert_t_uint160_to_t_address(value)\n    }\n\n    function abi_encode_t_contract$_SimpleStorage_$58_to_t_address_fromStack(value, pos) {\n        mstore(pos, convert_t_contract$_SimpleStorage_$58_to_t_address(value))\n    }\n\n    function abi_encode_tuple_t_contract$_SimpleStorage_$58__to_t_address__fromStack_reversed(headStart , value0) -> tail {\n        tail := add(headStart, 32)\n\n        abi_encode_t_contract$_SimpleStorage_$58_to_t_address_fromStack(value0,  add(headStart, 0))\n\n    }\n\n}\n",
+      "id": 2,
+      "language": "Yul",
+      "name": "#utility.yul"
+    }
+  ],
+  "sourceMap": "92:177:1:-:0;;;;;;;;;;;;;;;;;;;",
+  "deployedSourceMap": "92:177:1:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;167:99;;;:::i;:::-;;124:34;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;167:99;239:19;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;223:13;;:35;;;;;;;;;;;;;;;;;;167:99::o;124:34::-;;;;;;;;;;;;:::o;-1:-1:-1:-;;;;;;;;:::o;7:126:2:-;44:7;84:42;77:5;73:54;62:65;;7:126;;;:::o;139:60::-;167:3;188:5;181:12;;139:60;;;:::o;205:142::-;255:9;288:53;306:34;315:24;333:5;315:24;:::i;:::-;306:34;:::i;:::-;288:53;:::i;:::-;275:66;;205:142;;;:::o;353:126::-;403:9;436:37;467:5;436:37;:::i;:::-;423:50;;353:126;;;:::o;485:146::-;555:9;588:37;619:5;588:37;:::i;:::-;575:50;;485:146;;;:::o;637:171::-;744:57;795:5;744:57;:::i;:::-;739:3;732:70;637:171;;:::o;814:262::-;927:4;965:2;954:9;950:18;942:26;;978:91;1066:1;1055:9;1051:17;1042:6;978:91;:::i;:::-;814:262;;;;:::o",
+  "source": "//SPDX-License-Identifier: MIT\r\npragma solidity 0.8.19;\r\n\r\nimport './SimpleStorage.sol';\r\n\r\ncontract StorageFactory{\r\n\r\n    SimpleStorage public simpleStorage;\r\n\r\n    function createSimpleStorageContract() public{\r\n        simpleStorage = new SimpleStorage();\r\n    }\r\n}\r\n\r\n",
+  "sourcePath": "C:\\Users\\meika\\Documents\\01-BOOTCAMP\\BlockChain_U2B_Course\\contracts\\StorageFactory.sol",
+  "ast": {
+    "absolutePath": "project:/contracts/StorageFactory.sol",
+    "exportedSymbols": {
+      "SimpleStorage": [
+        58
+      ],
+      "StorageFactory": [
+        76
+      ]
+    },
+    "id": 77,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 60,
+        "literals": [
+          "solidity",
+          "0.8",
+          ".19"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "32:23:1"
+      },
+      {
+        "absolutePath": "project:/contracts/SimpleStorage.sol",
+        "file": "./SimpleStorage.sol",
+        "id": 61,
+        "nameLocation": "-1:-1:-1",
+        "nodeType": "ImportDirective",
+        "scope": 77,
+        "sourceUnit": 59,
+        "src": "59:29:1",
+        "symbolAliases": [],
+        "unitAlias": ""
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "StorageFactory",
+        "contractDependencies": [
+          58
+        ],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "id": 76,
+        "linearizedBaseContracts": [
+          76
+        ],
+        "name": "StorageFactory",
+        "nameLocation": "101:14:1",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "constant": false,
+            "functionSelector": "6be0d6bf",
+            "id": 64,
+            "mutability": "mutable",
+            "name": "simpleStorage",
+            "nameLocation": "145:13:1",
+            "nodeType": "VariableDeclaration",
+            "scope": 76,
+            "src": "124:34:1",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_contract$_SimpleStorage_$58",
+              "typeString": "contract SimpleStorage"
+            },
+            "typeName": {
+              "id": 63,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 62,
+                "name": "SimpleStorage",
+                "nameLocations": [
+                  "124:13:1"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 58,
+                "src": "124:13:1"
+              },
+              "referencedDeclaration": 58,
+              "src": "124:13:1",
+              "typeDescriptions": {
+                "typeIdentifier": "t_contract$_SimpleStorage_$58",
+                "typeString": "contract SimpleStorage"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "body": {
+              "id": 74,
+              "nodeType": "Block",
+              "src": "212:54:1",
+              "statements": [
+                {
+                  "expression": {
+                    "id": 72,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 67,
+                      "name": "simpleStorage",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 64,
+                      "src": "223:13:1",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_contract$_SimpleStorage_$58",
+                        "typeString": "contract SimpleStorage"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "arguments": [],
+                      "expression": {
+                        "argumentTypes": [],
+                        "id": 70,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "nodeType": "NewExpression",
+                        "src": "239:17:1",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_creation_nonpayable$__$returns$_t_contract$_SimpleStorage_$58_$",
+                          "typeString": "function () returns (contract SimpleStorage)"
+                        },
+                        "typeName": {
+                          "id": 69,
+                          "nodeType": "UserDefinedTypeName",
+                          "pathNode": {
+                            "id": 68,
+                            "name": "SimpleStorage",
+                            "nameLocations": [
+                              "243:13:1"
+                            ],
+                            "nodeType": "IdentifierPath",
+                            "referencedDeclaration": 58,
+                            "src": "243:13:1"
+                          },
+                          "referencedDeclaration": 58,
+                          "src": "243:13:1",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_contract$_SimpleStorage_$58",
+                            "typeString": "contract SimpleStorage"
+                          }
+                        }
+                      },
+                      "id": 71,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "kind": "functionCall",
+                      "lValueRequested": false,
+                      "nameLocations": [],
+                      "names": [],
+                      "nodeType": "FunctionCall",
+                      "src": "239:19:1",
+                      "tryCall": false,
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_contract$_SimpleStorage_$58",
+                        "typeString": "contract SimpleStorage"
+                      }
+                    },
+                    "src": "223:35:1",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_contract$_SimpleStorage_$58",
+                      "typeString": "contract SimpleStorage"
+                    }
+                  },
+                  "id": 73,
+                  "nodeType": "ExpressionStatement",
+                  "src": "223:35:1"
+                }
+              ]
+            },
+            "functionSelector": "1dda6541",
+            "id": 75,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "createSimpleStorageContract",
+            "nameLocation": "176:27:1",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 65,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "203:2:1"
+            },
+            "returnParameters": {
+              "id": 66,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "212:0:1"
+            },
+            "scope": 76,
+            "src": "167:99:1",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          }
+        ],
+        "scope": 77,
+        "src": "92:177:1",
+        "usedErrors": []
+      }
+    ],
+    "src": "32:241:1"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.19+commit.7dd6d404.Emscripten.clang"
+  },
+  "networks": {
+    "5777": {
+      "events": {},
+      "links": {},
+      "address": "0xF3439Ef133c302979cb24Efc298D32b51fda6D9d",
+      "transactionHash": "0x36139b8ac8fff21c3558a8226ac5bd7b6fdb5c94ac1f08136aba761aba241bc3"
+    }
+  },
+  "schemaVersion": "3.4.16",
+  "updatedAt": "2024-02-10T14:19:16.663Z",
+  "networkType": "ethereum",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "solidity.defaultCompiler": "remote",
+    "solidity.remappingsUnix": [
+        "@uniswap/=node_modules/@uniswap/",
+        "@openzeppelin/=node_modules/@openzeppelin/",
+        "@chainlink/=node_modules/@chainlink"
+    ]
+      
+}
