@@ -9,6 +9,7 @@ export interface LogEntityOptions{
      message: string
      createdAt?: Date
      origin: string
+     
 }
 
 
@@ -19,6 +20,7 @@ export class LogEntity{
     public message: string
     public createdAt: Date
     public origin: string
+   
 
     constructor(options: LogEntityOptions){
         const {message, level, createdAt = new Date(), origin}= options
@@ -27,9 +29,12 @@ export class LogEntity{
         this.level = level
         this.createdAt = new Date()
         this.origin = origin
+    
     }
     
     static fromJson = (json: string): LogEntity =>{
+        json = (json==='{}') ? '{}': json //para que no de error cuando esté vacio
+        
         const {message, level, createdAt}= JSON.parse(json) 
         if(!message) throw new Error("message is required") 
         if(!level) throw new Error("message is required")
@@ -41,6 +46,21 @@ export class LogEntity{
             origin: origin
         }) 
    
+        return log
+     }
+
+     static fromObject=(object: {[key:string]:any}):LogEntity=>{
+        const {message, level, createdAt, origin} = object
+
+        if(!message) throw new Error("¡Falta el mensaje!")
+        
+            const log = new LogEntity({
+            message,
+            level,
+            createdAt,
+            origin
+        })
+
         return log
      }
 }

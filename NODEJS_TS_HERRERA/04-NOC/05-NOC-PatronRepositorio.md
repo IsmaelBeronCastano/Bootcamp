@@ -246,10 +246,12 @@ const logAsJson = `${JSON.stringify(newLog)}\n`
 - Tenemos que transformar este objeto {"level": "medium", "message": "hola mundo", "createdAt": "21746TZ6546874145"} en una entidad
 - Voy a crear un switch para filtrar según severidad
 - Creo una función para obtener los logs del archivo
+- Uso un ternario para evaluar si el json viene vacío
 
 ~~~js
  private getLogsFromFile =(path: string): LogEntity[]=>{
         const content = fs.readFileSync(path, 'utf-8') 
+        if(content=== '') return []
    }
 
     getLogs(severityLevel: LogSeverityLevel): Promise<LogEntity[]> {
@@ -279,6 +281,9 @@ const logAsJson = `${JSON.stringify(newLog)}\n`
 
 ~~~js
 static fromJson = (json: string): LogEntity =>{
+    //coloco un ternario por si viene vacío (sin logs) no me cree una entidad con los valores undefined desde getLogsFromFile 
+    json = (json === '{}') ? '{}': json
+
     const {message, level, createdAt}= JSON.parse(json) //parseo el string del archivo .log a formato JSON
     if(!message) throw new Error("message is required") //validaciones
     if(!level) throw new Error("message is required")
@@ -294,6 +299,7 @@ static fromJson = (json: string): LogEntity =>{
 - **En JS cuando tenemos el mismo argumento como mismo parámetro de la función se puede poner solo la declaración de la función (sin paréntesis)**
 - No necesito hacer una nueva instancia ya que es un método estático 
   - Es decir, en lugar de **.map(arg=> LogEntity.fromJson(arg)) se puede escribir .map(LogEntity.fromJson)**
+  - Si no hay logs devuelvo un array vacío, así no llama al fromJson
 
 ~~~js
 import { LogDataSource } from "../../domain/datasources/log.datasource";
@@ -347,6 +353,10 @@ export class FileSystemDatasource implements LogDataSource{
 
    private getLogsFromFile = (path: string): LogEntity[]=>{
         const content = fs.readFileSync(path, 'utf-8') 
+
+        //si no hay logs devuelvo un array vacío
+        if(content === '') return []
+        
         const logs = content.split('\n').map(LogEntity.fromJson)
 
         return logs

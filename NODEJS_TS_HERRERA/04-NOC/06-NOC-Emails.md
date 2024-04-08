@@ -16,7 +16,10 @@
 - Desestructuro de options las propiedades. Si no viene el createdAt va a ser igual a new Date
 - Cuando creo la instancia en el método estatico fromJSON me da error porque recibe dos argumentos y se esperaba uno (el objeto options)
 - En origin coloco el origin desestructurado, pero aquí iría el string 'log.entity'
-
+- *NOTA*: Para que el fromJson no de error si no hay logs en el archivo, **uso un ternario**
+  - También **debo colocar un return** tras evaluar la condicion en getLogsFromFile **para que no llame al fromJson** en caso de que venga vacío
+- domain/entities/log.entities.ts
+- 
 ~~~js
 export enum LogSeverityLevel{
     low    = 'low',
@@ -50,6 +53,9 @@ export class LogEntity{
     }
     
     static fromJson = (json: string): LogEntity =>{
+        json = (json==='{}') ? '{}': json //para que no de error cuando esté vacio
+
+        //para que no cree una entidad con undefined si viene el json vacio(no hay logs), evito que llame el fromJSOn en getLogsFromFile
         const {message, level, createdAt}= JSON.parse(json) 
         if(!message) throw new Error("message is required") 
         if(!level) throw new Error("message is required")
@@ -66,9 +72,25 @@ export class LogEntity{
 }
 ~~~
 
+- En infraestructure/datasources/file-system.datasource
+
+~~~js
+private getLogsFromFile = (path: string): LogEntity[]=>{
+        const content = fs.readFileSync(path, 'utf-8') 
+
+        if(content=== "") return []//aquí si no hay contenido devuelvo un array vacío
+
+        const logs = content.split('\n').map(LogEntity.fromJson)
+
+        return logs
+   }
+~~~
+
 - Esto va a generar una serie de errores en todos los lugares dónde usamos LogEntity. 
 - En este caso es solo en el caso de uso
 - Debo pasarle el objeto a las nuevas instancias de LogEntity
+- domain/use-cases/checks/check-service.ts
+
 ~~~js
 import { LogEntity, LogSeverityLevel } from "../../entities/log.entity"
 import { LogRepository } from "../../repository/log.repository"
@@ -153,6 +175,7 @@ export class CheckService implements CheckServiceUseCase{
 - Yo puedo querer cambiar estos valores dentro del transporter por lo que uso variabels de entorno
     - Recuerda poner la variable vacía en env.template para saber que hay que introducirla ya que .env no se subirá a GIT
     - Coloco la variable de entorno en env.plugin
+- config/plugins/envs.plugins.ts
 
 ~~~js
 import 'dotenv/config'
@@ -168,6 +191,7 @@ export const envs = {
 ~~~
 
 - El servicio 
+- presentation/email/email.service.ts
 
 ~~~js
 import nodemailer from 'nodemailer'
@@ -483,6 +507,7 @@ export class Server {
 - Creo en domain/use-cases/logs/emails/send-email-logs.ts
 - Usualmente son los casos de uso que llaman al repositorio
 - Entonces debo inyectar el servicio y el repositorio
+- domain/use-cases/emails/send-email.logs.ts
 
 ~~~js
 import { EmailService } from "../../../presentation/email/email.service"
