@@ -1,11 +1,17 @@
-import http2 from 'http2'
+import http from 'http'
 import fs from 'fs'
 
-const server = http2.createSecureServer({
-    key:fs.readFileSync('./keys/server.key'),
-    cert:fs.readFileSync('./keys/server.crt')
-}, (req,res)=>{
-    
+const server = http.createServer((req,res)=>{
+    console.log(req.url)
+
+    // res.write("hola mundo!")
+    // res.writeHead(200, {'Content-Type': 'text/html'})
+    // res.write(`<h1>URL ${req.url}</h1>`)
+
+    // const data = {name: "Mili Vanili", age: 25}
+    // res.writeHead(200, {'Content-Type': 'application/json'})
+    // res.end(JSON.stringify(data))
+
     if(req.url === '/'){
         const htmlFile= fs.readFileSync('./public/index.html', 'utf-8')
         res.writeHead(200, {'Content-Type': 'text/html'})
