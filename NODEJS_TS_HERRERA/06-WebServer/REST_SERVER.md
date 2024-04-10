@@ -224,7 +224,183 @@ server.listen(8080, ()=>{
 
 ## Usemos Express
 
-- 
+- Trata de que los types de express y la version de express sean lo más cercanas posibles (mirar .json)
+- Creo un nuevo app.ts
+- En una función autoinvocada llamo al metodo main que creo fuera de la función
 
-- 
+~~~js
+(async()=>{
 
+    main();
+})()
+
+
+function main (){
+    
+}
+~~~
+
+- En presentation creo la clase Server
+- Lo crearemos sin hacer estático el método start
+
+~~~js
+import express from 'express'
+
+
+export class Server {
+
+    private app = express()
+
+    async start(){
+        this.app.listen(3000, ()=>{
+            console.log("corriendo en el 3000!")
+        })
+    }
+}
+~~~
+
+- Creo una instancia del Server en app y llamo a start
+
+~~~js
+import { Server } from "./presentation/server";
+
+(async()=>{
+
+    main();
+})()
+
+
+function main (){
+
+    const server = new Server()
+
+    server.start()
+
+}
+~~~
+
+- Creo un middleware para mostrar lo que haya en mi carpeta pública
+- Los middlewares son funciones que se ejecutan al pasar por una ruta
+- Tanto el puerto como la ruta serán variables, dependencias que deberiamos recibir al crear el servidor
+
+~~~js
+import express from 'express'
+
+
+export class Server {
+
+    private app = express()
+
+    async start(){
+
+
+        //middlewares
+
+        //Public Folder
+        this.app.use(express.static('public'))
+        
+        this.app.listen(3000, ()=>{
+            console.log("corriendo en el 3000!")
+        })
+    }
+}
+~~~
+------
+
+## Servir SPA con Router
+
+- Usaremos un proyecto de React ya hecho
+- Con el paquete http-server y el comando http-server -o levanto la app de Raect
+- Sirve para hacer pruebas
+- Ahora lo que ocurre es que si yo busco por /marvel y recargo no accede porque no tengo la carpeta marvel en mi carpeta public pero si está en el enrutamiento de React
+- 
+~~~js
+import express from 'express'
+
+
+export class Server {
+
+    private app = express()
+
+    async start(){
+
+
+        //middlewares
+
+        //Public Folder
+        this.app.use(express.static('public'))
+
+        this.app.get('*', (req,res)=>{
+          res.send('Hola Mundo')  
+        })
+        
+        this.app.listen(3000, ()=>{
+            console.log("corriendo en el 3000!")
+        })
+    }
+}
+~~~
+
+- Si recargo voy a la aplicacion, pero si busco la ruta me devuelve el hola mundo
+- Esto pasa porque cuando levanto el server lo encuentra y lo sirve porque React toma el control de la aplicación
+- Cuando recargo en una ruta que no es el index, cae al hola mundo porque no encuentra las carpetas /marvel, etc
+
+~~~js
+import express from 'express'
+import path from 'path'
+
+
+export class Server {
+
+    private app = express()
+
+    async start(){
+
+
+        //middlewares
+
+        //Public Folder
+        this.app.use(express.static('public'))
+
+        this.app.get('*', (req,res)=>{
+          const indexPage = path.join(__dirname, '../../public/index.html')  
+          res.sendFile(indexPage)  
+        })
+        
+        this.app.listen(3000, ()=>{
+            console.log("corriendo en el 3000!")
+        })
+    }
+}
+~~~
+
+## Variables de entorno
+
+- .env
+
+~~~
+PORT=3000
+PUBLIC_PATH=public
+~~~
+
+- Instalo
+
+> npm i dotenv env-var
+
+- En src/config/env.ts
+
+~~~js
+import 'dotenv/config'
+import {get} from 'env-var'
+
+export const envs = {
+    PORT: get('PORT').required().asPortNumber(),
+    PUBLIC_PATH: get('PUBLIC_PATH').required().default('public').asString()
+
+}
+~~~
+
+- En el server
+
+~~~js
+~~~
