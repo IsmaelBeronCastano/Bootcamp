@@ -400,7 +400,53 @@ export const envs = {
 }
 ~~~
 
-- En el server
+- En el server creo una interfaz Options donde pasar el puerto y el path
+- El path lo pongo opcional y le asigno uno por defecto
+- Podemos declararlas como readonly y asignarles el valor en el constructor
+- Luego ya no podremos cambiar ese valor (por ser readonly, pero si es permitido en el constructor)
 
 ~~~js
+import express from 'express'
+import path from 'path'
+
+
+interface Options{
+    PORT : number
+    PUBLIC_PATH?: string
+}
+
+
+export class Server {
+    private readonly port;
+    private readonly publicPath;
+
+    constructor(options:Options){
+        const {PORT, PUBLIC_PATH='public'}= options
+
+        this.port = PORT
+        this.publicPath = PUBLIC_PATH
+    }
+
+    private app = express()
+
+    async start(){
+
+
+        //middlewares
+
+        //Public Folder
+        this.app.use(express.static(this.publicPath))
+
+        this.app.get('*', (req,res)=>{
+          const indexPage = path.join(__dirname, `../../${this.publicPath}/index.html`)  
+          res.sendFile(indexPage)  
+        })
+        
+        this.app.listen(this.port, ()=>{
+            console.log("corriendo en el 3000!")
+        })
+    }
+}
 ~~~
+
+- Ahora debo agregarle las variables a la instancia del server
