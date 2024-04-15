@@ -209,6 +209,9 @@ return returnobj
 ~~~
 
 - El dto
+- Le paso al constructor los valores opcionales que puede tener el req.body. El id es obligatorio
+- Creo un getter que retorna el objeto que asemeja el del req.body para obtener los valopres desde el controlador
+- En el metodo create, o retorno el string de error o el dto 
 
 ~~~js
 export class UpdateTodoDto {
@@ -232,20 +235,21 @@ export class UpdateTodoDto {
     static create( props: {[key:string]: any} ): [string?, UpdateTodoDto?]  {
   
       const { id, text, completedAt } = props;
-      let newCompletedAt =completedAt;
+      let newCompletedAt =completedAt; // si viene completedAt la guardo aqui
   
       if ( !id || isNaN( Number(id)) ) {
-        return ['id must be a valid number'];
+        return ['id must be a valid number']; //si da error retornará este string
       }
   
       if ( completedAt ) {
-        newCompletedAt = new Date( completedAt)
+        newCompletedAt = new Date( completedAt) //la formateo
+        //la valido
         if ( newCompletedAt.toString() === 'Invalid Date' ) {
           return ['CompletedAt must be a valid date']
         }
       }
   
-      return [undefined, new UpdateTodoDto(id, text, newCompletedAt)];
+      return [undefined, new UpdateTodoDto(id, text, newCompletedAt)]; //si no da error retornará la instancia con los nuevos valores
     }
   
   
@@ -256,10 +260,12 @@ export class UpdateTodoDto {
 
 ~~~js
 public updateTodo = async( req: Request, res: Response ) => {
-    const id = +req.params.id;
-    const [error, updateTodoDto] = UpdateTodoDto.create({...req.body, id});
-    if ( error ) return res.status(400).json({ error });
+    const id = +req.params.id; //casteo el id de la url
+
+    const [error, updateTodoDto] = UpdateTodoDto.create({...req.body, id}); //creo el dto y extraigo el valor de retorno
+    if ( error ) return res.status(400).json({ error }); //si hay error devuelvo el error
     
+    //busco el todo
     const todo = await prisma.todo.findFirst({
         where: { id }
     });
@@ -268,7 +274,7 @@ public updateTodo = async( req: Request, res: Response ) => {
 
     const updatedTodo = await prisma.todo.update({
         where: { id },
-        data: updateTodoDto!.values
+        data: updateTodoDto!.values //le paso los valores con el getter
     });
     
     res.json( updatedTodo );
@@ -277,7 +283,7 @@ public updateTodo = async( req: Request, res: Response ) => {
 ~~~
 
 - Recuerda agregar la ruta!
-- -todos/routes.ts
+- todos/routes.ts
 
 ~~~js
 export class TodoRoutes{
@@ -295,3 +301,17 @@ export class TodoRoutes{
     }
 }
 ~~~
+-------------
+
+## Aprovisionar DB
+
+- En railway puedo subir mi DB. Me entregará una cadena de conexión
+- Para desplegar mi db cambio el string de conexión por el proporcionado
+- Creo un nuevo scripot en el package.json
+
+> "prisma:migrate:prod":"prisma migrate deploy"
+
+- Lo incluyo en el build
+
+> "build":"rimraf ./dist && tsc && npm run prisma:migrate:prod"
+
