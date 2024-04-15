@@ -108,7 +108,7 @@ export class TodoEntity{
         return !!this.completedAt
     }
 
-    public static formJson(object: {[key:string]: any}){
+    public static formJson(object: {[key:string]: any}): TodoEntity{
         const {id, text, completedAt} = object
 
         if(!id){
@@ -168,33 +168,34 @@ import { TodoDataSource } from "../../domain/datasources/todo.datasources";
 import { CreateTodoDto } from "../../domain/dtos/todos/todo.dto";
 import { UpdateTodoDto } from "../../domain/dtos/todos/update.dto";
 import { TodoEntity } from "../../domain/entities/todo.entity";
-import { TodoDatasourceImpl } from "../datasource/todo.datasource.impl";
+import { TodoRepository } from "../../domain/repositories/todo.repo";
 
-export class TodoRepositoryImpl implements TodoDataSource{
+
+export class TodoRepositoryImpl implements TodoRepository{
 
     constructor(
-        private readonly datasource: TodoDataSource
+        private readonly todoDatasource: TodoDataSource
     ){}
 
 
     create(createTodoDto: CreateTodoDto): Promise<TodoEntity> {
-        return this.datasource.create(createTodoDto);
+        return this.todoDatasource.create(createTodoDto);
     }
 
-    deleteById(id: number): Promise<TodoEntity | null> {
-        return this.datasource.deleteById(id)
+    deleteById(id: number): Promise<TodoEntity> {
+        return this.todoDatasource.deleteById(id)
     }
 
     async getAll(): Promise<TodoEntity[]> {
-        return this.datasource.getAll()
+        return this.todoDatasource.getAll()
     }
 
-    findById(id: number): Promise<TodoEntity | null> {
-        return this.datasource.findById(id)
+    findById(id: number): Promise<TodoEntity> {
+        return this.todoDatasource.findById(id)
     }
     
-    updateById(updateTodoDto: UpdateTodoDto): Promise<TodoEntity | null> {
-        return this.datasource.updateById(updateTodoDto)
+    updateById(updateTodoDto: UpdateTodoDto): Promise<TodoEntity> {
+        return this.todoDatasource.updateById(updateTodoDto)
     }
 }
 ~~~
@@ -211,8 +212,6 @@ import { TodoEntity } from "../../domain/entities/todo.entity";
 export class TodoDatasourceImpl implements TodoDataSource{
     
     async create(createTodoDto: CreateTodoDto): Promise<TodoEntity> {
-        //todo: validacion del dto
-
         const todo = await prisma.todo.create({
             data: createTodoDto
         })
@@ -222,7 +221,7 @@ export class TodoDatasourceImpl implements TodoDataSource{
     }
 
     async deleteById(id: number): Promise<TodoEntity> {
-        await this.findById(id)
+        
         const deleted = await prisma.todo.delete({
             where: {id}
         })
@@ -247,8 +246,6 @@ export class TodoDatasourceImpl implements TodoDataSource{
     }
 
     async updateById(updateTodoDto: UpdateTodoDto): Promise<TodoEntity> {
-        //todo: validacion dto
-        
         const todo = await this.findById(updateTodoDto.id)
         const updatedTodo = await prisma.todo.update({
             where:{id:updateTodoDto.id},
@@ -266,7 +263,88 @@ export class TodoDatasourceImpl implements TodoDataSource{
 - En presentation/todos/todos.controller bien podría inyectar un servicio y es en el servicio dónde irían todas las implementaciones
 - Pero aqui lo que quiero hacer, es antes de implementar los casos de usos, hacer uso del repositorio (lo inyecto)
 - Podría mandar la implementación pero eso me obligaría a que siempre fuera esa implementación. Le mando el repo "genérico"
+- Si voy a presentation/todos/routes me marca error porque necesito proveer a la instancia de TodosController el todoRepository
 
 ~~~js
+import { Router } from "express";
+import { TodosController } from "./todos.controller";
+import { TodoRepositoryImpl } from "../../infraestructure/repositories/todo.repo.impl";
+import { TodoDatasourceImpl } from "../../infraestructure/datasource/todo.datasource.impl";
+
+export class TodoRoutes{
+    
+    
+    static get routes():Router{
+        const router = Router();
+
+        const todoDatasource = new TodoDatasourceImpl()
+        const todoRepository = new TodoRepositoryImpl(todoDatasource)
+        const todosController = new TodosController(todoRepository) //necesito proveer el repositorio
+      
+
+    
+
+        router.get('/', todosController.getTodos) //solo mandamos la referencia a la función
+        router.get('/:id', todosController.todoById) //solo mandamos la referencia a la función
+        router.post('/', todosController.createTodo) 
+        router.put('/:id', todosController.updateTodo) 
+        return router
+    }
+}
 
 ~~~
+
+~~~js
+import { Request, Response } from "express"
+import { CreateTodoDto } from "../../domain/dtos/todos/todo.dto"
+import { UpdateTodoDto } from "../../domain/dtos/todos/update.dto"
+import { TodoRepository } from "../../domain/repositories/todo.repo"
+
+
+
+
+
+export class TodosController{
+    
+        constructor(
+            private readonly todoRepository: TodoRepository
+        ){
+           
+        }
+
+       public getTodos= async(req: Request, res: Response)=>{
+            const todos= await this.todoRepository.getAll()
+            
+            return res.json(todos)
+        }
+
+    public async todoById(req: Request, res: Response){
+        //const id = +req.params.id
+        try{
+            const todo = await this.todoRepository.findById(Number(req.params.id))
+            return res.json(todo)
+        }catch(error){
+            res.status(400).json({error})
+        }
+    }
+
+    public async createTodo(req:Request, res:Response){ 
+        const todo= await this.todoRepository.create(req.body as CreateTodoDto)
+        return res.json(todo)
+
+    }
+
+    public updateTodo = async( req: Request, res: Response ) => {
+        const updatedTodo= await this.todoRepository.updateById(req.body as UpdateTodoDto)
+        return res.json(updatedTodo)
+      }
+    
+
+    public deleteTodoById(req:Request, res:Response){
+        return this.todoRepository.deleteById(Number(req.params.id))
+    }
+}
+~~~
+--- 
+
+

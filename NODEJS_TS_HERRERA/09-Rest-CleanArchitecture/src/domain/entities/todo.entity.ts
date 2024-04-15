@@ -12,7 +12,7 @@ export class TodoEntity{
         return !!this.completedAt
     }
 
-    public static formJson(object: {[key:string]: any}){
+    public static formJson(object: {[key:string]: any}): TodoEntity{
         const {id, text, completedAt} = object
 
         if(!id){
@@ -25,15 +25,16 @@ export class TodoEntity{
 
         let newCompletedAt;
 
+
         if(completedAt){
             newCompletedAt = new Date(completedAt)
+            if(isNaN(newCompletedAt.getTime())){
+                throw new Error('Invalid date')
+            }
         }
 
-        if(isNaN(newCompletedAt.getTime())){
-            throw new Error('Invalid date')
-        }
 
-       return  new TodoEntity(id, text, newCompletedAt)
+        return new TodoEntity(id, text, newCompletedAt)
     }
 
 }

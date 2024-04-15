@@ -8,9 +8,9 @@ export abstract class TodoRepository{
     //todo:paginación
     abstract getAll(): Promise<TodoEntity[]>
 
-    abstract findById(id: number): Promise<TodoEntity | null>
+    abstract findById(id: number): Promise<TodoEntity>
    
-    abstract updateById(id: number, updateTodoDto: UpdateTodoDto): Promise<TodoEntity | null>
+    abstract updateById(updateTodoDto: UpdateTodoDto): Promise<TodoEntity>
 
-    abstract deleteById(id: number): Promise<TodoEntity | null>
+    abstract deleteById(id: number): Promise<TodoEntity>
 }

@@ -61,7 +61,7 @@ datasource db {
 model todo{
   id Int @id @default(autoincrement())
   text String @db.VarChar
-  completedAt DateTime? @db.Timestamp 
+  completedAt DateTime? @db.Timestamp() 
 }
 
 ~~~
