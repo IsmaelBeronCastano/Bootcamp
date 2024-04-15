@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import { prisma } from "../../data/postgres"
 import { CreateTodoDto } from "../../domain/dtos/todos/todo.dto"
 import { UpdateTodoDto } from "../../domain/dtos/todos/update.dto"
+import { TodoRepository } from "../../domain/repositories/todo.repo"
 
 interface Todo {
     id: number
@@ -17,7 +18,9 @@ const todos : Todo[] = [
 
 export class TodosController{
     
-    constructor(){
+    constructor(
+        private readonly todoRepo: TodoRepository
+    ){
 
     }
 

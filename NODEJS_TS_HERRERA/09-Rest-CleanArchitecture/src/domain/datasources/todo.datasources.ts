@@ -10,7 +10,7 @@ export abstract class TodoDataSource{
 
     abstract findById(id: number): Promise<TodoEntity | null>
    
-    abstract updateById(id: number, updateTodoDto: UpdateTodoDto): Promise<TodoEntity | null>
+    abstract updateById(updateTodoDto: UpdateTodoDto): Promise<TodoEntity | null>
 
     abstract deleteById(id: number): Promise<TodoEntity | null>
 }
