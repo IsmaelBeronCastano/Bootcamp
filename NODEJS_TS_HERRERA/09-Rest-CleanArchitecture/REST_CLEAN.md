@@ -221,7 +221,7 @@ export class TodoDatasourceImpl implements TodoDataSource{
     }
 
     async deleteById(id: number): Promise<TodoEntity> {
-        
+         await this.findById(id)
         const deleted = await prisma.todo.delete({
             where: {id}
         })
@@ -288,12 +288,13 @@ export class TodoRoutes{
         router.get('/:id', todosController.todoById) //solo mandamos la referencia a la función
         router.post('/', todosController.createTodo) 
         router.put('/:id', todosController.updateTodo) 
+        router.delete('/:id', todosController.deleteTodoById)
         return router
     }
 }
 
 ~~~
-
+- En el controller
 ~~~js
 import { Request, Response } from "express"
 import { CreateTodoDto } from "../../domain/dtos/todos/todo.dto"
@@ -329,13 +330,17 @@ export class TodosController{
     }
 
     public async createTodo(req:Request, res:Response){ 
-        const todo= await this.todoRepository.create(req.body as CreateTodoDto)
+        const [error, createTodoDto] = CreateTodoDto.create(req.body)
+        if(error) return res.status(400).json({error})
+        const todo= await this.todoRepository.create(createTodoDto!)
         return res.json(todo)
 
     }
 
     public updateTodo = async( req: Request, res: Response ) => {
-        const updatedTodo= await this.todoRepository.updateById(req.body as UpdateTodoDto)
+        const [error,updateTodoDto] = UpdateTodoDto.create(req.body)
+        if(error) return res.status(400).json({error})
+        const updatedTodo= await this.todoRepository.updateById(updateTodoDto!)
         return res.json(updatedTodo)
       }
     
@@ -347,4 +352,219 @@ export class TodosController{
 ~~~
 --- 
 
+## Casos de uso
 
+- Hago una copia del controlador como backup
+- Creo en domain/use-cases
+  - create-todo.ts
+  - update-todo.ts
+  - delete-todo.ts
+  - get-todos.ts
+  - get-todo.ts
+- Creo la interfaz. Es útil tenerla en el caso de que cambie el día de mañana
+- 
+~~~js
+import { CreateTodoDto } from "../../dtos/todos/todo.dto";
+import { TodoEntity } from "../../entities/todo.entity";
+import { TodoRepository } from "../../repositories/todo.repo";
+
+export interface CreateTodoUseCase{
+    execute(dto:CreateTodoDto): Promise<TodoEntity>
+}
+
+export class CreateTodo implements CreateTodoUseCase{
+
+    constructor(
+        private readonly repository:TodoRepository
+    ){}
+
+    public execute(dto: CreateTodoDto){
+        return this.repository.create(dto)
+    }
+}
+~~~
+
+- Hago lo mismo con elñ restoi de casos de uso (/copio, pego y modifico)
+- delete
+
+~~~js
+import { CreateTodoDto } from "../../dtos/todos/todo.dto";
+import { TodoEntity } from "../../entities/todo.entity";
+import { TodoRepository } from "../../repositories/todo.repo";
+
+export interface DeleteTodoUseCase{
+    execute(id:number): Promise<TodoEntity>
+}
+
+export class DeleteTodo implements DeleteTodoUseCase{
+
+    constructor(
+        private readonly repository:TodoRepository
+    ){}
+
+    public execute(id:number){
+        return this.repository.deleteById(id)
+    }
+}
+~~~
+
+- update
+
+~~~js
+import { CreateTodoDto } from "../../dtos/todos/todo.dto";
+import { UpdateTodoDto } from "../../dtos/todos/update.dto";
+import { TodoEntity } from "../../entities/todo.entity";
+import { TodoRepository } from "../../repositories/todo.repo";
+
+export interface UpdateTodoUseCase{
+    execute(dto:UpdateTodoDto): Promise<TodoEntity>
+}
+
+export class UpdateTodo implements UpdateTodoUseCase{
+
+    constructor(
+        private readonly repository:TodoRepository
+    ){}
+
+    public execute(dto:UpdateTodoDto){
+        return this.repository.updateById(dto)
+    }
+}
+~~~
+
+- get
+
+~~~js
+import { CreateTodoDto } from "../../dtos/todos/todo.dto";
+import { UpdateTodoDto } from "../../dtos/todos/update.dto";
+import { TodoEntity } from "../../entities/todo.entity";
+import { TodoRepository } from "../../repositories/todo.repo";
+
+export interface GetTodoUseCase{
+    execute(id:number): Promise<TodoEntity>
+}
+
+export class GetTodo implements GetTodoUseCase{
+
+    constructor(
+        private readonly repository:TodoRepository
+    ){}
+
+    public execute(id:number){
+        return this.repository.findById(id)
+    }
+}
+~~~
+
+- get-todos
+
+~~~js
+import { CreateTodoDto } from "../../dtos/todos/todo.dto";
+import { UpdateTodoDto } from "../../dtos/todos/update.dto";
+import { TodoEntity } from "../../entities/todo.entity";
+import { TodoRepository } from "../../repositories/todo.repo";
+
+export interface GetTodosUseCase{
+    execute(): Promise<TodoEntity[]>
+}
+
+export class GetTodos implements GetTodosUseCase{
+
+    constructor(
+        private readonly repository:TodoRepository
+    ){}
+
+    public execute(){
+        return this.repository.getAll()
+    }
+}
+~~~
+-------
+
+## Consumir los casos de uso
+
+- Hago un  archivo de barril de los casos de uso
+- Consumo los casos de uso en el controlador
+- Express recomienda no usar métodos asíncronos en el controlador. Usaremos .then
+
+~~~js
+export class TodosController{
+    
+        constructor(
+            private readonly todoRepository: TodoRepository
+        ){
+           
+        }
+
+       public getTodos=(req: Request, res: Response)=>{
+            new GetTodos(this.todoRepository)
+                .execute()
+                .then(todos=> res.json(todos))
+                .catch(error=> res.status(400).json({error}))
+        }
+}
+~~~
+
+- Vamos con el resto de casos
+
+~~~js
+import { Request, Response } from "express"
+import { CreateTodoDto } from "../../domain/dtos/todos/todo.dto"
+import { UpdateTodoDto } from "../../domain/dtos/todos/update.dto"
+import { TodoRepository } from "../../domain/repositories/todo.repo"
+import { CreateTodo, DeleteTodo, GetTodo, GetTodos, UpdateTodo } from "../../domain/use-cases"
+
+
+export class TodosController{
+    
+        constructor(
+            private readonly todoRepository: TodoRepository
+        ){
+           
+        }
+
+       public getTodos=(req: Request, res: Response)=>{
+            new GetTodos(this.todoRepository)
+                .execute()
+                .then(todos=> res.json(todos))
+                .catch(error=> res.status(400).json({error}))
+        }
+
+    public todoById=(req: Request, res: Response)=>{
+        const id = +req.params.id
+        new GetTodo(this.todoRepository)
+        .execute(id)
+        .then(todo=> res.json(todo))
+        .catch(error=> res.status(400).json({error}))
+      
+    }
+
+    public createTodo=(req:Request, res:Response)=>{ 
+        const [error, createTodoDto] = CreateTodoDto.create(req.body)
+        if(error) return res.status(400).json({error})
+            new CreateTodo(this.todoRepository)
+            .execute(createTodoDto!) //aqui no puede ser undefined
+            .then(todo=> res.json(todo))
+            .catch(error=> res.status(400).json({error}))   
+    }
+
+    public updateTodo = ( req: Request, res: Response ) => {
+    const id = +req.params.id
+    const [error,updateTodoDto] = UpdateTodoDto.create({...req.body, id})
+    if(error) return res.status(400).json({error})
+    new UpdateTodo(this.todoRepository)
+    .execute(updateTodoDto!)
+    .then(todo=> res.json(todo))
+    .catch(error=> res.status(400).json({error}))
+    }
+    
+
+    public deleteTodoById=(req:Request, res:Response)=>{
+        const id = +req.params.id
+        new DeleteTodo(this.todoRepository)
+        .execute(id)
+        .then(todo=> res.json(todo))
+        .catch(error=>res.status(400).json({error}))
+    }
+}
+~~~

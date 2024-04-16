@@ -20,6 +20,7 @@ export class TodoRoutes{
         router.get('/:id', todosController.todoById) //solo mandamos la referencia a la función
         router.post('/', todosController.createTodo) 
         router.put('/:id', todosController.updateTodo) 
+        router.delete('/:id', todosController.deleteTodoById)
         return router
     }
 }

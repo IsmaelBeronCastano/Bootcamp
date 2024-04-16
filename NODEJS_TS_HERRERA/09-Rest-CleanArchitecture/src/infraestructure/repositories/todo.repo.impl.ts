@@ -21,7 +21,7 @@ export class TodoRepositoryImpl implements TodoRepository{
         return this.todoDatasource.deleteById(id)
     }
 
-    async getAll(): Promise<TodoEntity[]> {
+    getAll(): Promise<TodoEntity[]> {
         return this.todoDatasource.getAll()
     }
 
