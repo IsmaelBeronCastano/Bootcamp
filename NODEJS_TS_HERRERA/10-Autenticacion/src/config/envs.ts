@@ -7,6 +7,7 @@ export const envs = {
   PORT: get('PORT').required().asPortNumber(),
   MONGO_STRING: get('MONGO_STRING').required().asString(),
   MONGO_DB_NAME: get('MONGO_DB_NAME').required().asString(),
+  JWT_SEED: get('JWT_SEED').required().asString(),
 
 }
 

@@ -553,7 +553,8 @@ registerUser=(req:Request,res:Response)=>{
 - Podría coger el objeto en AuthService y crear con mi entidad para que se encargue de validar todo
 
 ------
-- *NOTA*: si no tienes configurada la autenticación en MONGO deberás crear un usuario y habilitarla. Si tienes corriendo el servicio de mongod y docker a la vez, es posible que MongoCompass no te muestre la db
+- *NOTA*: si no tienes configurada la autenticación en MONGO deberás crear un usuario y habilitarla. Si tienes corriendo el servicio de mongod y docker a la vez, es posible que MongoCompass no te muestre la db,
+- Para detener el servicio en windows, abrir PowerShell con privilegios > net stop MongoDB
 -----
 
 ~~~js
@@ -703,5 +704,132 @@ public async loginUser(loginUserDto: LoginUserDto){
     }
 }
 ~~~
+------
+
+## Generar JWT
+
+- Instalamos jsonwebtoken
+
+> npm i jsonwebtoken
+
+- Siempre que uses una librería de terceros usa un adaptador
+- En config/jwt.adapter.ts la idea es que solo en este archivo voy a tener la dependencia directa a la librería
+- Si no necesito inyección de dependencias puedo usar un método estático
+- jwt.sign funciona con callbacks, puedo volver el método async y envolverlo todo en una promesa
+- El SEED es la semilla que vamos a usar para firmar los tokens
+
+~~~js
+import jwt from 'jsonwebtoken'
+
+export class JwtAdapter{
+
+    
+   static async generateToken(payload:any, duration:string= '2h'){
+
+    return new Promise(resolve=>{
+
+        jwt.sign(payload, "SEED", {expiresIn: duration}, (err, token)=>{
+            if(err) return resolve(null)
+            
+            resolve(token)
+        })
+    })
+
+0
+   }
+
+   static validateToken(token:string){
+
+   }
+
+}
+~~~
+
+- En el AuthService uso ek JwtAdapter
+- Como uso el resolve siempre resuelve de una manera exitosa
+- Si no lo hace (la generación del token puede fallar) devuelve un InternalServerError
+
+~~~js
+public async loginUser(loginUserDto: LoginUserDto){
+    const user = await UserModel.findOne({email:loginUserDto.email })
+
+    if(!user) throw CustomError.badRequest("User don't exists!")
+
+    const hashMatch = bcryptAdapter.compare(loginUserDto.password, user.password)
+
+    if(!hashMatch) throw CustomError.unauthorized("Password is not valid")
+    
+    const {password, ...userEntity} = UserEntity.fromObject(user)
+
+    const token= await JwtAdapter.generateToken({id: user.id})
+    if(!token) throw CustomError.internalServer("Error generating token")
+
+    return {
+        user: userEntity,
+        token: token
+    }
+}
+~~~
+------
+
+## Jwt SEED
+
+- La semilla no debe estar comprometida
+- Creemos una variable de entorno
+
+~~~
+JWT_SEED=seed
+~~~
+
+- /config/envs.ts
+
+~~~js
+import 'dotenv/config';
+import { get } from 'env-var';
 
 
+export const envs = {
+
+  PORT: get('PORT').required().asPortNumber(),
+  MONGO_STRING: get('MONGO_STRING').required().asString(),
+  MONGO_DB_NAME: get('MONGO_DB_NAME').required().asString(),
+  JWT_SEED: get('JWT_SEED').required().asString(),
+
+}
+~~~
+
+- En el JwtAdapter podria usar un constructor (y dejar de usar métodos estáticos)
+- También puedo mandar el seed en el método generarToken
+- Para indicar que va a haber una dependencia lo indico con una constante
+- *NOTA*: sería mejor usar el constructor
+
+~~~js
+import jwt from 'jsonwebtoken'
+import { envs } from './envs'
+
+const JWT_SEED = envs.JWT_SEED
+
+
+export class JwtAdapter{
+
+    
+   static async generateToken(payload:any, duration:string= '2h', seed= JWT_SEED){
+
+    return new Promise(resolve=>{
+
+        jwt.sign(payload, "SEED", {expiresIn: duration}, (err, token)=>{
+            if(err) return resolve(null)
+            
+            resolve(token)
+        })
+    })
+
+0
+   }
+
+   static validateToken(token:string){
+
+   }
+
+}
+~~~
