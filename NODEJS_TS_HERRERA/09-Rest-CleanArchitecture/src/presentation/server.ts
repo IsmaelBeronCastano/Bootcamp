@@ -1,5 +1,6 @@
 import express, { Router } from 'express'
 import path from 'path'
+import compression from 'compression'
 
 
 interface Options{
@@ -32,6 +33,8 @@ export class Server {
 
         //Public Folder
         this.app.use(express.static(this.publicPath))
+
+        this.app.use(compression())
 
 
         this.app.use(this.routes)

@@ -568,3 +568,15 @@ export class TodosController{
     }
 }
 ~~~
+-----
+
+## Buenas prácticas
+
+- Se puede usar compression para que gzip mejore el tiempo de respuesta
+
+> npm i compression
+
+~~~js
+this.app.use(compression())
+~~~
+
