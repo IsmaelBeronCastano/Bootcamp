@@ -12,7 +12,7 @@ export class MongoDBConnection{
 
         try {
             await mongoose.connect(mongoUrl, {
-                dbName,
+                dbName
             
             })
             console.log('Mongo connected')

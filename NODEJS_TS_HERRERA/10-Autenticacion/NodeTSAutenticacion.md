@@ -343,14 +343,14 @@ export class UserEntity{
         if(!password) throw CustomError.badRequest('Missing password')
         if(!role) throw CustomError.badRequest('Missing role')     
             
-
+        //hay que ponerlo en el mismo orden que el constructor
         return new UserEntity(
             id || _id,
             name,
             email,
-            emailValidated,
             password,
             role,
+            emailValidated,
             img
         )
     }
@@ -552,6 +552,10 @@ registerUser=(req:Request,res:Response)=>{
 - No quiero regresar el password, ni el _id, ni __v
 - Podría coger el objeto en AuthService y crear con mi entidad para que se encargue de validar todo
 
+------
+- *NOTA*: si no tienes configurada la autenticación en MONGO deberás crear un usuario y habilitarla. Si tienes corriendo el servicio de mongod y docker a la vez, es posible que MongoCompass no te muestre la db
+-----
+
 ~~~js
 public async registerUser(registerUserDto: RegisterUserDto){
 
@@ -575,9 +579,129 @@ public async registerUser(registerUserDto: RegisterUserDto){
     
 }
 ~~~
+- También podría inyectar el repositorio en el servicio para hacerlo más sostenible
 ------
 
 ## Encriptar contraseñas
 
-- 
+- Usemos bcrypt.js y el patrón adaptador
+- En srx/config/bcrypt.adapter.ts. Bien podría hacerlo con métodos estáticos de una clase
+
+~~~js
+import {compareSync, genSaltSync, hashSync} from 'bcryptjs'
+
+
+export const bcryptAdapter= {
+    hash: (password:string)=>{
+        const salt = genSaltSync()
+        return hashSync(password,salt) 
+    },
+    compare: (password: string, hashed: string)=>{
+        return compareSync(password,hashed)
+    }
+}
+~~~
+
+- Encripto el password
+
+~~~js
+public async registerUser(registerUserDto: RegisterUserDto){
+
+    const existUser = await UserModel.findOne({email: registerUserDto.email});
+    if(existUser) throw CustomError.badRequest('User already exists');
+
+    try {
+        const user = new UserModel(registerUserDto);
+
+        user.password = bcryptAdapter.hash(registerUserDto.password) //encripto el password antes de guardar
+
+        await user.save();
+
+        const {password, ...rest} = UserEntity.fromObject(user)
+        return {user: rest, token: 'ABC'}
+        
+    } catch (error) {
+        throw CustomError.internalServer(`${error}`)
+    }   
+}
+~~~
+-------
+
+- Hagamos el login y luego evaluemos el mail de confirmación con el token
+-----
+
+## Login de usuario
+
+- LoginUserDto
+
+~~~js
+import { regularExps } from "../../../config/regular-exp"
+
+export class LoginUserDto{
+    constructor(
+        public readonly email: string,
+        public readonly password: string
+    ){}
+
+    static create(object:{[key:string]:any}):[string?, LoginUserDto?] {
+        const {email, password} = object
+
+        if(!email) return ['Email is required', undefined]
+        if(!regularExps.email.test(email)) return ['Invalid email', undefined]
+        if(!password) return ['Password is required', undefined]
+        if(password.length >6) return ['Password too short']
+
+        return [undefined, new LoginUserDto(email, password)]
+    }
+}
+~~~
+
+- AuthController
+
+~~~js
+import { regularExps } from "../../../config/regular-exp"
+
+interface Options{
+    email: string | null
+    password: string | null
+}
+
+
+export class LoginUserDto{
+    constructor(options:Options){}
+
+    static create(options:{[key:string]:any}):[string?, LoginUserDto?] {
+        const {email, password}= options
+
+        if(!email) return ['Email is required', undefined]
+        if(!regularExps.email.test(email)) return ['Invalid email', undefined]
+        if(!password) return ['Password is required', undefined]
+        if(password.length >6) return ['Password too short']
+
+        return [undefined, new LoginUserDto({email, password})]
+    }
+}
+~~~
+
+- AuthService
+
+~~~js
+public async loginUser(loginUserDto: LoginUserDto){
+    const user = await UserModel.findOne({email:loginUserDto.email })
+
+    if(!user) throw CustomError.badRequest("User don't exists!")
+
+    const hashMatch = bcryptAdapter.compare(loginUserDto.password, user.password)
+
+    if(!hashMatch) throw CustomError.unauthorized("Password is not valid")
+    
+    const {password, ...userEntity} = UserEntity.fromObject(user)
+
+    return {
+        user: userEntity,
+        token: 'ABC'
+    }
+}
+~~~
+
 

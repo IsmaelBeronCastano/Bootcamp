@@ -14,7 +14,7 @@ export class UserEntity{
 
     static fromObject(obj:{[key:string]:any}): UserEntity{
         
-        const {id, _id, name, email, emailValidated, password, role, img} = obj
+        const {id,_id, name, email, emailValidated, password, role, img} = obj
         
         if(!id && !_id) throw CustomError.badRequest('Missing id')
         if(!name) throw CustomError.badRequest('Missing name')
@@ -28,9 +28,9 @@ export class UserEntity{
             id || _id,
             name,
             email,
-            emailValidated,
             password,
             role,
+            emailValidated,
             img
         )
     }
