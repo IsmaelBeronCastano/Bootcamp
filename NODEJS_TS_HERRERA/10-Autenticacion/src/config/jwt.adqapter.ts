@@ -11,7 +11,7 @@ export class JwtAdapter{
 
     return new Promise(resolve=>{
 
-        jwt.sign(payload, "SEED", {expiresIn: duration}, (err, token)=>{
+        jwt.sign(payload, seed, {expiresIn: duration}, (err, token)=>{
             if(err) return resolve(null)
             
             resolve(token)
@@ -22,6 +22,12 @@ export class JwtAdapter{
    }
 
    static validateToken(token:string){
+    return new Promise(resolve=>{
+        jwt.verify(token, JWT_SEED, (err, decoded)=>{
+            if(err) return resolve(null)
+            resolve(decoded)
+        })
+    })
 
    }
 

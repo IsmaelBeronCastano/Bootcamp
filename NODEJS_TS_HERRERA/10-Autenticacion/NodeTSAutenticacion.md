@@ -770,6 +770,7 @@ public async loginUser(loginUserDto: LoginUserDto){
     }
 }
 ~~~
+- Añado también la generación de token en registerUser y lo paso en lugar de 'ABC'
 ------
 
 ## Jwt SEED
@@ -817,7 +818,7 @@ export class JwtAdapter{
 
     return new Promise(resolve=>{
 
-        jwt.sign(payload, "SEED", {expiresIn: duration}, (err, token)=>{
+        jwt.sign(payload, seed, {expiresIn: duration}, (err, token)=>{
             if(err) return resolve(null)
             
             resolve(token)
