@@ -394,6 +394,5 @@ public validateEmail= async(token:string)=>{
 ~~~
 
 - Ahora puedo probar con el link que hay en mi correo
--------
 
-## 
+

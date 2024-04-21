@@ -21,7 +21,8 @@ export class EmailService{
     constructor(
         mailerService: string,
         mailerEmail: string,
-        senderEmailPassword: string
+        senderEmailPassword: string,
+        private readonly postToProvider: boolean
     ){  
         this.transporter= nodemailer.createTransport({
             service: mailerService,
@@ -41,6 +42,8 @@ export class EmailService{
 
             try {
 
+                    if(!this.postToProvider) return true 
+
                 const sentInformation = await this.transporter.sendMail({
                     to,
                     subject,
@@ -56,21 +59,6 @@ export class EmailService{
             }
     }
 
-    async sendemailWithFileSystemLogs(to: string | string[]){ 
-            const subject= 'Logs del servidor'
-            const htmlBody=`
-            <h3>Logs del sistema</h3>
-            <p>Desde sendEmailWithFileSystem</p>
-            `
 
-        const attachments: Attachment[]= [
-            {filename: 'logs-all.log', path: './logs/logs-all.log'},
-            {filename: 'logs-high.log', path: './logs/logs-high.log'},
-            {filename: 'logs-medium.log', path: './logs/logs-medium.log'},
-        ]
-
-        
-        return this.sendEmail({to, subject, attachments, htmlBody})
-    }
 
 }
