@@ -4,10 +4,12 @@ import { AuthService } from "../services/auth.service";
 import { LoginUserDto } from "../../domain/dtos/auth/login-user.dto";
 import { CategoryDto } from "../../domain/dtos/auth/categories/category.dto";
 import { CustomError } from "../../domain";
+import { CategoryService } from "../services/category.service";
 
 export class CategoryController{
 
     constructor(
+        private readonly categoryService: CategoryService
         
     ){}
 
@@ -22,11 +24,13 @@ export class CategoryController{
 
     }
 
-    public createCategory(req:Request, res: Response){
+    public createCategory=(req:Request, res: Response)=>{
         const [error, categoryDto] = CategoryDto.create(req.body)
         if(error) return res.status(400).json({error})
 
-        res.json(categoryDto)
+        this.categoryService.createCategory(categoryDto!, req.body.user)
+            .then(category =>res.json(category))
+            .catch(error=>res.json(`${error}`))
     }
 
     

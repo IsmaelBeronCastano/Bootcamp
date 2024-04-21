@@ -309,6 +309,202 @@ public createCategory(req:Request, res: Response){
 
 ## Auth Middleware - proteger rutas
 
-- 
+- Cómo obtengo el usuario?
+- Cuando hacemos un login, el token que se crea solo tiene el id del usuario
+- Hay que tomar el token y mandarlo mediante los headers
+- Seleccionamos Bearer Token en POSTMAN o similares y pego el token del login
+- El middleware no es una regla de negocio, va en la capa de presentación
+- El token está en la Response, en header Authorization
+- Le añado el tipado genérico a valideateToken jwt.adapter
+- Puede retornar un genérico o null
+- Le digo que trate el decoded de tipo genérico
 
--  
+~~~js
+static validateToken<T>(token:string): Promise<T | null>{
+    return new Promise(resolve=>{
+        jwt.verify(token, JWT_SEED, (err, decoded)=>{
+            if(err) return resolve(null)
+            resolve(decoded as T)
+        })
+    })
+~~~
+
+- Después de hacer las validaciones y encontrar el usuario, lo paso al req.body
+- Quiero que este user sea una instancia de mi entidad, para que no esté amarrado a la db y a mongoose
+- Uso fromObject de UserEntity
+- presentation/middlewares/auth.middleware.ts
+
+~~~js
+import { NextFunction, Request, Response } from "express";
+import { JwtAdapter } from "../../config/jwt.adqapter";
+import { UserModel } from "../../data";
+import { UserEntity } from "../../domain/entities/user/user.entity";
+
+export class AuthMiddleware{
+ 
+    static async validateJWT(req:Request,res:Response,next: NextFunction ){
+        const authorization= req.header('Authorization')
+
+        if(!authorization) return res.status(401).json({error:"No token provider"})
+
+        if(!authorization.startsWith('Bearer ')) return res.status(401).json({error: "Invalid Bearer Token"})
+
+        const token = authorization.split(' ').at(1)  || ""//es lo mismo que poner [1]
+        
+        try {
+            const payload = await JwtAdapter.validateToken<{id:string}>(token)
+            if(!payload) return res.status(401).json({error: "Invalid Token"})
+
+            const user = await UserModel.findById(payload.id)
+            if(!user) return res.status(401).json({error:"Invalid Token- user"})
+            
+            //todo: validar si el usuario está activo
+            req.body.user = UserEntity.fromObject(user)
+
+            next()
+            
+        } catch (error) {
+            res.status(500).json({error:"Internal Server error"})
+        }
+
+    }
+}
+~~~
+------
+
+## Probar AuthMiddleware
+
+- Como solo debo aplicarlo al posteo de categoria voy al CategoryRoute
+- Para colocar el middleware lo pongo como segundo argumento. Si hay varios puedo colocarlos en un arreglo
+
+~~~js
+import { Router } from 'express';
+import { CategoryController } from './controller';
+import { getEnabledCategories } from 'trace_events';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+
+
+export class CategoryRoutes {
+
+
+  static get routes(): Router {
+    const categoryController = new CategoryController()
+    const router = Router();
+    
+    router.get('/', categoryController.getCategories)
+    router.post('/', [AuthMiddleware.validateJWT], categoryController.createCategory)
+
+    return router;
+  }
+}
+~~~
+
+- El usuario lo tengo en el req.body
+- Creo el CategoryService
+
+~~~js
+import { CategoryModel } from "../../data/mongo";
+import { CustomError } from "../../domain";
+import { CategoryDto } from "../../domain/dtos/auth/categories/category.dto";
+import { UserEntity } from "../../domain/entities/user/user.entity";
+
+export class CategoryService{
+
+
+    constructor(){}
+
+    async createCategory(categoryDto:CategoryDto, user:UserEntity){
+        const categoryExists = await CategoryModel.findOne({name: categoryDto.name})
+        if(categoryExists) throw CustomError.badRequest("Category exists")
+
+            try {
+                const category= new CategoryModel({
+                    ...categoryDto,
+                    user: user.id
+                })
+
+                await category.save()
+
+                return {
+                    id: category.id,
+                    name: category.name,
+                    available: category.available
+                }
+                
+            } catch (error) {
+                throw CustomError.internalServer(`${error}`)
+            }
+    }
+}
+~~~
+
+- En el controlador necesito usar el servicio. Debo inyectarlo
+
+~~~js
+import { Request, Response } from "express"
+import { RegisterUserDto } from "../../domain/dtos/auth/register-user.dto";
+import { AuthService } from "../services/auth.service";
+import { LoginUserDto } from "../../domain/dtos/auth/login-user.dto";
+import { CategoryDto } from "../../domain/dtos/auth/categories/category.dto";
+import { CustomError } from "../../domain";
+import { CategoryService } from "../services/category.service";
+
+export class CategoryController{
+
+    constructor(
+        private readonly categoryService: CategoryService
+        
+    ){}
+
+    private handleError = (error:unknown, res: Response)=>{
+        if(error instanceof Error){
+            return res.status(400).json({error: error.message})
+        }
+        res.status(500).json({error: 'Internal Server Error'})
+    }
+
+    public getCategories(){
+
+    }
+
+    public createCategory=(req:Request, res: Response)=>{
+        const [error, categoryDto] = CategoryDto.create(req.body)
+        if(error) return res.status(400).json({error})
+
+        this.categoryService.createCategory(categoryDto!, req.body.user)
+            .then(category =>res.json(category))
+            .catch(error=>res.json(`${error}`))
+    }   
+}
+~~~
+
+- Debo pasarle una instancia del servicio a la instancia del controller en routes
+
+~~~js
+import { Router } from 'express';
+import { CategoryController } from './controller';
+import { getEnabledCategories } from 'trace_events';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+import { CategoryService } from '../services/category.service';
+
+
+export class CategoryRoutes {
+
+
+  static get routes(): Router {
+    
+    const categoryController = new CategoryController(new CategoryService())
+    const router = Router();
+    
+    router.get('/', categoryController.getCategories)
+    router.post('/', [AuthMiddleware.validateJWT], categoryController.createCategory)
+
+    return router;
+  }
+}
+~~~
+----
+
+## Retornar todas las categorias
+
+- 
