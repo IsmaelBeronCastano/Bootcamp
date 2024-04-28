@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, MqttContext } from '@nestjs/microservices';
 import { connectionMqtt } from 'src/config/mqtt-connection';
 import { MqttDataDto } from '../mqtt-publisher/dtos/mqtt-data.dto';
 
@@ -15,4 +15,11 @@ export class MqttSubscriberService {
         return true
     }
   
+    getData(context: MqttContext, payload: any){
+        console.log({
+            topic: context.getTopic(),
+            data: payload.toString()
+        })
+
+    }a
 }

@@ -388,7 +388,85 @@ export class MqttSubscriberService {
     }  
 }
 ~~~
+---
 
-- 
+## Recibir data
 
+- En subscribe-controller uso @MessagePattern
+- Uso @MessagePattern, le digo que esté pendiente del topic
+- Uso el decorador Ctx (context) de microservice, en este caso es el topic como tal
+- El decorador Payload es la información 
+- En el servicio creo el método getData
 
+~~~js
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy, MqttContext } from '@nestjs/microservices';
+import { connectionMqtt } from 'src/config/mqtt-connection';
+import { MqttDataDto } from '../mqtt-publisher/dtos/mqtt-data.dto';
+
+@Injectable()
+export class MqttSubscriberService {
+    constructor(
+        @Inject(connectionMqtt.clientID)
+        private readonly client: ClientProxy
+    ){}
+
+    publishTopic(topic: string, data: any){
+        this.client.send(topic, data).subscribe()
+        return true
+    }
+  
+    getData(context: MqttContext, payload: any){
+        console.log({
+            topic: context.getTopic(),
+            data: payload.toString()
+        })
+
+    }a
+}
+~~~
+
+- Lo llamo en el controlador
+
+~~~js
+import { Controller } from '@nestjs/common';
+import { MqttSubscriberService } from './mqtt-subscriber.service';
+import { Ctx, MessagePattern, MqttContext, Payload } from '@nestjs/microservices';
+
+@Controller()
+export class MqttSubscriberController {
+    constructor(private readonly mqttSubscriberService: MqttSubscriberService){}
+
+    @MessagePattern('home/messages/#') //que esté pendiente del topic
+    listenTopic(@Ctx() context: MqttContext, @Payload() payload: any){ 
+
+        return this.mqttSubscriberService.getData(context, payload)
+    }
+
+}
+~~~
+
+- Si pongo # como topic en MQTT Explorer escuchará TODO
+- Si pongo 'home/messages/#' escuchará todos los topics derivados de home/messages
+-----
+
+## Controlar errores
+
+- Vamos a manejar el error en caso de que no haya conexión
+- En el SubscriberService
+
+~~~js
+async publishTopic(topic: string, data: any){
+        try {
+            await this.client.connect() //esto comprueba la conexión
+            this.client.send(topic, data).subscribe()
+            return true
+            
+        } catch (error) {
+            console.error('No hay conexión')
+          return false  
+        }
+    }
+~~~
+
+- No lo podemos probar. Funcionaría en caso de no tener un servicio activo (sin conexión)
