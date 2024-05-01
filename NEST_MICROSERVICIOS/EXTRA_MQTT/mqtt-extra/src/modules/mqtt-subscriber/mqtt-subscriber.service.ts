@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy, MqttContext } from '@nestjs/microservices';
 import { connectionMqtt } from 'src/config/mqtt-connection';
-import { MqttDataDto } from '../mqtt-publisher/dtos/mqtt-data.dto';
 
 @Injectable()
 export class MqttSubscriberService {
@@ -10,9 +9,16 @@ export class MqttSubscriberService {
         private readonly client: ClientProxy
     ){}
 
-    publishTopic(topic: string, data: any){
-        this.client.send(topic, data).subscribe()
-        return true
+    async publishTopic(topic: string, data: any){
+        try {
+            await this.client.connect() //esto comprueba la conexión
+            this.client.send(topic, data).subscribe()
+            return true
+            
+        } catch (error) {
+            console.error('No hay conexión')
+          return false  
+        }
     }
   
     getData(context: MqttContext, payload: any){

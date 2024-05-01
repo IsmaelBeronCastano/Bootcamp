@@ -1,0 +1,57 @@
+# 01 ELECTRONICA DIGITAL
+
+## Sistemas analógicos vs digitales
+
+- El sistema anlógico es el original. Nos entrega señales con muchos valores en el tiempo. 
+- Requieren mayor potencia, generan mayor ruido
+- Se llama digital porque trabaja en base a los dígitos 0-1, binario
+- Antiguamente se usaban bulbos, 0 era apagado y 1 era encendido
+- Los transistores ofrecen muchas ventajas al respecto: mayor velocidad de respuesta, menor consumo, etc
+- Las **señales analógicas** pueden ser de cualquier tipo. La naturaleza es un universo analógico (aparentemente)
+  - Requieren de mayor capacidad de almacenamiento
+  - Tienen millones de valores en el tiempo
+  - Las tecnicas antiguas deterioraban el almacenamiento
+  - Dificil de separar del ruido
+  - Requieren gran potencia para su amplificación y transmisión
+- Las **señales digitales** son aquellas que solo poseen dos dígitos, 0 y 1 (estados lógicos, 0= 0 Volts, 1=+5V, por ejemplo)
+  - Requieren menor capacidad de almacenamiento
+  - Tienen solo 2 valores en el tiempo
+  - Las tecnicas de almacenamiento no sufren deterioro
+  - Más fácil de separar del ruido
+  - No requieren de gran potencia para amplificarse o transmitirse
+  - Algoritmos de detección de errores
+  - Algoritmos de encriptamiento
+  - Son señales artificiales
+- Los circuitos digitales basados en relés (relevadores electromecánicos) utilizan el concepto de conmutador para implementar las funciones logicas (1:true/on 0:false:off)
+- Un relevador excitado:cierra sus platinos. Un relevador no excitado, sus platinos permanecen abiertos, 
+- Si añadimos un tercer elemento (llamado terminal común), este deriva a la bobina 5 y 4, 5 y terminal 3 están relacionadas, es **NC (normally closed)** que permanece siempre cerrada y 4 que tambien está relacionado con la bobiona 3, es **NO (Normally opened)** que permanece abierta. 
+- Cuando excito la bobina, el NC se abre y el NO se cierra
+- Si tengo dos relés en serie (A y B) para que la electricidad llegue al final de B y pueda encender la bombilla, requiero (además de aplicar un voltaje) que haya una continuidad de puertos abiertos/ interruptores prendidos que transporten la corriente
+- Cuando trabajemos con puertos abiertos le llamaremos **lógica presente**, o **sistemas presentes**
+- Estos circuitos en la actualidad se representan con diagramas, y a estas conexiones se les llaman **compuertas lógicas**
+- Vienen a ser interruptores que permiten la circulación de corriente hasta un punto
+- Se pueden implementar con relevadores o con interruptores mecánicos/eléctricos (que pulsar para conectar)
+- No tiene porque significar abierto como la unica opcion de pase de corriente
+  - Los sistemas **negados** funcionan con los puertos cerrados, llevando la corriente hasta el punto final (funciona de forma contraria)
+  - Los llamaremos de **lógica negada** o **sistemas negados**
+- En los **sistemas digitales** estas compuertas lógicas (mecánicas) se sustituyen por **compuertas lógicas de semiconducción** (físicas)
+- Estas compuertas tambien han sido sustituidas por **programación** (microcontroladores, AVR)
+- Para meterte en programación, debes entender los **principios de operación de los sistemas digitales**
+- La indústria fue todo un boom, y algunas necesidades se fueron supliendo con electronica digital
+  - Los contadores digitales
+  - Circuitos lógicos
+- Se buscó como hacer lo mismo en menos espacio por lo que sew desarrollaron
+  - Técnicas de reducción (de algoritmos, de circuitos, aplicadas a microcontroladores, PLC, hago lo mismo pero más compacto)
+  - Tabla de comportamiento (algoritmos) 
+  - Si quiero algo más general y compacto lo hago en un AVR o PLC
+- En los sistemas con compuertas lógicas mecánicas (Principio de operación de 1era generación), cambiar el algoritmo era **cambiar el cableado**
+- En el momento en el que se conectaban los relevadores había un delay de milisegundos. Con varios relevadores (ponle 50) el tiempo de retraso era notable. A estos estados los llamaremos "estados erráticos", algo muy peligroso en maquinaria industrial
+- Por ello inventaron el código **GRAY** como **método de reducción de errores** (hay varios, los veremos)
+- Una señal analógica puede swer monopolar/bipolar (es decir, que se encuentre solo en el cuadrante 1 )
+- Para una señal bipolar necesitaremos un ADC (Analog to Digital Converter y Digital to Analog Converter)
+- Con ADC tomo n muestras constantes de valores, cuando cuantifico y hago la conversion tengo la onda (cuadrada y deswigual, no sinoidal como es la analógica)
+- Como el tiempo entre la muestra 1 y 2 puedo tener pérdida de información/voltaje no lo voy a detectar
+  - **Cuantas más muestras tenga, mas fiel a la original será**
+  - Tengo diferentes valores de voltaje, estandarizo y homogenizo los valores (normalizo)
+  - Ahora tengo una onda cuadrada pero uniforme con la misma altura de manera constante 
+- Para más info **TEOREMA DE MUESTREO**
