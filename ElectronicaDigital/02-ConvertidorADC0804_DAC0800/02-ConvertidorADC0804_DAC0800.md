@@ -1,3 +1,90 @@
 # 02 ELECTRONICA DIGITAL - CONVERTIDOR ADC 0804 & DAC 0800
 
-- 
+## Importancia de estudiar electronica digital
+
+- Se aprenden las bases para entender métodos de programación más sofisticados
+- Es la base para aprender a programar PLC
+- Es la base para aprender a programar circuitos lógicos en un microcontrolador
+- Se aprenden métodos de reducción de algoritmos complejos a circuitos más sencillos
+- Se aprenden métodos de equivalencia de circuitos
+- Se aprrende a convertir señales analógicas a digitales y viceversa
+- Aprendes a diseñar contadores y temporizadores de procesos industriales
+- Aprendes a fusionar circuitos analógicos a los digitales y viceversa
+- Expandes tu áreas de conocimiento en ingeniería
+
+- Para convertir de analógica a digital:
+    - **Resolución (Vmin)= Vmáx/2**N -1**
+    - Resolución (o voltaje mínimo a detectar) es igual a voltaje máximo dividido entre 2 elevado a numero de bits menos uno
+    - N = número de bits
+    - El típico chip usado para la conversiuón es el ADC0804
+    - A 8 bits podemos visualizar 8 bits como 8 salidas u 8 LEDS
+- Según los bits es capaz de leer un voltaje u otro. A esto le llamaremos **resolución** (voltaje mínimo)
+- Pongamos que quiero detectar 5 milivolts
+- Si quiero saber que convertidor es el más adecuado para trabajar con la resolución mínima tengo la fórmula de aquí arriba
+- Pongamos que el voltaje máximo son 5V, 5V / 2**8 -1 == 5/256-1 == 5/255 == 0.01960 == 19.60 milivolts por bit (mv/bit)
+- Con lo cual 5V convertirlos con 8 bits **es posible**. La primera conversión se daría a los 19.60 milivolts, la siguiente igual
+- Que pasa si queremos trabajar con 10 bits?
+- %V / 2**10-1 == 5/1024-1 == 5/1023 == 0.00488 == 4.88 milivolt/bit
+- Significa que el voltaje minimo a detectar a 10 bits sería 4.88 milivolts
+- Significa que para poder detectar 5 mv tendría que usar un convertidor de 10 bits, ya que es el más ajustado
+- La primera conversión se haría a lso 4.88 milivolts
+- A más bits puedo leer voltajes más pequeños
+  - Por ejemplo para leer voltajes musculares o cerebrales necesitaría conversores de 12 bits, 22 bits, tirando a alto
+  - A parte hay que trabajar con filtros para eliminar el ruido porque son señales muy pequeñas y el ruido puede ser mayor que la señal
+- El ajuste de offset es cuando ya armé el circuito (8 salidas=8 LEDS) y estoy a 0 volts, los LEDS deben estar apagados
+- Si hay alguno encendido muevo el potenciometro de este **AJUSTE DE OFFSET (VREF/2)** (se recomienda multivuelta 10K) hasta apagarlos
+- Ahora le doy 5V, si hay alguno apagado repito la operación
+- En lugar de ponerle un potenciometro para automatizarlo le puedo colocar un divisor de voltaje del voltaje a la alimentación de entrada con dos resistencias al divisor de voltaje 
+- En la entrada de voltaje de 0-5V. Es un rango absoluto
+  - Voltaje negativo quemo el convertidor. Más de 5v quemo el convertidor
+- Con 2.35V que LEDS estarían prendidos y cuales apagados?
+- Para ello tenemos la fórmula de **valor de conversión** == **Voltaje a medir / Resolución**
+- 2.35/0.01960 == 119.89
+- Más adelante veremos como trabajar con la calculadora **BINARIO OCTAL DECIMAL Y HEXADECIMAL**
+- Selecciono DECIMAL y redondeo a 120 (como norma redondeo hacia arriba), en DECIMAL no tengo el punto de decimales
+- Si cambio el OUTPUT de la calculadora a BINARIO obtengo 0111 1000. Los 1 son los LEDS encendidos!!!! Tengo esta **palabra de salida**
+- Divido el número binario en códigos de 4 bits. Cada bloque se llama **nibble**
+- El nibble de la derecha es el **LOW** y el de la izquierda es el **HIGH**
+- **EL PRIMER CERO ES EL DEL EXTREMO DERECHO** (digamos que se lee a la inversa que la escritura occidental)
+- A este primer bit se le llama **bit de menor peso**
+- **AL BIT DEL EXTREMO IZQUIERDO** le llamaremos **bit de mayor peso**
+- El bit de menor peso que está en 0 sería la salida 0 (apagado)
+- Cuando está en 1 es que está encendido. Coinciden las posiciones físicas con la posición binaria resultante
+- El valor del bit siguiente siempre es el doble (como las notas musicales)
+- Si el primero vale 1, el segundo 2, el siguiente, 4, 8, 16,32,64,128
+- Si uso 10 bits debería colocar 10 LEDS
+----------
+
+## DAC 0800
+
+- Veamos la conversión de digital a analógico!
+- Tenemos 8 entradas denominadas del bit 1 al bit 8
+- El bit más significativo (de la izquierda) aparece como bit 1 y el menos significativo como bit 8
+- Aunque diga bit 8 lo vamos a tomar como bit 0, y el 1 como bit 8
+- Entonces tenemos de bit 0 a bit 7
+- **Voltaje de salida = V conversión * Resolución**
+- A travé de una VR (dispositivo) podemos generar una DB que se mete en el convertidor DAC0800 a ciuerta velocidad/frecuencia y puede generar diferentes formas de onda
+- Se puede trabajar con una DB que genere una tabla de ondas sinoidales (u otras formas de onda)
+- Meto en MatLab una forma de onda, extraigo los datos segun  el número de muestras, y en la tabla lo organizo
+- Es más simple trabajar con señales monopolares (positivas o negativas)
+- El potenciómetro para ajustar el offset de salida está en el Vref + puerto 14
+- Para que no haya voltajes erráticos a la entrada del convertidor,  cada una de las entradas (LEDS) va con una resistencia a tierra de 10K
+- Como trabaja la ponderación?
+- Imagina un alinea dividida por la mitad en la mitad de la izquierda tenemos los bits que contamos de derecha a izquierda de menor peso a mayor
+- El primer bit (al estar en binario) es 2**0, que vale 1 (LSB= Lower Significant Bit). Cualquier número elevado a 0 vale 1
+- El segundo 2**1 que vale 2
+- El tercero (yendo de derecha a izquierda) 2**2, que vale 4. Y asi...
+- Esta es la ponderación
+- Si tengo prendidos el 1, el 4 y el 8, los sumo == 13 == 10110000
+- No significa que tenga 13 milivolts, solo es la conversión al sistema decimal
+- 2**8 == 255. El máximo valor que puedo tener es 255 (estando en 8 bits)
+- Si aumento el número de bits sigo sumando 2**9, a 10, etc
+- 2**10 == 1024
+- Si en 8 bits sumo todos (255) el voltaje de salida que obtengo es 4.98
+- Entonces, valor de salida = Valor de conversión * Resolución
+- En 8 bits, la resolución es 5/255 == 0.01969 == 19.60 milivolts/bit
+- Entonces elvalor de conversión (teniendo todos los valores prendidos es 255) * 19.60 == 5 V
+- Si 19.60 lo hago exponente a la negativa me da 4.98
+- Ahora tengo calibrado el circuito
+- Pongamos que tengo 01011001 (LEDS) calculo la suma según la posición 1+8+16+64= 89
+- Aplicando la fórmula, el voltaje de salida = valor de la conversión 89 * resolución a 8 bits 19.60 mv (exponente negativo 3) == 1.74
