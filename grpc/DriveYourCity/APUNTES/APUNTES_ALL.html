@@ -1,0 +1,3031 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>APUNTES_ALL.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="basics-grpc-01">BASICS gRPC 01</h1>
+<h2 id="01-grpc-node---server">01 gRPC NODE - Server</h2>
+<ul>
+<li>Creo el archivo .node-version (linux y mac)</li>
+</ul>
+<pre class="hljs"><code><div>20.10.0
+</div></code></pre>
+<blockquote>
+<p>npm init -y</p>
+</blockquote>
+<ul>
+<li>Dependencias:</li>
+</ul>
+<blockquote>
+<p>npm i @ypes/google-protobuf grpc_tools_node_protoc_ts ts-node typescript -D</p>
+</blockquote>
+<ul>
+<li>Estas dependencias no son de desarrollo (estas nospermitirán generar el código)</li>
+</ul>
+<blockquote>
+<p>npm i @grpc/grpc-js @grpc/proto-loader</p>
+</blockquote>
+<hr>
+<h2 id="construir-archivo-proto">Construir archivo proto</h2>
+<ul>
+<li>Creo la carpeta proto en la raíz</li>
+<li>Creo el archivo de ejemplo  employees.proto</li>
+<li>Defino la sintaxis</li>
+<li>Defino los paquetes para la posterior autogeneración de código</li>
+<li>Defino la entidad</li>
+<li>Defino los servicios</li>
+<li>Defino los tipos de Request y Response</li>
+</ul>
+<pre class="hljs"><code><div>//declaro la sintaxis con la que voy a trabajar
+syntax = &quot;proto3&quot;;
+
+//sección de paquetes (nombrará los paquetes autogenerados)
+package employees;
+option go_package = &quot;grpc-node/basic/pb/employees&quot;;
+option csharp_namespace = &quot;Employees&quot;;
+
+//Creo mi entidad  (tipando las propiedades)
+message Employee{
+    int32 id = 1;
+    int32 badgeNumber= 2;
+    string firstName = 3;
+    string lastName = 4;
+    float vacationAccrualRate = 5;
+    float vacationAccrued = 6;
+}
+
+//Se pueden crear tipos de datosparticulares y ser asociados mediante contenedores
+
+//Defino los servicios (lo que va a ser el puente entre el servidor y el cliente)
+//Como va a generar una interfaz le coloco I al principio (por convención)
+service IEmployeeService{
+    rpc GetByBadgeNumber(GetByBadgeNumberRequest) returns (EmployeeResponse);
+    //getByBadgeNumberRequest y EmployeeResponse son dos tipos de datos que todavía no he construido
+    //es un servicio unario porque a una petición me devuelve un solo response
+
+    rpc Save(EmployeeRequest) returns (EmployeeResponse);
+
+    rpc getAll(GetAllRequest) returns (stream EmployeeResponse); //devuelve un stream, significa que es un servicio de streaming dlldo del servidor
+                                                                //cuando el servidor considere que ha enviado todos los datos cerrará la conexión
+                                                                //me enviará el flujo de datos de tods los EmployeeResponse, tantos  como tenga en  mi 
+
+    rpc AddPhoto (stream AddPhotoRequest) returns (AddPhotoResponse);
+    //streaming del lado del ciente; el cliente va a enviar datos hasta que considere que ha enviado todos los datos y cierre la conexión
+    //Cuando cierre la  conexión el servidor va a entender que ha terminado y va a emitir la Response 
+    
+    rpc SaveAll (stream EmployeeRequest) returns (stream EmployeeResponse);
+    //tendrmos streaming del lado del servidor  y del cliente
+    //Cualquiera de los dos puede cerrar la conexión y una vez se cierra el servidor procesa y devuelve la Response
+    //El servidor también puede devolver una Response a cada petición, cada 10 peticiones, etc
+   //Puedo enviar datos y recibirlos de fora arbitraria                                      
+ }
+
+
+message GetByBadgeNumberRequest{
+    int32 badgeNumber = 1; //contiene un entero con el nombre de atributo badgeNumber que nos va a permitir recibir el número de badge de cualquier empleado
+}
+
+message EmployeeResponse{
+    Employee employee = 1; //agrupa la abstracción de Employee
+}
+
+message EmployeeRequest{
+    Employee employee = 1;
+}
+
+message AddPhotoRequest{
+    bytes data = 1; //vamos  a eeenviar bytes de una foto en varios paquetes hasta enviar toda la foto 
+}
+
+message AddPhotoResponse {
+    bool isOk = 1;
+}
+
+message GetAllRequest{}
+</div></code></pre>
+<ul>
+<li>Para generar el autocódigo creo una carpeta enla raíz llamada scripts/proto-gen.sh</li>
+<li>Primero le digo ue es un archivo bash</li>
+<li>Le indico el directorio donde estoy almacenando los archivos .proto</li>
+<li>Escribo el comando: uso npm para invocar proto-loader que genera los archivos ts definidos en .proto con lasopciones de la librería grpc-js, y le indico el directorio de salida</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-meta">#!/bin/bash
+</span>
+PROTO_DIR=./../proto
+
+yarn proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=proto/ proto/*.proto
+</div></code></pre>
+<ul>
+<li>Creo el script en el json</li>
+</ul>
+<pre class="hljs"><code><div> <span class="hljs-string">"scripts"</span>: {
+    <span class="hljs-attr">"proto:gen"</span>: <span class="hljs-string">"sh scripts/proto-gen.sh"</span>
+  }
+</div></code></pre>
+<ul>
+<li>Lo ejecuto, me genera employees.ts y un archivo .ts por cada servicio</li>
+<li>employees.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> type * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>;
+<span class="hljs-keyword">import</span> type { MessageTypeDefinition } <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>;
+
+<span class="hljs-keyword">import</span> type { IEmployeeServiceClient <span class="hljs-keyword">as</span> _employees_IEmployeeServiceClient, IEmployeeServiceDefinition <span class="hljs-keyword">as</span> _employees_IEmployeeServiceDefinition } <span class="hljs-keyword">from</span> <span class="hljs-string">'./employees/IEmployeeService'</span>;
+
+type SubtypeConstructor&lt;Constructor extends <span class="hljs-keyword">new</span> (...args: any) =&gt; any, Subtype&gt; = {
+  <span class="hljs-keyword">new</span>(...args: ConstructorParameters&lt;Constructor&gt;): Subtype;
+};
+
+<span class="hljs-keyword">export</span> interface ProtoGrpcType {
+  <span class="hljs-attr">employees</span>: {
+    <span class="hljs-attr">AddPhotoRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">AddPhotoResponse</span>: MessageTypeDefinition
+    <span class="hljs-attr">Employee</span>: MessageTypeDefinition
+    <span class="hljs-attr">EmployeeRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">EmployeeResponse</span>: MessageTypeDefinition
+    <span class="hljs-attr">GetAllRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">GetByBadgeNumberRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">IEmployeeService</span>: SubtypeConstructor&lt;<span class="hljs-keyword">typeof</span> grpc.Client, _employees_IEmployeeServiceClient&gt; &amp; { <span class="hljs-attr">service</span>: _employees_IEmployeeServiceDefinition }
+  }
+}
+</div></code></pre>
+<p>-En cada archivo hay una interfaz de la Request o la Resonse y el output
+-Por ejemplo, en Employee.ts</p>
+<pre class="hljs"><code><div><span class="hljs-comment">// Original file: proto/employees.proto</span>
+
+
+<span class="hljs-keyword">export</span> interface Employee {
+  <span class="hljs-string">'id'</span>?: (number);
+  <span class="hljs-string">'badgeNumber'</span>?: (number);
+  <span class="hljs-string">'firstName'</span>?: (string);
+  <span class="hljs-string">'lastName'</span>?: (string);
+  <span class="hljs-string">'vacationAccrualRate'</span>?: (number | string);
+  <span class="hljs-string">'vacationAccrued'</span>?: (number | string);
+}
+
+<span class="hljs-keyword">export</span> interface Employee__Output {
+  <span class="hljs-string">'id'</span>?: (number);
+  <span class="hljs-string">'badgeNumber'</span>?: (number);
+  <span class="hljs-string">'firstName'</span>?: (string);
+  <span class="hljs-string">'lastName'</span>?: (string);
+  <span class="hljs-string">'vacationAccrualRate'</span>?: (number);
+  <span class="hljs-string">'vacationAccrued'</span>?: (number);
+}
+</div></code></pre>
+<ul>
+<li>Si analizo el cliente que me ha generado (ctrl+click sobre _employees_IEmployeeServiceClient) puedo oservar una sobrecarga demétodos importante</li>
+<li>Porque podemos enviar metadatos, opciones, solo o con callbacks</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> interface IEmployeeServiceClient extends grpc.Client {
+  AddPhoto(metadata: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(metadata: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(options: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(callback: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(metadata: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(metadata: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(options: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(callback: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  
+  SaveAll(metadata: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  SaveAll(options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  saveAll(metadata: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  saveAll(options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  
+  getAll(argument: _employees_GetAllRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientReadableStream&lt;_employees_EmployeeResponse__Output&gt;;
+  getAll(argument: _employees_GetAllRequest, options?: grpc.CallOptions): grpc.ClientReadableStream&lt;_employees_EmployeeResponse__Output&gt;;
+  
+}
+</div></code></pre>
+<hr>
+<h2 id="mensajes---unary">Mensajes - Unary</h2>
+<ul>
+<li>Hemos creado .proto con la definición de mi entidad y la interfaz de servicio, toca implementar esos servicios</li>
+<li>Crearemos una  DB simulada</li>
+<li>Creo la carpeta src/EmployeesDB.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> {Employee} <span class="hljs-keyword">from</span> <span class="hljs-string">'../proto/employees/Employee'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">EmployeesDB</span></span>{
+
+    private employees: Employee [] =[]
+
+    <span class="hljs-keyword">constructor</span>(){
+        <span class="hljs-keyword">this</span>.employees = [
+            {
+                <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>,
+                <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2080</span>,
+                <span class="hljs-attr">firstName</span>: <span class="hljs-string">'Grace'</span>,
+                <span class="hljs-attr">lastName</span>: <span class="hljs-string">'Decker'</span>,
+                <span class="hljs-attr">vacationAccrualRate</span>: <span class="hljs-number">2</span>,
+                <span class="hljs-attr">vacationAccrued</span>: <span class="hljs-number">30</span>
+            },
+            {
+                <span class="hljs-attr">id</span>: <span class="hljs-number">2</span>,
+                <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2030</span>,
+                <span class="hljs-attr">firstName</span>: <span class="hljs-string">'Peter'</span>,
+                <span class="hljs-attr">lastName</span>: <span class="hljs-string">'Doherty'</span>,
+                <span class="hljs-attr">vacationAccrualRate</span>: <span class="hljs-number">4</span>,
+                <span class="hljs-attr">vacationAccrued</span>: <span class="hljs-number">25</span>
+            },
+            {
+                <span class="hljs-attr">id</span>: <span class="hljs-number">3</span>,
+                <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2010</span>,
+                <span class="hljs-attr">firstName</span>: <span class="hljs-string">'John'</span>,
+                <span class="hljs-attr">lastName</span>: <span class="hljs-string">'Scofield'</span>,
+                <span class="hljs-attr">vacationAccrualRate</span>: <span class="hljs-number">5</span>,
+                <span class="hljs-attr">vacationAccrued</span>: <span class="hljs-number">12</span>
+            }
+        ]
+    }
+
+
+    public getEmployees(): Employee[]{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.employees
+    }
+
+    public saveEmployee(employee: Employee): Employee{
+        <span class="hljs-keyword">this</span>.employees.push(employee)
+        <span class="hljs-keyword">return</span> employee
+    }
+
+    public getEmployeeBybadgeNumber(badgeNumber: number): Employee | <span class="hljs-literal">undefined</span>{
+        <span class="hljs-keyword">const</span> employee = <span class="hljs-keyword">this</span>.employees.find(<span class="hljs-function"><span class="hljs-params">employee</span> =&gt;</span> employee.badgeNumber === badgeNumber)
+        <span class="hljs-keyword">if</span>(!employee){
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Employee not found'</span>)
+        }
+        <span class="hljs-keyword">return</span> employee
+    }
+
+} 
+</div></code></pre>
+<ul>
+<li>En los archivos generados (concretamente en proto/IEmployeeService) encuentro la interfaz del servicio</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> interface IEmployeeServiceHandlers extends grpc.UntypedServiceImplementation {
+  <span class="hljs-attr">AddPhoto</span>: grpc.handleClientStreamingCall&lt;_employees_AddPhotoRequest__Output, _employees_AddPhotoResponse&gt;;
+  
+  GetByBadgeNumber: grpc.handleUnaryCall&lt;_employees_GetByBadgeNumberRequest__Output, _employees_EmployeeResponse&gt;;
+  
+  Save: grpc.handleUnaryCall&lt;_employees_EmployeeRequest__Output, _employees_EmployeeResponse&gt;;
+  
+  SaveAll: grpc.handleBidiStreamingCall&lt;_employees_EmployeeRequest__Output, _employees_EmployeeResponse&gt;;
+  
+  getAll: grpc.handleServerStreamingCall&lt;_employees_GetAllRequest__Output, _employees_EmployeeResponse&gt;;
+  
+}
+</div></code></pre>
+<p>-Al tipar el servicio en EmployeeService.ts (el archivo que he cread para implementar los servicios) me marca error porque faltanlosmétodos</p>
+<ul>
+<li>Con quick fix del IDE lo arreglo al instante (ojo que el servicio no lo estoy construyendo como una clase!)</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ServerReadableStream, sendUnaryData, ServerUnaryCall, ServerDuplexStream, ServerWritableStream } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> { AddPhotoRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/AddPhotoRequest"</span>;
+<span class="hljs-keyword">import</span> { AddPhotoResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/AddPhotoResponse"</span>;
+<span class="hljs-keyword">import</span> { EmployeeRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/EmployeeRequest"</span>;
+<span class="hljs-keyword">import</span> { EmployeeResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/EmployeeResponse"</span>;
+<span class="hljs-keyword">import</span> { GetAllRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/GetAllRequest"</span>;
+<span class="hljs-keyword">import</span> { GetByBadgeNumberRequest, GetByBadgeNumberRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/GetByBadgeNumberRequest"</span>;
+<span class="hljs-keyword">import</span> { IEmployeeServiceHandlers } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/employees/IEmployeeService"</span>;
+<span class="hljs-keyword">import</span> { EmployeesDB } <span class="hljs-keyword">from</span> <span class="hljs-string">"./EmployeesDB"</span>;
+
+
+<span class="hljs-keyword">const</span> _employeesDB = <span class="hljs-keyword">new</span> EmployeesDB()
+
+
+<span class="hljs-keyword">const</span>  EmployeesService : IEmployeeServiceHandlers={
+    
+    <span class="hljs-attr">AddPhoto</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerReadableStream&lt;AddPhotoRequest__Output, AddPhotoResponse&gt;, callback: sendUnaryData&lt;AddPhotoResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+    },
+
+    <span class="hljs-attr">GetByBadgeNumber</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerUnaryCall&lt;GetByBadgeNumberRequest__Output, EmployeeResponse&gt;, callback: sendUnaryData&lt;EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">const</span> req = call.request <span class="hljs-keyword">as</span> GetByBadgeNumberRequest <span class="hljs-comment">//lo casteo al objeto que necesito trabajar</span>
+        <span class="hljs-comment">//si reviso os archivos generados, GetByBadgNumberReuest.ts tiene un badgeNumber</span>
+
+        <span class="hljs-keyword">if</span>(req.badgeNumber){
+            <span class="hljs-keyword">const</span> badgeNumber = req.badgeNumber
+            <span class="hljs-keyword">const</span> employee = _employeesDB.getEmployeeBybadgeNumber(badgeNumber) 
+                callback(<span class="hljs-literal">null</span>, {employee}) 
+        }
+
+        <span class="hljs-comment">//si no hay employee volvemos a usar elcallback para indicar el error</span>
+        callback({
+            <span class="hljs-attr">name</span>: <span class="hljs-string">"badgeNumber is undefined"</span>,
+            <span class="hljs-attr">message</span>:<span class="hljs-string">"invalid input"</span>
+        }, {<span class="hljs-attr">employee</span>: <span class="hljs-literal">undefined</span>})
+
+    },
+
+    <span class="hljs-attr">Save</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerUnaryCall&lt;EmployeeRequest__Output, EmployeeResponse&gt;, callback: sendUnaryData&lt;EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+    },
+    <span class="hljs-attr">SaveAll</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerDuplexStream&lt;EmployeeRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+    },
+    <span class="hljs-attr">getAll</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerWritableStream&lt;GetAllRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    EmployeesService
+}
+</div></code></pre>
+<p>-Para prbar que el servicio funcione debemos crear el servidor!
+-En la raíz creo sever.ts</p>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/proto-loader"</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> {ProtoGrpcType} <span class="hljs-keyword">from</span> <span class="hljs-string">'./proto/employees'</span>
+<span class="hljs-keyword">import</span> {EmployeesService} <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/EmployeesService'</span>
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">8082</span>
+
+<span class="hljs-comment">//ubicacion archivo proto</span>
+<span class="hljs-keyword">const</span> PROTO_FILE=<span class="hljs-string">"./proto/employees.proto"</span>
+
+
+<span class="hljs-comment">//necesitamos crear una instancia de objeto de grpc usando employees.proto</span>
+<span class="hljs-comment">//para ello importamos @grpc/proto-loader</span>
+<span class="hljs-keyword">const</span> packageDefinition = protoLoader.loadSync(path.resolve(__dirname, PROTO_FILE)) <span class="hljs-comment">//importamos el archivo proto</span>
+
+<span class="hljs-comment">//con packageDefinition podremos obtener la definición de tipos grpc</span>
+<span class="hljs-comment">//para ello importamos @grpc/grpc-js</span>
+<span class="hljs-comment">//lo  tipo como unknown para poderlo castear con el tipo de la interface generada desde employees.proto volcada en employees.ts</span>
+<span class="hljs-keyword">const</span> grpcObj= (grpc.loadPackageDefinition(packageDefinition) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType <span class="hljs-comment">//ProtoGrpcType es una interface que tiene los tipos </span>
+                                                                                           <span class="hljs-comment">//de todos los mensajes</span>
+
+<span class="hljs-comment">//EN el main hago todos los llamados a las configuraciones particulares</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-comment">//podemos agregar tantos servicios como queramos divididos por entidades, ahora solo tenemos una</span>
+    <span class="hljs-keyword">const</span> server = getServer()
+    <span class="hljs-keyword">const</span> serverCredentials= grpc.ServerCredentials.createInsecure()<span class="hljs-comment">//server sin autenticación</span>
+
+    <span class="hljs-comment">//usamos bindAsync para conectar el server al localhost:puerto, el segundo parametro  es el tipo de auth (aqui sin auth)</span>
+    <span class="hljs-comment">//el tercer parámetro es un callback que me devuelve el error o el puerto donde se pudo conectar</span>
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, serverCredentials, (err, port)=&gt;{
+            <span class="hljs-keyword">if</span>(err){
+                <span class="hljs-built_in">console</span>.log(err)
+                <span class="hljs-keyword">return</span>
+            }
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Conectado en el puerto <span class="hljs-subst">${port}</span>`</span>)
+            <span class="hljs-comment">//server.start() ---&gt;deprecated!</span>
+    })
+}
+
+<span class="hljs-comment">//configurar el server de grpc</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getServer</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">const</span> server = <span class="hljs-keyword">new</span> grpc.Server()
+    
+    <span class="hljs-comment">//este método recibe la definicion de un servicio como primer parámetro</span>
+    <span class="hljs-comment">//y la implementación de ese servicio como segundo parámetro (EmployeesService.ts)</span>
+    <span class="hljs-comment">//Si exploro employees.ts observo la definición delservicio en service: _employees_IEmployeeServiceDefinition</span>
+    <span class="hljs-comment">//En grpcObj tengo todo</span>
+    server.addService(grpcObj.employees.IEmployeeService.service, EmployeesService)
+
+
+    <span class="hljs-keyword">return</span> server
+}
+
+main()
+</div></code></pre>
+<ul>
+<li>Creo el script para iniciar el server</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-string">"start:server"</span>:<span class="hljs-string">"ts-node server.ts"</span>
+</div></code></pre>
+<ul>
+<li>Usamos POSTMAN para usarlo como cliente</li>
+<li>import a  proto  file e importo employees com una nueva API</li>
+<li>Ahora puedo seleccionar un método</li>
+<li>Le añado badgeNumber al mensaje</li>
+<li><em>NOTA</em>: algo en el código de este servicio no está bien. Los servicios posteriores funcionan pero este no</li>
+</ul>
+<hr>
+<h2 id="mensajes---server-streaming">Mensajes - Server Streaming</h2>
+<ul>
+<li>Vamos con obtener  todos los empleados</li>
+</ul>
+<pre class="hljs"><code><div> getAll: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerWritableStream&lt;GetAllRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+    }
+</div></code></pre>
+<ul>
+<li>Tenemos un servicio grpc del tipo streaming del lado del servidor que recibe como  objeto de petición el GetAllReuest y devuelve una EmployeeResponse (no un arreglo)</li>
+<li>Cada vez que mandemos un mensaje a través del streaming mandaremos un empleado que el cliente va a capturar en su conjunto como un arreglo</li>
+<li>call tiene unmetodo write que recibe un chunk de respuesta (de tipo EmployeeResponse)</li>
+<li>Hay que terminar la conexión</li>
+</ul>
+<pre class="hljs"><code><div>getAll: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerWritableStream&lt;GetAllRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+    <span class="hljs-keyword">const</span> employees  = _employeesDB.getEmployees()
+    employees.forEach(<span class="hljs-function"><span class="hljs-params">employee</span>=&gt;</span>{
+        call.write({employee})
+    } )
+
+    call.end()
+    
+}
+</div></code></pre>
+<ul>
+<li>En la respuesta observo que cada empleado es un envío por parte del servidor,  en lugar de venir tdo en un arreglo</li>
+<li>La conexión durará hasta que el servidor considere que ha enviado toda la data</li>
+</ul>
+<hr>
+<h2 id="mensajes---client-streaming">Mensajes - Client Streaming</h2>
+<ul>
+<li>Subiremos una foto con AddPhoto</li>
+</ul>
+<pre class="hljs"><code><div>AddPhoto: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerReadableStream&lt;AddPhotoRequest__Output, AddPhotoResponse&gt;, callback: sendUnaryData&lt;AddPhotoResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+}
+</div></code></pre>
+<ul>
+<li>El servidor está recibiendo como parámetro de call un stream de lectura ServerReadableStream, por el que se nos va a enviar un chunk de información, en algún momento se va a detener ese envío de tipo AddPhotoRequest y devolver un dato unario de tipo AddPhotoResponse en el callback</li>
+<li>Por eso es streaming del lado del cliente, porque es este quien envía información hasta un momento determinado
+-EmployeesService.ts</li>
+</ul>
+<pre class="hljs"><code><div>AddPhoto: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerReadableStream&lt;AddPhotoRequest__Output, AddPhotoResponse&gt;, callback: sendUnaryData&lt;AddPhotoResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-comment">//guardamos el stream en un archivo</span>
+        <span class="hljs-keyword">const</span> writableStream  = fs.createWriteStream(<span class="hljs-string">'upload_photo.png'</span>)
+
+        <span class="hljs-comment">//lo que hareos cada vez que lleguen datos</span>
+        call.on(<span class="hljs-string">'data'</span>, (request:AddPhotoRequest)=&gt;{ <span class="hljs-comment">//si busco la interfaz de AddPhotoRequest contine data de tipo Buffer</span>
+
+            writableStream.write(request.data)
+        })
+
+        <span class="hljs-comment">//lo que haremos cuando terminen de llegar esos datos</span>
+        call.on(<span class="hljs-string">'end'</span>, ()=&gt;{
+            <span class="hljs-comment">//guardará todos los bytes dentro de la ruta upload_photo</span>
+            writableStream.end()
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"File uploaded successfully!!"</span>)
+        })
+
+    }
+</div></code></pre>
+<ul>
+<li>Para el streaming del lado del cliente para una foto no puedo hacerlo con POSTMAN</li>
+<li>Crearé un cliente para ello con un script</li>
+</ul>
+<hr>
+<h2 id="mensajes---bidireccional-streaming">Mensajes - Bidireccional Streaming</h2>
+<ul>
+<li>Vamos a implmentar un servicio full duplex bidireccional de streaming</li>
+<li>Usaremos SaveAll ara el ejemplo, dónde el cliente va a ir enviando employees y el server irá devolviendo información</li>
+</ul>
+<pre class="hljs"><code><div>SaveAll: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerDuplexStream&lt;EmployeeRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">"Function not implemented."</span>);
+}
+</div></code></pre>
+<ul>
+<li>Tenemos un ServerDuplexStream, nos indica que tenemos un canalduplex de  streaming donde el cliente y el servidor van a poder enviar información de tipo EmployeeRequest con una respuesta de tipo EmployeeResponse</li>
+<li>La estrategia es muy similar a la de AddPhoto</li>
+</ul>
+<pre class="hljs"><code><div> SaveAll: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerDuplexStream&lt;EmployeeRequest__Output, EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+        <span class="hljs-keyword">let</span> count= <span class="hljs-number">0</span>
+        
+        call.on(<span class="hljs-string">'data'</span>, (request: EmployeeRequest)=&gt;{
+            <span class="hljs-keyword">if</span>(request.employee){
+                <span class="hljs-keyword">const</span> employee = request.employee
+                _employeesDB.saveEmployee(employee)
+                count ++
+                call.write({employee})
+            }
+        })
+
+        call.on(<span class="hljs-string">'end'</span>, ()=&gt;{
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`<span class="hljs-subst">${count}</span> employees saved`</span>)
+            call.end() <span class="hljs-comment">//siempre cerrar la conexión!!!</span>
+        })
+    },
+</div></code></pre>
+<ul>
+<li>Si ahora voy a POSTMAN y edoy a invoke  ABRE EL  STREAMING pero no aparece nada en consola</li>
+<li>Esto solo abrió la conexión. Debo darle a SEND para enviar la data y acabar con END STREAMING</li>
+<li>El cliente puede enviar tantos datos como quiera y el servidor enviar una respuesta cuando lo considere necesario</li>
+<li>No necesariamente debe enviar una respuesta a cada petición, puedo enviar un video en varios chunks y cuando tenga un 10% enviar una  notificación</li>
+</ul>
+<hr>
+<h2 id="establecer-conexi%C3%B3n-segura">Establecer conexión segura</h2>
+<ul>
+<li>Creo  la carpeta ssl y dentro un archivo ssl.sh con este código</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-meta">#!/bin/bash
+</span>
+rm *.pem
+rm *.srl
+rm *.cnf
+rm *.crt
+rm *.key
+rm *.csr
+
+<span class="hljs-comment"># 1. Generate CA's private key and self-signed certificate</span>
+openssl req -x509 -newkey rsa:4096 -days 365 -nodes -keyout ca-key.pem -out ca-cert.pem -subj <span class="hljs-string">"/C=FR/ST=Occitanie/L=Toulouse/O=Test Org/OU=Test/CN=*.test/emailAddress=test@gmail.com"</span>
+
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"CA's self-signed certificate"</span>
+openssl x509 -<span class="hljs-keyword">in</span> ca-cert.pem -noout -text
+
+<span class="hljs-comment"># 2. Generate web server's private key and certificate signing request (CSR)</span>
+openssl req -newkey rsa:4096 -nodes -keyout server-key.pem -out server-req.pem -subj <span class="hljs-string">"/C=FR/ST=Ile de France/L=Paris/O=Server TLS/OU=Server/CN=*.tls/emailAddress=tls@gmail.com"</span>
+
+<span class="hljs-comment"># Remember that when we develop on localhost, It’s important to add the IP:0.0.0.0 as an Subject Alternative Name (SAN) extension to the certificate.</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"subjectAltName=DNS:*.tls,DNS:localhost,IP:0.0.0.0"</span> &gt; server-ext.cnf
+<span class="hljs-comment"># Or you can use localhost DNS and grpc.ssl_target_name_override variable</span>
+<span class="hljs-comment"># echo "subjectAltName=DNS:localhost" &gt; server-ext.cnf</span>
+
+<span class="hljs-comment"># 3. Use CA's private key to sign web server's CSR and get back the signed certificate</span>
+openssl x509 -req -<span class="hljs-keyword">in</span> server-req.pem -days 60 -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -extfile server-ext.cnf
+
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"Server's signed certificate"</span>
+openssl x509 -<span class="hljs-keyword">in</span> server-cert.pem -noout -text
+
+<span class="hljs-comment"># 4. Generate client's private key and certificate signing request (CSR)</span>
+openssl req -newkey rsa:4096 -nodes -keyout client-key.pem -out client-req.pem -subj <span class="hljs-string">"/C=FR/ST=Alsace/L=Strasbourg/O=PC Client/OU=Computer/CN=*.client.com/emailAddress=client@gmail.com"</span>
+
+<span class="hljs-comment"># Remember that when we develop on localhost, It’s important to add the IP:0.0.0.0 as an Subject Alternative Name (SAN) extension to the certificate.</span>
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"subjectAltName=DNS:*.client.com,IP:0.0.0.0"</span> &gt; client-ext.cnf
+
+<span class="hljs-comment"># 5. Use CA's private key to sign client's CSR and get back the signed certificate</span>
+openssl x509 -req -<span class="hljs-keyword">in</span> client-req.pem -days 60 -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem -extfile client-ext.cnf
+
+<span class="hljs-built_in">echo</span> <span class="hljs-string">"Client's signed certificate"</span>
+openssl x509 -<span class="hljs-keyword">in</span> client-cert.pem -noout -text
+</div></code></pre>
+<ul>
+<li>Nos generarálos ceryificados que necesitamos</li>
+<li>Esto solo es útil en localhost</li>
+<li>Para ejecutarlo creo el script</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-string">"ssl:gen"</span>: <span class="hljs-string">"cd ssl &amp;&amp; chmod +x ssl.sh &amp;&amp; sh ssl.sh"</span>
+</div></code></pre>
+<ul>
+<li>Dentro de la carpeta ssl creo SSLService.ts en el que generaremos las credenciales de seguridad para el servidor y para el cliente</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ServerCredentials } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> *<span class="hljs-keyword">as</span> fs <span class="hljs-keyword">from</span> <span class="hljs-string">'fs'</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SSLService</span></span>{
+    <span class="hljs-keyword">static</span> getServerCredentials():ServerCredentials{
+        <span class="hljs-keyword">const</span> serverCert = fs.readFileSync(path.resolve(__dirname,  <span class="hljs-string">'../../ssl/server-cert.pem'</span>)) <span class="hljs-comment">//importamos  el certificado</span>
+        <span class="hljs-keyword">const</span> serverKey =  fs.readFileSync(path.resolve(__dirname, <span class="hljs-string">'../../ssl/server-key.pem'</span>))  <span class="hljs-comment">//importamos la clave</span>
+
+        <span class="hljs-comment">//el primer parámetro es el root del Buffer, lo mandamos como nulo</span>
+        <span class="hljs-comment">//el segundo es un diccionario de certificados y claves</span>
+        <span class="hljs-comment">//le  envio false como tercero para que no chequee  el certificado del cliente, eso lo haremos más adelante  </span>
+        <span class="hljs-keyword">return</span> ServerCredentials.createSsl(<span class="hljs-literal">null</span>,[{<span class="hljs-attr">cert_chain</span>:serverCert, <span class="hljs-attr">private_key</span>:serverKey}], <span class="hljs-literal">false</span>)
+
+
+    }
+}
+</div></code></pre>
+<ul>
+<li>Para configurarlo en el server.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>)</span>{
+
+    <span class="hljs-keyword">const</span> server = getServer()
+    <span class="hljs-keyword">const</span> serverCredentials= SSLService.getServerCredentials()
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, serverCredentials, (err, port)=&gt;{
+            <span class="hljs-keyword">if</span>(err){
+                <span class="hljs-built_in">console</span>.log(err)
+                <span class="hljs-keyword">return</span>
+            }
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Conectado en el puerto <span class="hljs-subst">${port}</span>`</span>)
+           
+    })
+}
+</div></code></pre>
+<ul>
+<li>Proximamente crearemos el cliente gRPC, aprenderemosaimplementar los métodos y crear unaconexión segura dellado del cliente</li>
+</ul>
+<hr>
+<h2 id="grpc-node---client">gRPC NODE - Client</h2>
+<ul>
+<li>Creo el client.ts en la raíz</li>
+<li>Uso parte del código de server.ts como el puerto, la ubicación del archivo proto, la definición del paquete (packageDefinition) y la definición de los objetos de grpc (grpcObj)</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/proto-loader"</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> {ProtoGrpcType} <span class="hljs-keyword">from</span> <span class="hljs-string">'./proto/employees'</span>
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">8082</span>
+
+<span class="hljs-keyword">const</span> PROTO_FILE=<span class="hljs-string">"./proto/employees.proto"</span>
+
+
+<span class="hljs-keyword">const</span> packageDefinition = protoLoader.loadSync(path.resolve(__dirname, PROTO_FILE)) <span class="hljs-comment">//importamos el archivo proto</span>
+
+
+<span class="hljs-keyword">const</span> grpcObj= (grpc.loadPackageDefinition(packageDefinition) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType
+
+<span class="hljs-comment">//haremos que el server funcione de momento con las credenciales inseguras</span>
+<span class="hljs-comment">//lo modifico en server.ts tambien, luego lo cambio</span>
+<span class="hljs-keyword">const</span> channelCredentials= grpc.credentials.createInsecure() <span class="hljs-comment">//notar que aqui son .credentials no ServerCredentials</span>
+<span class="hljs-keyword">const</span> client= <span class="hljs-keyword">new</span> grpcObj.employees.IEmployeeService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials)
+
+<span class="hljs-comment">//creamos la conexión del cliente</span>
+<span class="hljs-comment">//ncesitamos  undeadLine, un tiempo  de espera para que el cliente se conecte (5-10 segundos)</span>
+<span class="hljs-keyword">const</span> deadLine= <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>()
+deadLine.setSeconds(deadLine.getSeconds()+<span class="hljs-number">10</span>) <span class="hljs-comment">//le añado 10 segundos</span>
+
+<span class="hljs-comment">//esperamos a que el cliente este listo para conectarse</span>
+client.waitForReady(deadLine, (err)=&gt;{
+    <span class="hljs-keyword">if</span>(err){
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Error  creating Client'</span>)
+        
+    }
+    onClientReady()
+})
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onClientReady</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'working!'</span>)
+}
+</div></code></pre>
+<ul>
+<li>Modifico las credenciales del server para trabajar de momento de forma insegura</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">const</span> server = getServer()
+    <span class="hljs-comment">//podemos agregar tantos servicios como queramos divididos por entidades, ahora solo tenemos una</span>
+    <span class="hljs-keyword">const</span> serverCredentials= grpc.ServerCredentials.createInsecure()<span class="hljs-comment">//server sin autenticación</span>
+
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT }</span>`</span>, serverCredentials, (err,port)=&gt;{
+        <span class="hljs-keyword">if</span>(err){
+            <span class="hljs-built_in">console</span>.error(err)
+            <span class="hljs-keyword">return</span>
+        }
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Server running at port <span class="hljs-subst">${port}</span>`</span>)
+    })
+}
+</div></code></pre>
+<ul>
+<li>Genero el script  para inicializar el cliente</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-string">"start:client"</span>:<span class="hljs-string">"ts-node client.ts"</span>,
+</div></code></pre>
+<ul>
+<li>Por ahora solo nos devuelve el console.log y se cierra la conexión</li>
+<li>Porué dispongo de  los métodos desde client?</li>
+<li>Al crearlo apunta a la nterfaz de servicio</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> client= <span class="hljs-keyword">new</span> grpcObj.employees.IEmployeeService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials)
+</div></code></pre>
+<ul>
+<li>Si miro la interfaz</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> interface ProtoGrpcType {
+  <span class="hljs-attr">employees</span>: {
+    <span class="hljs-attr">AddPhotoRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">AddPhotoResponse</span>: MessageTypeDefinition
+    <span class="hljs-attr">Employee</span>: MessageTypeDefinition
+    <span class="hljs-attr">EmployeeRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">EmployeeResponse</span>: MessageTypeDefinition
+    <span class="hljs-attr">GetAllRequest</span>: MessageTypeDefinition
+    <span class="hljs-attr">GetByBadgeNumberRequest</span>: MessageTypeDefinition            <span class="hljs-comment">//puedo clicar encima de esta interfaz</span>
+    <span class="hljs-attr">IEmployeeService</span>: SubtypeConstructor&lt;<span class="hljs-keyword">typeof</span> grpc.Client, _employees_IEmployeeServiceClient&gt; &amp; { <span class="hljs-attr">service</span>: _employees_IEmployeeServiceDefinition }
+  }
+}
+</div></code></pre>
+<p>-Si voy a _employees_IEmployeeServiceClient veo como me define todo estos métodos en IEmployeeService</p>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> interface IEmployeeServiceClient extends grpc.Client {
+  AddPhoto(metadata: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(metadata: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(options: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  AddPhoto(callback: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(metadata: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(metadata: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(options: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  addPhoto(callback: grpc.requestCallback&lt;_employees_AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;_employees_AddPhotoRequest&gt;;
+  
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  GetByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  getByBadgeNumber(argument: _employees_GetByBadgeNumberRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  Save(argument: _employees_EmployeeRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  save(argument: _employees_EmployeeRequest, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;_employees_EmployeeResponse__Output&gt;): grpc.ClientUnaryCall;
+  
+  SaveAll(metadata: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  SaveAll(options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  saveAll(metadata: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  saveAll(options?: grpc.CallOptions): grpc.ClientDuplexStream&lt;_employees_EmployeeRequest, _employees_EmployeeResponse__Output&gt;;
+  
+  getAll(argument: _employees_GetAllRequest, <span class="hljs-attr">metadata</span>: grpc.Metadata, options?: grpc.CallOptions): grpc.ClientReadableStream&lt;_employees_EmployeeResponse__Output&gt;;
+  getAll(argument: _employees_GetAllRequest, options?: grpc.CallOptions): grpc.ClientReadableStream&lt;_employees_EmployeeResponse__Output&gt;;
+  
+}
+</div></code></pre>
+<ul>
+<li>Entonces, el cliente tiene el método de getByBadgeNumber que es el qe usaremos ahora</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/proto-loader"</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> {ProtoGrpcType} <span class="hljs-keyword">from</span> <span class="hljs-string">'./proto/employees'</span>
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">8082</span>
+
+<span class="hljs-keyword">const</span> PROTO_FILE=<span class="hljs-string">"./proto/employees.proto"</span>
+
+
+<span class="hljs-keyword">const</span> packageDefinition = protoLoader.loadSync(path.resolve(__dirname, PROTO_FILE)) <span class="hljs-comment">//importamos el archivo proto</span>
+
+
+<span class="hljs-keyword">const</span> grpcObj= (grpc.loadPackageDefinition(packageDefinition) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType
+
+<span class="hljs-comment">//haremos que el server funcione de momento con las credenciales inseguras</span>
+<span class="hljs-comment">//lo modifico en server.ts tambien, luego lo cambio</span>
+<span class="hljs-keyword">const</span> channelCredentials= grpc.credentials.createInsecure() <span class="hljs-comment">//notar que aqui son .credentials no ServerCredentials</span>
+<span class="hljs-keyword">const</span> client= <span class="hljs-keyword">new</span> grpcObj.employees.IEmployeeService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials) <span class="hljs-comment">//el cliente apunta a la interfaz del servicio.</span>
+                                                                                            <span class="hljs-comment">//dispongo  de todos los métodos</span>
+
+<span class="hljs-comment">//creamos la conexión del cliente</span>
+<span class="hljs-comment">//ncesitamos  undeadLine, un tiempo  de espera para que el cliente se conecte (5-10 segundos)</span>
+<span class="hljs-keyword">const</span> deadLine= <span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>()
+deadLine.setSeconds(deadLine.getSeconds()+<span class="hljs-number">10</span>) <span class="hljs-comment">//le añado 10 segundos</span>
+
+<span class="hljs-comment">//esperamos a que el cliente este listo para conectarse</span>
+client.waitForReady(deadLine, (err)=&gt;{
+    <span class="hljs-keyword">if</span>(err){
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'Error  creating Client'</span>)
+        
+    }
+    onClientReady()
+})
+
+
+<span class="hljs-comment">//Creo el método usando client</span>
+<span class="hljs-keyword">const</span> getEmployeeByBadgeNumber = <span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+    client.getByBadgeNumber({<span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2010</span>}, (err, response)=&gt;{
+        <span class="hljs-keyword">if</span>(err){
+            <span class="hljs-built_in">console</span>.error(err)
+            <span class="hljs-keyword">return</span>
+        }
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Employee: with badgeNumber <span class="hljs-subst">${response?.employee?.badgeNumber}</span> has name <span class="hljs-subst">${response?.employee?.firstName}</span>`</span>)
+    
+    })
+}
+
+<span class="hljs-comment">//lo añado a la función que se ejecuta en la conexión </span>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onClientReady</span>(<span class="hljs-params"></span>)</span>{
+    getEmployeeByBadgeNumber()
+}
+</div></code></pre>
+<ul>
+<li>Ejecuto el server y el cliente con los scripts correspondientes</li>
+<li>Sigo conlo otros métodos, save.</li>
+<li>En el server, save es así</li>
+</ul>
+<pre class="hljs"><code><div>Save: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">call: ServerUnaryCall&lt;EmployeeRequest__Output, EmployeeResponse&gt;, callback: sendUnaryData&lt;EmployeeResponse&gt;</span>): <span class="hljs-title">void</span> </span>{
+    <span class="hljs-keyword">const</span> req = call.request <span class="hljs-keyword">as</span> EmployeeRequest
+    <span class="hljs-keyword">if</span>(req.employee){
+        <span class="hljs-keyword">const</span> employee = req.employee
+        _employeesDB.saveEmployee(employee)
+        callback(<span class="hljs-literal">null</span>, {employee})
+    }
+
+    callback({
+        <span class="hljs-attr">name</span>: <span class="hljs-string">"employee is undefined"</span>,
+        <span class="hljs-attr">message</span>:<span class="hljs-string">"invalid input"</span>
+    }, <span class="hljs-literal">null</span>)
+},
+</div></code></pre>
+<ul>
+<li>En el cliente es  así</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> saveEmployee= <span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+    <span class="hljs-keyword">const</span> employee:  Employee ={
+        <span class="hljs-attr">id</span>: <span class="hljs-number">1000</span>,
+        <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2080</span>,
+        <span class="hljs-attr">firstName</span>: <span class="hljs-string">"John"</span>,
+      
+    }
+
+    client.save({employee}, (err, response)=&gt;{
+        <span class="hljs-keyword">if</span>(err){
+            <span class="hljs-built_in">console</span>.error(err)
+            <span class="hljs-keyword">return</span>
+        }
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Employee saved with badgeNumber: <span class="hljs-subst">${response?.employee?.badgeNumber}</span>`</span>)
+    })
+
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onClientReady</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-comment">//getEmployeeByBadgeNumber()</span>
+    saveEmployee()
+}
+</div></code></pre>
+<h2 id="mensajes---server-streaming">Mensajes - Server Streaming</h2>
+<ul>
+<li>Construiremos  getAll</li>
+<li>Si yo poso el cursor encima de getAll puedo ver con la ayuda del IDE que es un grpc.CientReadableStream que nos va a devolver un EmployeeResponse</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> getAll= <span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+    client.getAll
+}
+</div></code></pre>
+<ul>
+<li>Empty es un objeto vacío  que viene de protobuf. Con esto envío un objeto vacío en la petición</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> {Empty} <span class="hljs-keyword">from</span> <span class="hljs-string">'google-protobuf/google/protobuf/empty_pb'</span>
+</div></code></pre>
+<ul>
+<li>El método</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> getAll= <span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+    <span class="hljs-keyword">const</span> stream = client.getAll(<span class="hljs-keyword">new</span> Empty()) <span class="hljs-comment">//este stream nos va a permitir escuchar eventos</span>
+    
+    <span class="hljs-keyword">const</span> employees:Employee[]= []
+
+    stream.on(<span class="hljs-string">'data'</span>, (response)=&gt;{
+        <span class="hljs-keyword">const</span> employee = response.employee
+        employees.push(employee)
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Fetch employeewith badgeNumber <span class="hljs-subst">${employee.badgeNumber}</span>`</span>) <span class="hljs-comment">//cada vez que obtengamos datos se imprimirá</span>
+        <span class="hljs-comment">//cada chunk de datos será un empleado</span>
+    })
+
+    stream.on(<span class="hljs-string">'error'</span>, (err)=&gt;{
+        <span class="hljs-comment">//en un entorno de producción aqui se hacen políticas de reintentos, reestablecer la conexión,o usar otros frameworks</span>
+        <span class="hljs-comment">//como temporal.io para que las ejecuciones que no se completaron de forma exitosa se completen aunque haya habido un error </span>
+        <span class="hljs-built_in">console</span>.log(err)
+    })
+    stream.on(<span class="hljs-string">'end'</span>, ()=&gt;{
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`<span class="hljs-subst">${employees.length}</span> total employees`</span>)
+    })
+}
+</div></code></pre>
+<h2 id="mensajes---client-streaming">Mensajes - Client Streaming</h2>
+<ul>
+<li>AddPhoto desde el cliente</li>
+<li>Hago lo mismo, escribo client.AddPhoto y observo los tipos posando el cursor encima</li>
+</ul>
+<pre class="hljs"><code><div>(method) IEmployeeServiceClient.AddPhoto(metadata: grpc.Metadata, <span class="hljs-attr">options</span>: grpc.CallOptions, <span class="hljs-attr">callback</span>: grpc.requestCallback&lt;AddPhotoResponse__Output&gt;): grpc.ClientWritableStream&lt;AddPhotoRequest&gt; 
+</div></code></pre>
+<ul>
+<li>Observo que la response es de tipo  grpc.ClientWritableStream<AddPhotoRequest></li>
+<li>Para implementar este métodono necesitamos nada, podemos enviar un callback vacío</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> addPhoto =<span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+   <span class="hljs-keyword">const</span> stream= client.AddPhoto(<span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{})
+    <span class="hljs-comment">//con fs vamos a crear un readstream que nospermitirá leer un png, descomponerlo en chunks y enviárselo al server </span>
+    <span class="hljs-keyword">const</span> fileStream= fs.createReadStream(<span class="hljs-string">'./badgePhoto.png'</span>)
+
+    fileStream.on(<span class="hljs-string">'data'</span>, (chunk)=&gt;{
+        stream.write({<span class="hljs-attr">data</span>: chunk})
+    })
+
+    fileStream.on(<span class="hljs-string">'end'</span>,  ()=&gt;{
+        stream.end()
+    })
+
+}
+</div></code></pre>
+<ul>
+<li>Esto me crea un archivo en la raíz llamado upload_photo.png</li>
+</ul>
+<hr>
+<h2 id="mensajes---bidirectional-streaming">Mensajes - Bidirectional Streaming</h2>
+<ul>
+<li>Por cada vez que se guarde un cliente el servidor me va a devolver una respuesta</li>
+<li>Alguien tiene que cerrar la conexión (el cliente o el servidor)</li>
+<li>Por  la naturaleza de este método, es  elcliente quien está enviando. Cuando terminecierra el streaming
+-client.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> saveAll=<span class="hljs-function"><span class="hljs-params">()</span>=&gt;</span>{
+    <span class="hljs-keyword">const</span> stream= client.saveAll() <span class="hljs-comment">//esto crea el canal</span>
+
+    <span class="hljs-keyword">const</span> employeesToSave =[
+        {
+            <span class="hljs-attr">id</span>: <span class="hljs-number">4</span>,
+            <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2090</span>,
+            <span class="hljs-attr">firstName</span>: <span class="hljs-string">'Johnee'</span>,
+            <span class="hljs-attr">lastName</span>: <span class="hljs-string">'Scofieldaaa'</span>,
+            <span class="hljs-attr">vacationAccrualRate</span>: <span class="hljs-number">50</span>,
+            <span class="hljs-attr">vacationAccrued</span>: <span class="hljs-number">120</span>
+        },
+        {
+            <span class="hljs-attr">id</span>: <span class="hljs-number">5</span>,
+            <span class="hljs-attr">badgeNumber</span>: <span class="hljs-number">2023</span>,
+            <span class="hljs-attr">firstName</span>: <span class="hljs-string">'Johneet'</span>,
+            <span class="hljs-attr">lastName</span>: <span class="hljs-string">'Scofieldaaarrr'</span>,
+            <span class="hljs-attr">vacationAccrualRate</span>: <span class="hljs-number">50</span>,
+            <span class="hljs-attr">vacationAccrued</span>: <span class="hljs-number">120</span>
+        }
+
+    ]
+
+    <span class="hljs-keyword">const</span> employees:Employee []= []
+    stream.on(<span class="hljs-string">'data'</span>,(response)=&gt;{
+        employees.push(response.employee)
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'employee saved!'</span>)
+    })
+    stream.on(<span class="hljs-string">'error'</span>,(err)=&gt;{
+        <span class="hljs-built_in">console</span>.log(err)
+    })
+
+    stream.on(<span class="hljs-string">'end'</span>,()=&gt;{
+        <span class="hljs-built_in">console</span>.log(employees.length)
+    })
+
+    employeesToSave.forEach(<span class="hljs-function"><span class="hljs-params">employee</span>=&gt;</span>{
+        stream.write({employee})
+    })
+
+    <span class="hljs-comment">//cierro la conexión</span>
+    stream.end()
+
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">onClientReady</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-comment">//getEmployeeByBadgeNumber()</span>
+    <span class="hljs-comment">//saveEmployee()</span>
+    <span class="hljs-comment">//getAll()</span>
+    <span class="hljs-comment">//addPhoto()</span>
+    saveAll()
+}
+</div></code></pre>
+<hr>
+<h2 id="estalecer-conexi%C3%B3n-segura">Estalecer conexión segura</h2>
+<ul>
+<li>Habilitamos la conexion segura en el  server</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>)</span>{
+    <span class="hljs-keyword">const</span> server = getServer()
+
+    <span class="hljs-keyword">const</span> serverCredentials= SSLService.getServerCredentials()
+
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT }</span>`</span>, serverCredentials, (err,port)=&gt;{
+        <span class="hljs-keyword">if</span>(err){
+            <span class="hljs-built_in">console</span>.error(err)
+            <span class="hljs-keyword">return</span>
+        }
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`Server running at port <span class="hljs-subst">${port}</span>`</span>)
+        
+    })
+}
+</div></code></pre>
+<ul>
+<li>Creo otro método estático en SSLService</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ChannelCredentials, ServerCredentials } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> *<span class="hljs-keyword">as</span> fs <span class="hljs-keyword">from</span> <span class="hljs-string">'fs'</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SSLService</span></span>{
+    <span class="hljs-keyword">static</span> getServerCredentials():ServerCredentials{
+        <span class="hljs-keyword">const</span> serverCert = fs.readFileSync(path.resolve(__dirname,  <span class="hljs-string">'../../ssl/server-cert.pem'</span>)) <span class="hljs-comment">//importamos  el certificado</span>
+        <span class="hljs-keyword">const</span> serverKey =  fs.readFileSync(path.resolve(__dirname, <span class="hljs-string">'../../ssl/server-key.pem'</span>))  <span class="hljs-comment">//importamos la clave</span>
+
+        <span class="hljs-comment">//el primer parámetro es el root del Buffer, lo mandamos como nulo</span>
+        <span class="hljs-comment">//el segundo es un diccionario de certificados y claves</span>
+        <span class="hljs-comment">//le  envio false como tercero para que no chequee  el certificado del cliente, eso lo haremos más adelante  </span>
+        <span class="hljs-keyword">return</span> ServerCredentials.createSsl(<span class="hljs-literal">null</span>,[{<span class="hljs-attr">cert_chain</span>:serverCert, <span class="hljs-attr">private_key</span>:serverKey}], <span class="hljs-literal">false</span>)
+
+
+    }
+
+    <span class="hljs-keyword">static</span> getChannelCredentials(): ChannelCredentials{
+        <span class="hljs-keyword">const</span> rootCert = fs.readFileSync(path.resolve(__dirname, <span class="hljs-string">'./../ssl/ca-cert.pem'</span>))
+
+        <span class="hljs-keyword">return</span> ChannelCredentials.createSsl(rootCert)
+    }
+}
+</div></code></pre>
+<ul>
+<li>LLamo el método en el cliente</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">const</span> channelCredentials= SSLService.getChannelCredentials()
+<span class="hljs-keyword">const</span> client=<span class="hljs-keyword">new</span> grpcObj.employees.IEmployeeService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials)
+</div></code></pre>
+<hr>
+<h1 id="drive-your-city---microservices">DRIVE YOUR CITY - MICROSERVICES</h1>
+<hr>
+<h2 id="drive-your-city">Drive Your City</h2>
+<ul>
+<li>Aplicación de microservicios para uso de bicicletas en la ciudad</li>
+<li>Tenemos un dock con varias bicis aparcadas, con la aplicación podemos desbloquear la bici y desplazarnos</li>
+<li>Se contará el número de km</li>
+<li>Como podemos estar hablando de miles de bicicletas necesitamos un gran desempeño que sea escalable, y con baja latencia</li>
+</ul>
+<hr>
+<h2 id="arquitectura">Arquitectura</h2>
+<ul>
+<li>Capa más externa:
+<ul>
+<li>Cliente:
+<ul>
+<li>BikeIoT: se comunica con el servidor</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Siguiente capa:
+<ul>
+<li>Microservicios: (responsabilidad única, CRUD)
+<ul>
+<li>RideService: para controlar mis viajes. Comenzar un viaje requiere una orquestación de varios eventos.
+<ul>
+<li>Requiere verificar que la bici este disponible, que la persona tenga una cuenta habilitada, etc</li>
+</ul>
+</li>
+<li>DockService: crear un dock donde aparcar la bici, etc</li>
+<li>BikeService: para controlar las bicis. Añadir o retirar una bici a un dock</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Capa más interna: usaremos CockroachDB (altamente escalable)
+<ul>
+<li>Load Balancer:
+<ul>
+<li>DB-1
+<ul>
+<li>DB-2</li>
+<li>DB-3</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Podemos pensar que el microservicio de dock lo usaremos pocas veces a lo largo del día (crear, eliminar, actualizar un dock)</li>
+<li>Sin embargo ride requiere una escalabilidad alta, ya que en hora punta puede tener una alta demanda</li>
+<li>gRPC es adecuado por los requerimientos de calidad</li>
+<li>Usaremos gRPC para comunicarnos entre microservicios</li>
+<li>Vamos a tener un cliente en ride que se va a comunicar con el dock, dock se comunicará con bike y así</li>
+</ul>
+<hr>
+<h2 id="scaffolding-y-docker">Scaffolding y Docker</h2>
+<ul>
+<li>Crearemos las carpetas que usaremos a lo largo de todo el trabajo</li>
+<li>Instanciarermos la DB y el balanceador de carga</li>
+<li>El proyecto se llama DriveYourCity</li>
+<li>Creamos en la raíz docker-compose.yml</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-attr">version:</span> <span class="hljs-string">'3.9'</span>
+
+<span class="hljs-attr">services:</span>
+
+  <span class="hljs-attr">roach-0:</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">roach-0</span>
+    <span class="hljs-attr">hostname:</span> <span class="hljs-string">roach-0</span>
+    <span class="hljs-attr">image:</span>  <span class="hljs-string">cockroachdb/cockroach-unstable:v23.2.0-beta.1</span>  
+    <span class="hljs-comment"># --insecure porque no nos complicaremos con autenticación</span>
+    <span class="hljs-comment"># al crear un cluster nos uniremos a varias instancias, para ello uso join</span>
+    <span class="hljs-comment"># establezco el puerto 26257 y también el de advertise que necesita cockroachDB</span>
+    <span class="hljs-comment"># limito la cantidad de memoria que van a usar nuestros componentes y el caché  </span>
+    <span class="hljs-attr">command:</span> <span class="hljs-string">start</span> <span class="hljs-string">--insecure</span> <span class="hljs-string">--join=roach-0,roach-1,roach-2</span> <span class="hljs-string">--listen-addr=roach-0:26257</span> <span class="hljs-string">--advertise-addr=roach-0:26257</span> <span class="hljs-string">--max-sql-memory=.25</span> <span class="hljs-string">--cache=.25</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">'ALLOW_EMPTY_PASSWORD=yes'</span> <span class="hljs-comment"># le permito conectarse sin password</span>
+
+  <span class="hljs-attr">roach-1:</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">roach-1</span>
+    <span class="hljs-attr">hostname:</span> <span class="hljs-string">roach-1</span>
+    <span class="hljs-attr">image:</span>  <span class="hljs-string">cockroachdb/cockroach-unstable:v23.2.0-beta.1</span>
+    <span class="hljs-attr">command:</span> <span class="hljs-string">start</span>  <span class="hljs-string">--insecure</span> <span class="hljs-string">--join=roach-0,roach-1,roach-2</span> <span class="hljs-string">--listen-addr=roach-1:26257</span> <span class="hljs-string">--advertise-addr=roach-1:26257</span> <span class="hljs-string">--max-sql-memory=.25</span> <span class="hljs-string">--cache=.25</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">'ALLOW_EMPTY_PASSWORD=yes'</span>
+
+  <span class="hljs-attr">roach-2:</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">roach-2</span>
+    <span class="hljs-attr">hostname:</span> <span class="hljs-string">roach-2</span>
+    <span class="hljs-attr">image:</span>  <span class="hljs-string">cockroachdb/cockroach-unstable:v23.2.0-beta.1</span>
+    <span class="hljs-attr">command:</span> <span class="hljs-string">start</span>  <span class="hljs-string">--insecure</span> <span class="hljs-string">--join=roach-0,roach-1,roach-2</span> <span class="hljs-string">--listen-addr=roach-2:26257</span> <span class="hljs-string">--advertise-addr=roach-2:26257</span> <span class="hljs-string">--max-sql-memory=.25</span> <span class="hljs-string">--cache=.25</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">'ALLOW_EMPTY_PASSWORD=yes'</span>
+
+  <span class="hljs-attr">init:</span> <span class="hljs-comment"># con init nos aseguraremos de que todo esté inicializado</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">init</span>
+    <span class="hljs-attr">image:</span>  <span class="hljs-string">cockroachdb/cockroach-unstable:v23.2.0-beta.1</span> <span class="hljs-comment"># uso la misma imagen de cockroach para inicializar este container</span>
+    <span class="hljs-attr">command:</span> <span class="hljs-string">init</span> <span class="hljs-string">--host=roach-0</span> <span class="hljs-string">--insecure</span> <span class="hljs-comment"># para inicializar el cluster completo basta con incializar uno de los nodos que ya está estable</span>
+    <span class="hljs-attr">depends_on:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">roach-0</span>
+
+  <span class="hljs-attr">lb:</span> <span class="hljs-comment"># balanceador de carga para acceder a estas instancias</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">lb</span>
+    <span class="hljs-attr">hostname:</span> <span class="hljs-string">lb</span>
+    <span class="hljs-attr">build:</span> <span class="hljs-string">haproxy</span> <span class="hljs-comment"># este balanceador se llama haproxy</span>
+    <span class="hljs-attr">ports:</span>  <span class="hljs-comment"># usa 3 puertos</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">"26000:26000"</span> <span class="hljs-comment"># conecta a todo el cluster</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">"8080:8080"</span> <span class="hljs-comment"># cockroachDB ofrece una interfaz en el 8080</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">"8081:8081"</span> <span class="hljs-comment"># para que los nodos entre diferentes instancias de cockroachDB estén actualizados usamos 8081</span>
+    <span class="hljs-attr">depends_on:</span> <span class="hljs-comment"># dependerá de que estas instancias estén inicializadas, por ello crearé init para asegurarme de ello</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">roach-0</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">roach-1</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">roach-2</span>
+
+  <span class="hljs-attr">client:</span> <span class="hljs-comment"># para poder ejecutar comandos al cluster creamos un cliente</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">client</span>
+    <span class="hljs-attr">hostname:</span> <span class="hljs-string">client</span>
+    <span class="hljs-attr">image:</span>  <span class="hljs-string">cockroachdb/cockroach-unstable:v23.2.0-beta.1</span>
+    <span class="hljs-attr">entrypoint:</span> <span class="hljs-string">["/usr/bin/tail",</span> <span class="hljs-string">"-f"</span><span class="hljs-string">,</span> <span class="hljs-string">"/dev/null"</span><span class="hljs-string">]</span> <span class="hljs-comment"># ubicación del comando que nos va a permitir acceder a esta instancia de cockroachDB, ver logs, etc</span>
+
+</div></code></pre>
+<ul>
+<li>Para crear el container de haproxy creo una nueva carpeta en la raíz del proyecto llamada haproxy</li>
+<li>Creo el Dockerfile donde defino el contenedor del balanceador de carga</li>
+</ul>
+<pre class="hljs"><code><div>FROM haproxy:lts-bullseye <span class="hljs-comment">// usamos esta imagen</span>
+
+LABEL maintainer=<span class="hljs-string">"artemervits at gmail dot com"</span> <span class="hljs-comment">// nos permitirá identificar este container (asigno valor por defecto)</span>
+
+COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg <span class="hljs-comment">// copiaremos nuestro archivo de configuración haproxy.cfg en la ubicación del container /usr/...</span>
+
+<span class="hljs-comment">// expongo los tres puertos que necesito (que ya he definido antes)</span>
+EXPOSE <span class="hljs-number">26257</span>
+EXPOSE <span class="hljs-number">8080</span>
+EXPOSE <span class="hljs-number">8081</span>
+</div></code></pre>
+<ul>
+<li>Dentro de la misma carpeta haproxy creo haproxy.cfg copn el código por defecto</li>
+</ul>
+<pre class="hljs"><code><div>global
+    log stdout format raw local0 info
+    maxconn 20000
+
+defaults
+    log                 global
+    timeout connect     10m
+    timeout client      30m
+    timeout server      30m
+    option              clitcpka
+    option              tcplog
+
+listen cockroach-jdbc
+    bind :26000    ---&gt; vamos a hacer un bind de todas las instancias que están en roach-0, roach-1, roach-2 del puerto 26257 al 26000
+    mode tcp
+    balance leastconn
+    option httpchk GET /health?ready=1
+    server roach-0 roach-0:26257 check port 8080   ---&gt; corriendo en el 26257 (puerto por defecto de cockroachDB) 
+    server roach-1 roach-1:26257 check port 8080   
+    server roach-2 roach-2:26257 check port 8080
+
+listen cockroach-ui
+    bind :8080   ---&gt; lo mismo con el 8080
+    mode tcp
+    balance leastconn
+    option httpchk GET /health
+    server roach-0 roach-0:8080 check port 8080
+    server roach-1 roach-1:8080 check port 8080
+    server roach-2 roach-2:8080 check port 8080
+
+listen stats
+    bind :8081  ---&gt; podremos acceder al balanceador de carga a través del 8081
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+</div></code></pre>
+<ul>
+<li>docker compose up no nos sirve porque tenemos que construir primero el contenedor de haproxy</li>
+<li>Uso -f para indicar que es el archivo de la raíz  con -d build porquye tenemos dependencias con todos aquellos contenedores que necesiten ser construidos</li>
+</ul>
+<blockquote>
+<p>docker compose -f docker-compose.yml up -d --build</p>
+</blockquote>
+<ul>
+<li>En localhost:8081 puedo vere el balanceador de carga</li>
+<li>En localhost:8080 tengo la UI de cockroachDB
+<ul>
+<li>Tiene las DB defaultdb, postgres y system que trae por defecto</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="02-grpc---definir-dominio-en-archivos-proto">02 gRPC - Definir dominio en archivos .proto</h2>
+<ul>
+<li>Tenemos el Dock, Bike y Ride</li>
+<li>En un dock pueden haber 0 o muchas bicis</li>
+<li>Una bici puede estar en 1 Dock (ranura de estacionamiento)</li>
+<li>Una bici hace un viaje</li>
+<li>En un viaje hay un dock de origen y un dock de destino</li>
+<li>Creo la carpeta proto en la raíz con Entities.proto</li>
+<li>Primero siempre defino la siuntaxis y el nombre del paquete</li>
+</ul>
+<pre class="hljs"><code><div>syntax = &quot;proto3&quot;;
+
+package DriveYourCity;
+
+message Bike {
+    int32   id = 1;
+    int32   totalKm = 2;
+    Dock    dock = 3; 
+}
+
+message Dock {
+    int32       id = 1;
+    int32       maxBikes = 2;
+    repeated    Bike bikes = 3; //arreglo repetido de bicis
+}
+
+message Ride {
+    int32   id = 1;    
+    int32   km = 2;
+    Bike    bike = 3;
+    Dock    originDock = 4;
+    Dock    targetDock = 5;    
+}
+</div></code></pre>
+<ul>
+<li>Ahora definiremos los proto de los 3 microservicios</li>
+<li>Se puede construir de varias formas. En este caso vamos a dividir las interfaces en archivos diferentes, ya que es más claro</li>
+<li>Creo Dock.proto</li>
+<li>Como siempre, declaro la sintaxis, el paquete y en este caso importo lel .proto de entidades</li>
+</ul>
+<pre class="hljs"><code><div>syntax = &quot;proto3&quot;;
+
+package DriveYourCity;
+
+import &quot;Entities.proto&quot;;
+
+service IDockService {
+  rpc CreateDock (CreateDockRequest) returns (DockResponse);
+  //es una response de stream pq no queremos enviar un objeto gigante con todos los docks
+  //enviaremos unbo tras otro
+  rpc GetAllDocks (GetAllDocks) returns (stream DockResponse); 
+  rpc GetDockById (GetDockByIdRequest) returns (DockResponse);
+  rpc IsDockAvailable(IsDockAvailableRequest) returns (IsDockAvailableResponse);
+}
+
+// Communication Entities - Requests
+message CreateDockRequest {
+  Dock dock = 1;
+}
+message GetAllDocks {
+
+}
+message GetDockByIdRequest {
+  int32 dockId = 1;
+}
+message IsDockAvailableRequest {
+  int32 dockId = 1;
+}
+
+// Communication Entities - Responses
+message DockResponse {
+  Dock dock = 1;
+}
+message IsDockAvailableResponse {
+  bool isAvalable = 1;
+}
+</div></code></pre>
+<ul>
+<li>Seguimos con las bicicletas</li>
+<li>Debemos poder obtener una bici por el id, crear una bici y añadir o quitar una bici de un dock</li>
+</ul>
+<pre class="hljs"><code><div>syntax = &quot;proto3&quot;;
+
+package DriveYourCity;
+
+import &quot;Entities.proto&quot;;
+
+service IBikeService {
+    rpc GetBikeById (GetBikeByIdRequest) returns (BikeResponse);
+    rpc CreateBike (BikeRequest) returns (BikeResponse);
+    rpc AttachBikeToDock (AttachBikeToDockRequest) returns (BikeResponse);
+    rpc UnAttachBikeFromDock (UnAttachBikeFromDockRequest) returns (BikeResponse);
+}
+
+// Communication Entities - Requests
+message GetBikeByIdRequest {
+  int32 bikeId = 1;
+}
+message BikeRequest {
+  Bike bike = 1;
+}
+
+message AttachBikeToDockRequest {
+  int32 bikeId = 1;
+  int32 dockId = 2;
+  int32 totalKms = 3; //queremos el número de km antes de ser añadida al nuevoi dock
+}
+
+message UnAttachBikeFromDockRequest {
+  int32 bikeId = 1;  //solo necesito el bikeId si ya está en un dock 
+}
+
+// Communication Entities - Responses
+message BikeResponse {
+  Bike bike = 1;
+}
+</div></code></pre>
+<ul>
+<li>Vamos con ride</li>
+<li>Voy a tener que comprobar que esa bicileta esté disponible en un dock, que se pueda desacoplar del dock y actualizar la instancia de la bicileta y el dock en la base de datos para generar consistencia</li>
+<li>El objetivo de esta prueba de concepto es ir actualizando la información de kilometraje de la bicicleta</li>
+</ul>
+<pre class="hljs"><code><div>syntax = &quot;proto3&quot;;
+
+package DriveYourCity;
+
+import &quot;Entities.proto&quot;;
+
+service IRideService {
+    rpc StartRide (StartRideRequest) returns (RideResponse);
+    rpc UpdateRide (stream UpdateRideRequest) returns (stream RideResponse); //actualizaremos la distancia recorrida cada x por stream bidireccional
+    //necesito manteener este canal TCP abierto para enviar y recibir de forma continua la información
+    rpc EndRide (EndRideRequest) returns (stream EndRideResponse); //endRide es un stream porque enviaremos diferente información
+}
+
+// Communication Entities - Requests
+message StartRideRequest {
+    int32 bikeId = 1;    //con qué bicicleta voy as inicar el viaje
+}
+
+message UpdateRideRequest {
+    int32 rideId    = 1;
+    int32 newKms    = 2;
+}
+
+message EndRideRequest {
+    int32 rideId = 1; //necesito el id del ride
+    int32 dockId = 2; //necesito el dock de destino
+}
+
+// Communication Entities - Responses
+message RideResponse {
+    Ride ride = 1;    
+}
+
+message EndRideResponse {
+    string info = 1;
+}
+</div></code></pre>
+<ul>
+<li>Con esto tenemos definido el contexto de dominio del proyecto</li>
+<li>Tenemos las entidades y los servicios</li>
+<li><strong>BikeIoT</strong> se va a conectar <strong>solamente a los servicios de ride</strong></li>
+<li>Bike y dock se comunicarán entre ellos</li>
+<li>Ride se comunicará con dock también (para verificar si un dock está disponible antes de terminar un viaje)</li>
+<li>Vamos a tener todo en un mismo repositorio</li>
+<li>Como compartir las definiciones de .proto
+<ul>
+<li>Un repo para los archivos .proto:
+<ul>
+<li>Están todas las definiciones en un mismo lugar.</li>
+<li>Muchas dependencias.</li>
+<li>Si ese repo se rompe los demás van a tenr problemas</li>
+</ul>
+</li>
+<li>Separados en repositorios por cada servicio:
+<ul>
+<li>Un repo por cada subdominio.</li>
+<li>Separamos mejor las responsabilidades.</li>
+<li>Muchos pequeños repos</li>
+<li>Va a tocar construir un pipeline para cada repo para generar el código fuente</li>
+</ul>
+</li>
+<li>Copiar y pegar
+<ul>
+<li>Muy válida y bastante usada</li>
+<li>Sencilla de usar</li>
+<li>Todos los repo van a tener una copia del modelo de dominio</li>
+<li>No creo dependencias a dominios externos ni divido en pequeños subdominios</li>
+<li>Vamos a tener muchas versiones que pueden desactualizarse</li>
+<li>Puede volverse poco claro (qué controla, qué maneja, puesto que está todo copiado)</li>
+</ul>
+</li>
+<li>gRPC server reflection protocol</li>
+</ul>
+</li>
+<li>Aquí lo manejaremos todo en la carpeta raíz</li>
+</ul>
+<hr>
+<h2 id="03-grpc---prisma-y-cockroachdb">03 gRPC - Prisma y CockroachDB</h2>
+<ul>
+<li>Definiremos la DB con prisma</li>
+<li>Creo la carpeta database en la raíz</li>
+<li>Creamos el proyecto con yarn init</li>
+<li>Instalamos prisma</li>
+</ul>
+<blockquote>
+<p>yarn add prisma -dev</p>
+</blockquote>
+<ul>
+<li>Añadimos dos scripts en el packaghe.json</li>
+<li>Para verificar todos los cambios entre la DB y el archivo .prisma para generar la migración y mantener la DB actualizada uso db:migrate
+<ul>
+<li>uso dev para migrar en modo desarrollo y definimos el schema pasaándole la ubi</li>
+</ul>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-string">"scripts"</span>: {
+    <span class="hljs-attr">"db:migrate"</span>: <span class="hljs-string">"npx prisma migrate dev --schema ./prisma/schema.prisma"</span>,
+    <span class="hljs-attr">"db:push"</span>: <span class="hljs-string">"npx prisma db push --schema ./prisma/schema.prisma"</span>
+  }
+</div></code></pre>
+<ul>
+<li>Creo la carpeta prisma y creo el archivo schema.prisma</li>
+<li>Prisma puede generar el schema a raíz de una DB y al revés, generar una DB a través de un schema</li>
+</ul>
+<pre class="hljs"><code><div>//defino la conexión
+datasource db {
+  provider = &quot;cockroachdb&quot; //el tipo de db
+  url      = env(&quot;DATABASE_URL&quot;) //la variable de entorno donde está la URL DE LA db
+}
+
+generator client {
+  provider        = &quot;prisma-client-js&quot; //prisma generará una librería para acceder a nuestro proyecto dado un schema
+}                                       //es decir, usaremos de forma nativa Prisma.loquesea para realizar als operaciones con la db
+
+model Dock {
+  id        Int      @id 
+  maxBikes  Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bikes Bike[]  //la referencia está en Bike
+  originRides Ride[] @relation(&quot;originDock&quot;) //relaciones con ride
+  targetRides Ride[] @relation(&quot;targetDock&quot;) //relaciones con ride
+}
+
+model Bike {
+  id        Int       @id 
+  dockId    Int?       
+  totalKm   Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  dock      Dock?     @relation(fields: [dockId], references: [id]) //referencia con el dock
+  //rides     Ride[]    @relation(&quot;ride&quot;) 
+}
+
+model Ride {
+  id            Int       @id @default(sequence())  
+  km            Int      
+  bikeId        Int
+  originDockId  Int
+  targetDockId  Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  //bike          Bike      @relation(&quot;ride&quot;, fields: [bikeId], references: [id]) //referencia con Bike
+  originDock    Dock      @relation(&quot;originDock&quot;, fields: [originDockId], references: [id])
+  targetDock    Dock?     @relation(&quot;targetDock&quot;, fields: [targetDockId], references: [id])
+}
+</div></code></pre>
+<ul>
+<li>Creo la variable de entorno en .env (en la raíz)</li>
+<li>CockroachDB usa postgres por debajo</li>
+<li>Deshabilito el password</li>
+</ul>
+<pre class="hljs"><code><div>DATABASE_URL=&quot;postgresql://root@localhost:26000/driveyourcity?sslmode=disable&quot;
+</div></code></pre>
+<ul>
+<li>Uso el comando migrate</li>
+</ul>
+<blockquote>
+<p>yarn run db:migrate</p>
+</blockquote>
+<ul>
+<li>Para conectarme puedo usar TablePlus
+<ul>
+<li>host: localhost</li>
+<li>user: root</li>
+<li>Port: 26000</li>
+<li>Database: driveyourcity</li>
+<li>SSLMode: disabled</li>
+</ul>
+</li>
+<li>Si voy al UI de cockroach en  localhost:8080 puedo ver a driveyouircity y ya voy a poder ver la actividad SQL</li>
+</ul>
+<hr>
+<h2 id="04-grpc---dock-service">04 gRPC - Dock Service</h2>
+<ul>
+<li>Dock es el dispositivo al que las bicis llegan y de las que son tomadas para realizar los viajes</li>
+<li>Esate servicio se va a conectar al balanceador de carga que le va a dar acceso a la DB que está dividida en 3 instancias</li>
+<li>En Dock.proto creamos los 4 servicios que usaremos
+<ul>
+<li>Crear un dock</li>
+<li>Obtener todos los docks</li>
+<li>Obtener un dock por id</li>
+<li>Saber si el dock está disponible</li>
+</ul>
+</li>
+<li>Vamos a hacer el scaffolding del proyecto</li>
+<li>Es algo que vamos a tener que hacer con cada uno de los microservicios</li>
+<li>Creo el directorio de dock-service</li>
+<li>Uso yarn init</li>
+<li>Instalo las dependencias de node</li>
+</ul>
+<blockquote>
+<p>npm i @grpc/grpc-js @grpc/proto-loader @prisma/client
+npm i --save-dev @types/google-protobuf grpc_tools_node_protoc_ts prisma ts-node typescript</p>
+</blockquote>
+<ul>
+<li>Creamos los scriptsç</li>
+</ul>
+<pre class="hljs"><code><div> <span class="hljs-string">"scripts"</span>: {
+    <span class="hljs-attr">"db:gen"</span>: <span class="hljs-string">"sh scripts/prisma-gen.sh"</span>, <span class="hljs-comment">//generar la DB </span>
+    <span class="hljs-attr">"proto:gen"</span>: <span class="hljs-string">"sh scripts/proto-gen.sh"</span>, <span class="hljs-comment">//generar los archivos de ts con las definiciones declaradas en proto   </span>
+    <span class="hljs-attr">"start:server"</span>: <span class="hljs-string">"ts-node server.ts"</span> <span class="hljs-comment">//ejecutar el servidor</span>
+  }
+</div></code></pre>
+<ul>
+<li>Creo la carpeta scripts</li>
+<li>Para crear el script para prisma creo prisma-gen.sh</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment"># copio el schema </span>
+cp -f ./../database/prisma/schema.prisma ./../dock-service/schema.prisma 
+<span class="hljs-comment"># genero el documento de node</span>
+npx prisma generate --schema ./schema.prisma
+<span class="hljs-comment"># remnuevo el documento para no generar basura</span>
+rm ./../dock-service/schema.prisma
+</div></code></pre>
+<ul>
+<li>Creo proto-gen.sh</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-meta">#!/bin/bash
+</span>
+PROTO_DIR=./../../proto  
+
+<span class="hljs-comment"># usamos la librería proto-loader para a travgés de la librería grpc generar todos los archivos que contengan .proto</span>
+yarn proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=src/proto/ ./../proto/*.proto
+</div></code></pre>
+<ul>
+<li><em>NOTA</em>: si los scripts no funcionan realizar el código manualmente
+<ul>
+<li>Para prisma copiar schema.prisma en la raíz del microservicio y ejecutar npx ...</li>
+</ul>
+</li>
+<li>En node_modules/@prisma/client puedo ver todos los archivos ts y js generados</li>
+<li>Ahora ejecutamos <strong>yarn run proto:gen</strong></li>
+<li>Esto genera todos los archivos con el código fuente dentro de la carpeta proto/DriveYourCity y los archivos Bike, Dock, Entities</li>
+<li>Creo .env con la URL de la DB (postgres, ya que cockroachDB usa postgres por debajo)</li>
+</ul>
+<pre class="hljs"><code><div>DATABASE_URL=&quot;postgresql://root@localhost:26000/driveyourcity?sslmode=disable&quot;
+</div></code></pre>
+<ul>
+<li>Crearemos src/persistence dónde almacenaremos toda la persistencia</li>
+<li>Creo src/services, donde crearemos la implementación de los servicios de grpc y otros servicios de apoyo que vamos a necesitar</li>
+<li>Creo la carpeta src/utils con código de utilidad</li>
+<li>Creo el server.ts en la raíz</li>
+<li>De momento lo hacemos inseguro</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">// @ts-ignore</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/proto/Dock'</span>;
+<span class="hljs-keyword">import</span> { DockService } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/service/DockService'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9081</span>;
+<span class="hljs-keyword">const</span> DOCK_PROTO_FILE = <span class="hljs-string">'./../proto/Dock.proto'</span>;
+
+<span class="hljs-keyword">const</span> dockPackageDef = protoLoader.loadSync(path.resolve(__dirname, DOCK_PROTO_FILE)); 
+<span class="hljs-keyword">const</span> dockGrpcObj = (grpc.loadPackageDefinition(dockPackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType;
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = getServer();    
+    <span class="hljs-keyword">const</span> serverCredentials = grpc.ServerCredentials.createInsecure();
+
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, serverCredentials,
+        (err, port) =&gt; {
+            <span class="hljs-keyword">if</span> (err) {
+                <span class="hljs-built_in">console</span>.error(err)
+                <span class="hljs-keyword">return</span>
+            }
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`dock server as started on port <span class="hljs-subst">${port}</span>`</span>)
+            server.start()
+        })
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getServer</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = <span class="hljs-keyword">new</span> grpc.Server();
+
+    server.addService(dockGrpcObj.DriveYourCity.IDockService.service, <span class="hljs-keyword">new</span> DockService())
+
+    <span class="hljs-keyword">return</span> server
+}
+
+main()
+</div></code></pre>
+<ul>
+<li>Dentro de la carpeta utils creo el archivoi prisma.ts para la conexión</li>
+<li>Es un código genérico que se conecta a la instancia definidaq en la variable de entorno</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { PrismaClient } <span class="hljs-keyword">from</span> <span class="hljs-string">'@prisma/client'</span>;
+
+declare global {
+  <span class="hljs-keyword">var</span> prisma: PrismaClient | <span class="hljs-literal">undefined</span>;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> prisma = global.prisma || <span class="hljs-keyword">new</span> PrismaClient();
+
+<span class="hljs-keyword">if</span> (process.env.NODE_ENV !== <span class="hljs-string">'production'</span>) {
+  global.prisma = prisma;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">connectDB</span>(<span class="hljs-params"></span>) </span>{
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> prisma.$connect();
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'? Database connected successfully'</span>);
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-built_in">console</span>.log(error);
+    process.exit(<span class="hljs-number">1</span>);
+  } <span class="hljs-keyword">finally</span> {
+    <span class="hljs-keyword">await</span> prisma.$disconnect();
+  }
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> connectDB;
+</div></code></pre>
+<ul>
+<li>En utils creo también gRPC.ts para definir errores personalizados</li>
+<li>Para ello importo Status que es lo que nos ofrece la librería de grpc</li>
+<li>Si clico encima con ctrl puedo ver el archivo de definiciones constants.d.ts con todos los status disponibles</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> declare enum Status {
+    OK = <span class="hljs-number">0</span>,
+    CANCELLED = <span class="hljs-number">1</span>,
+    UNKNOWN = <span class="hljs-number">2</span>,
+    INVALID_ARGUMENT = <span class="hljs-number">3</span>,
+    DEADLINE_EXCEEDED = <span class="hljs-number">4</span>,
+    NOT_FOUND = <span class="hljs-number">5</span>,
+    ALREADY_EXISTS = <span class="hljs-number">6</span>,
+    PERMISSION_DENIED = <span class="hljs-number">7</span>,
+    RESOURCE_EXHAUSTED = <span class="hljs-number">8</span>,
+    FAILED_PRECONDITION = <span class="hljs-number">9</span>,
+    ABORTED = <span class="hljs-number">10</span>,
+    OUT_OF_RANGE = <span class="hljs-number">11</span>,
+    UNIMPLEMENTED = <span class="hljs-number">12</span>,
+    INTERNAL = <span class="hljs-number">13</span>,
+    UNAVAILABLE = <span class="hljs-number">14</span>,
+    DATA_LOSS = <span class="hljs-number">15</span>,
+    UNAUTHENTICATED = <span class="hljs-number">16</span>
+}
+<span class="hljs-keyword">export</span> declare enum LogVerbosity {
+    DEBUG = <span class="hljs-number">0</span>,
+    INFO = <span class="hljs-number">1</span>,
+    ERROR = <span class="hljs-number">2</span>,
+    NONE = <span class="hljs-number">3</span>
+}
+<span class="hljs-comment">/**
+ * <span class="hljs-doctag">NOTE:</span> This enum is not currently used in any implemented API in this
+ * library. It is included only for type parity with the other implementation.
+ */</span>
+<span class="hljs-keyword">export</span> declare enum Propagate {
+    DEADLINE = <span class="hljs-number">1</span>,
+    CENSUS_STATS_CONTEXT = <span class="hljs-number">2</span>,
+    CENSUS_TRACING_CONTEXT = <span class="hljs-number">4</span>,
+    CANCELLATION = <span class="hljs-number">8</span>,
+    DEFAULTS = <span class="hljs-number">65535</span>
+}
+<span class="hljs-keyword">export</span> declare <span class="hljs-keyword">const</span> DEFAULT_MAX_SEND_MESSAGE_LENGTH = <span class="hljs-number">-1</span>;
+<span class="hljs-keyword">export</span> declare <span class="hljs-keyword">const</span> DEFAULT_MAX_RECEIVE_MESSAGE_LENGTH: number;
+</div></code></pre>
+<ul>
+<li>Uso los que necesito en utils/gRPC.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { Status } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js/build/src/constants"</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> NotFoundError = <span class="hljs-function">(<span class="hljs-params">entity: string, id: number</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.NOT_FOUND, <span class="hljs-attr">message</span>: <span class="hljs-string">`<span class="hljs-subst">${entity}</span> with id <span class="hljs-subst">${id}</span> not found`</span> });
+<span class="hljs-comment">//cuando nos invocan una función pero los argumentos no son insufcientes muestro este error</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> InvalidArgumentError = <span class="hljs-function">(<span class="hljs-params">args: string[]</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.INVALID_ARGUMENT, <span class="hljs-attr">message</span>: <span class="hljs-string">`<span class="hljs-subst">${args.join(<span class="hljs-string">', '</span>)}</span> missing arguments.`</span> });
+<span class="hljs-comment">//error desconocido o no controlado</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-built_in">InternalError</span> = <span class="hljs-function">(<span class="hljs-params">message: string</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.INTERNAL, message });
+</div></code></pre>
+<ul>
+<li>Este es el scaffolding completo del proyecto</li>
+<li>Creo en src/persistence/DockPersistence.ts</li>
+<li>Creamos la interfaz de acceso a datos a la entidad</li>
+<li>Creamos la clase implementando la interfaz. Le digo al IDE que me cree los métodos rápidamente</li>
+<li>Para obtener el cliente de prisma creo un atributo privado _prisma</li>
+<li>Importo (la conexión) prisma de utils, la paso por el constructor</li>
+<li>DockCreateInput es un componente generado ese componente nativamente al doiminio por Prisma desde el esquema (importo Prisma de @prisma/client)</li>
+<li>Uso async await porque voy a interactuar con la DB, por lo que el método devuelve una promesa</li>
+<li>Para obtener un dock por id, uso where para indicar que el id que le mando por parámetro es el id que busco y tambiénn quiero obtener las bicicletas de ese dock, por lo que uso includes</li>
+<li>Para saber si un dock está disponible o no uso $queryRaw para ejecutar syntaxis de SQL con un valor de is_avaliable: false por defecto
+<ul>
+<li>Selecciono la selección del número de bicis desde Bike y dock dónde el &quot;Dock&quot;.id == &quot;Bike&quot;.&quot;dockId&quot;</li>
+<li>Este número debe de ser inferior al número máximo de bicis que el dock puede recibir, donde &quot;Dock&quot;.id es el id pasado como parámetro</li>
+<li>Si la respuesta devuelve algo (con .length), tomo el primer resultado que está disponible y retorno la variable bboleana is_avaliable</li>
+<li>Si no devolvemos faLso indicando que el dock no puede recibir más bicicletas</li>
+</ul>
+</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">"./../utils/prisma"</span>;
+<span class="hljs-keyword">import</span> { Prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">"@prisma/client"</span>;
+<span class="hljs-keyword">import</span> { Dock } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/Dock"</span>;
+
+<span class="hljs-keyword">export</span> interface IDockPersistence {
+    createDock(dock: Dock): <span class="hljs-built_in">Promise</span>&lt;Dock&gt;;
+    getAllDocks(): <span class="hljs-built_in">Promise</span>&lt;Dock[]&gt;;
+    getDockById(id:number): <span class="hljs-built_in">Promise</span>&lt;Dock | <span class="hljs-literal">undefined</span>&gt;;
+    isDockAvailable(id: number): <span class="hljs-built_in">Promise</span>&lt;boolean&gt;;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CockroachDBDockPersistence</span> <span class="hljs-title">implements</span> <span class="hljs-title">IDockPersistence</span> </span>{
+
+    private _prisma;
+
+    <span class="hljs-keyword">constructor</span>() {
+        <span class="hljs-keyword">this</span>._prisma = prisma;
+    }    
+
+    <span class="hljs-keyword">async</span> createDock(dock: Dock): <span class="hljs-built_in">Promise</span>&lt;Dock&gt; {
+        <span class="hljs-keyword">const</span> input = dock <span class="hljs-keyword">as</span> Prisma.DockCreateInput;
+        <span class="hljs-keyword">const</span> newDock = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.dock.create({ <span class="hljs-attr">data</span>: input });
+        <span class="hljs-keyword">return</span> newDock;        
+    }
+    <span class="hljs-keyword">async</span> getAllDocks(): <span class="hljs-built_in">Promise</span>&lt;Dock[]&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._prisma.dock.findMany();        
+    }
+    <span class="hljs-keyword">async</span> getDockById(id: number): <span class="hljs-built_in">Promise</span>&lt;Dock | <span class="hljs-literal">undefined</span>&gt; {
+        <span class="hljs-keyword">const</span> dock = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.dock.findFirst({
+            <span class="hljs-attr">where</span>: {
+              id,
+            },
+            <span class="hljs-attr">include</span>: {
+                <span class="hljs-attr">bikes</span>: <span class="hljs-literal">true</span>,
+            }
+          });
+        <span class="hljs-keyword">return</span> dock <span class="hljs-keyword">as</span> Dock;
+    }
+    <span class="hljs-keyword">async</span> isDockAvailable(id: number): <span class="hljs-built_in">Promise</span>&lt;boolean&gt; {                
+        <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> prisma.$queryRaw&lt;{<span class="hljs-attr">is_available</span>: <span class="hljs-literal">false</span>}[]&gt;<span class="hljs-string">`
+            SELECT (SELECT COUNT(*) as numBikes
+                    FROM "Bike",
+                        "Dock"
+                    WHERE "Dock".id = "Bike"."dockId"
+                    AND "Dock".id = <span class="hljs-subst">${id}</span>) &lt; "maxBikes" as is_available
+            FROM "Dock"
+            WHERE "Dock".id = <span class="hljs-subst">${id}</span>;
+        `</span>;        
+        <span class="hljs-keyword">if</span>(result.length) {
+            <span class="hljs-keyword">return</span> result[<span class="hljs-number">0</span>].is_available;
+        }
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+    }
+}
+</div></code></pre>
+<ul>
+<li>Para trabajar el servicio voy a src/service/DockService.ts</li>
+<li>Creo una nueva instancia de CockRoachDBDockPersistence</li>
+<li>La clase DockService implementa la interfaz IDockServiceHandlers
+<ul>
+<li>Esta interfaz está ubicada en dock-service/src/proto/DriveYourCity/IDockService con todos los métodos declarados en .proto a implementar</li>
+</ul>
+</li>
+<li>Para <strong>crear el dock</strong> obtengo el body con call.request, extraigo el dock</li>
+<li>Usaré try catch</li>
+<li>Hago la validación: si hay dock usop el método create de dockPersistence (CockRoachDBPersistence)</li>
+<li>Devuelvo en el callback el primer parámetro (error) en null y de segundo el dock</li>
+<li>Si hay un error lo capturo con el catch y uso en el primer argumento del callback uno de mis errores custom y como segundo parámetro le paso el dock como undefined</li>
+<li>Para <strong>obtener todos los docks</strong> uso el método de dockPersistence</li>
+<li>Con un forEach uso call.write para abrir la conexión por streaming y pasarle uno a uno todos los docks</li>
+<li>Cierro la conexión con call.end</li>
+<li>Para <strong>obtener el dock por id</strong> extraigo el dockId del body de la request con call.request.dockId</li>
+<li>Hago la validación y la inserción</li>
+<li>Si la inserción no va bien, Capturo el error con un ternario y lo guardo en una variable y lo devuelvo en el callback junto al dock</li>
+<li>Si no hay error su valor será null</li>
+<li>Si no hay dockId es que los argumentos paqsados son erróneos, por lo que lanzo mi error custom correswpondiente</li>
+<li>En el catch capto un posible error no manejado</li>
+<li>Para saber si <strong>el dock está disponible</strong> extraigo el id de la request con call.request.dockId</li>
+<li>Hago la validación, si hay dockId uso la DB para obtener la respuesta. Devuelvo en el callback el error como null, y la respuesta de la consulta</li>
+<li>Si no hay dockId es que no se pasó cómo argumento, lanzomi error custom</li>
+<li>En el catch capturo un posible error no manejado</li>
+<li>Exporto DockService!</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ServerUnaryCall, ServerWritableStream, sendUnaryData } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> { IDockServiceHandlers } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/IDockService"</span>;
+<span class="hljs-keyword">import</span> { DockResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/DockResponse"</span>;
+<span class="hljs-keyword">import</span> { GetAllDocks__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/GetAllDocks"</span>;
+<span class="hljs-keyword">import</span> { GetDockByIdRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/GetDockByIdRequest"</span>;;
+<span class="hljs-keyword">import</span> { CreateDockRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/CreateDockRequest"</span>;
+<span class="hljs-keyword">import</span> { IsDockAvailableRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/IsDockAvailableRequest"</span>;
+<span class="hljs-keyword">import</span> { IsDockAvailableResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/IsDockAvailableResponse"</span>;
+<span class="hljs-keyword">import</span> { CockroachDBDockPersistence } <span class="hljs-keyword">from</span> <span class="hljs-string">"../persitence/DockPersistence"</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-built_in">InternalError</span>, InvalidArgumentError, NotFoundError } <span class="hljs-keyword">from</span> <span class="hljs-string">"../utils/gRPC"</span>;
+
+<span class="hljs-keyword">const</span> dockPersistence = <span class="hljs-keyword">new</span> CockroachDBDockPersistence();
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">DockService</span> <span class="hljs-title">implements</span> <span class="hljs-title">IDockServiceHandlers</span> </span>{
+    [name: string]: <span class="hljs-keyword">import</span>(<span class="hljs-string">"@grpc/grpc-js"</span>).UntypedHandleCall;
+
+    <span class="hljs-keyword">async</span> CreateDock (call: ServerUnaryCall&lt;CreateDockRequest__Output, DockResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;DockResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {        
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> dock = call.request.dock;
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'CreateDock'</span>, { dock });
+            <span class="hljs-keyword">if</span> (dock) {                
+                <span class="hljs-keyword">const</span> newDock = <span class="hljs-keyword">await</span> dockPersistence.createDock(dock);
+                callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">dock</span>: newDock });
+            }
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">dock</span>: <span class="hljs-literal">undefined</span> });
+        }        
+    }
+
+    <span class="hljs-keyword">async</span> GetAllDocks (call: ServerWritableStream&lt;GetAllDocks__Output, DockResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'GetAllDocks'</span>);
+        <span class="hljs-keyword">const</span> docks = <span class="hljs-keyword">await</span> dockPersistence.getAllDocks();
+        docks.forEach(<span class="hljs-function"><span class="hljs-params">dock</span> =&gt;</span> call.write({ dock }));
+        call.end();     
+    }
+
+    <span class="hljs-keyword">async</span> GetDockById (call: ServerUnaryCall&lt;GetDockByIdRequest__Output, DockResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;DockResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> dockId = call.request.dockId;
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'GetDockById'</span>, { dockId });
+            <span class="hljs-keyword">if</span> (dockId) {            
+                <span class="hljs-keyword">const</span> dock = <span class="hljs-keyword">await</span> dockPersistence.getDockById(dockId);
+                <span class="hljs-keyword">const</span> error = dock ? <span class="hljs-literal">null</span> : NotFoundError(<span class="hljs-string">'dock'</span>, dockId);
+                callback(error, { dock });
+            }
+            callback(InvalidArgumentError([<span class="hljs-string">'dockId'</span>]), { <span class="hljs-attr">dock</span>: <span class="hljs-literal">undefined</span> });
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">dock</span>: <span class="hljs-literal">undefined</span> });
+        }        
+    }
+
+    <span class="hljs-keyword">async</span> IsDockAvailable(call: ServerUnaryCall&lt;IsDockAvailableRequest__Output, IsDockAvailableResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;IsDockAvailableResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> dockId = call.request.dockId;
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'IsDockAvailable'</span>, { dockId });
+            <span class="hljs-keyword">if</span> (dockId) {                        
+                callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">isAvalable</span>: <span class="hljs-keyword">await</span> dockPersistence.isDockAvailable(dockId) });
+            }
+            callback(InvalidArgumentError([<span class="hljs-string">'dockId'</span>]), { <span class="hljs-attr">isAvalable</span>: <span class="hljs-literal">false</span> });
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">isAvalable</span>: <span class="hljs-literal">false</span> });
+        }         
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    DockService
+}
+</div></code></pre>
+<ul>
+<li>Ahora solo queda hacer las pruebas con POSTMAN (ya creamos el servidor anteriormente)</li>
+<li>Para probar el microservicio incializamos docker-compose en la raíz de DriveYourCity</li>
+</ul>
+<blockquote>
+<p>docker compose -f docker-compose.yml up -d --build</p>
+</blockquote>
+<ul>
+<li>Para sincronizar el schema con la instancia de la DB usaré el script db:push</li>
+</ul>
+<pre class="hljs"><code><div> <span class="hljs-string">"db:push"</span>: <span class="hljs-string">"npx prisma db push --schema ./prisma/schema.prisma"</span>
+</div></code></pre>
+<hr>
+<h2 id="05-grpc-bike-service">05 gRPC Bike Service</h2>
+<ul>
+<li>Bike se encarga no solo del CRUD de una bici, también de asociar o desasociar unabici a un dock</li>
+<li>Observemos Bike.proto</li>
+</ul>
+<pre class="hljs"><code><div>syntax = &quot;proto3&quot;;
+
+package DriveYourCity;
+
+import &quot;Entities.proto&quot;;
+
+service IBikeService {
+    rpc GetBikeById (GetBikeByIdRequest) returns (BikeResponse);
+    rpc CreateBike (BikeRequest) returns (BikeResponse);
+    rpc AttachBikeToDock (AttachBikeToDockRequest) returns (BikeResponse);
+    rpc UnAttachBikeFromDock (UnAttachBikeFromDockRequest) returns (BikeResponse);
+}
+
+// Communication Entities - Requests
+message GetBikeByIdRequest {
+  int32 bikeId = 1;
+}
+message BikeRequest {
+  Bike bike = 1;
+}
+
+message AttachBikeToDockRequest {
+  int32 bikeId = 1;
+  int32 dockId = 2;
+  int32 totalKms = 3;
+}
+
+message UnAttachBikeFromDockRequest {
+  int32 bikeId = 1;  
+}
+
+// Communication Entities - Responses
+message BikeResponse {
+  Bike bike = 1;
+}
+</div></code></pre>
+<ul>
+<li>BikeService no solo expone un servicio de gRPC a RideService, también consume DockService</li>
+<li>Vamos a crear el microservicio, también vamos a crear un cliente que se conecte al servicio anterior (DockService) para realizar algunas tareas</li>
+<li>Creamos la carpeta BikeService, hacemos todo el scaffolding hecho anteriormente en DockService</li>
+<li>Es recomendable tener un repositorio con todo el scaffolding para poder reproducir los microservicios sin tener que repetir una y otra vez el código</li>
+<li>Genero el código fuente y el cliente de prisma con prisma-gen.sh y proto-gen.sh</li>
+<li>Creo la carpeta src/persistence/BikePersistence</li>
+<li>Realizamos la misma operación, importamos prisma de /utils/prisma con la conexión y se la pasamos al constructor guardándola en un atributo privado</li>
+<li>Para <strong>crear una bici</strong> necesitamos crear un input. Le paso el id que es lo que tengo</li>
+<li>Uso this._prisma.bike.create y en un objeto le paso en la data el input</li>
+<li>Para <strong>retornar todas las bicis</strong> uso findMany</li>
+<li>Para <strong>obtener la bici por id</strong> uso findFirst, colocando en el where el id e incluyendo el dock en include</li>
+<li>Retorno bike como Bike</li>
+<li>Para <strong>actualizar la bici</strong> guardo la bike como Prisma.BikeUpdateInput</li>
+<li>Si clico encima de BikeUpdateInput + ctrl obtengo esto</li>
+<li>index.d.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">export</span> type BikeUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    totalKm?: IntFieldUpdateOperationsInput | number
+    createdAt?: DateTimeFieldUpdateOperationsInput | <span class="hljs-built_in">Date</span> | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | <span class="hljs-built_in">Date</span> | string
+    dock?: DockUpdateOneWithoutBikesNestedInput <span class="hljs-comment">//puede tener un dock </span>
+    rides?: RideUpdateManyWithoutBikeNestedInput <span class="hljs-comment">//puede tener un ride</span>
+  }
+</div></code></pre>
+<ul>
+<li>Si clico encima de DockUpdateOneWithoutBikesNestedInput + ctrl obtengo esto</li>
+<li>Son todas las operaciones que puedo hacer con una relación</li>
+</ul>
+<pre class="hljs"><code><div> <span class="hljs-keyword">export</span> type DockUpdateOneWithoutBikesNestedInput = {
+    create?: XOR&lt;DockCreateWithoutBikesInput, DockUncheckedCreateWithoutBikesInput&gt;
+    connectOrCreate?: DockCreateOrConnectWithoutBikesInput
+    upsert?: DockUpsertWithoutBikesInput
+    disconnect?: DockWhereInput | boolean
+    <span class="hljs-keyword">delete</span>?: DockWhereInput | boolean
+    connect?: DockWhereUniqueInput
+    update?: XOR&lt;XOR&lt;DockUpdateToOneWithWhereWithoutBikesInput, DockUpdateWithoutBikesInput&gt;, DockUncheckedUpdateWithoutBikesInput&gt;
+  }
+</div></code></pre>
+<ul>
+<li>En BikePersistence.ts, en update, si bike.dock existe quiero conectar mi bici a ese dock</li>
+<li>Si no existe, lo que quiero es desconectar mi bici del dock al que esté conectado</li>
+<li>Para el update uso prisma.bike.update, pasándole el id a where, y pasándole el objeto data</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { Prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">'@prisma/client'</span>;
+<span class="hljs-keyword">import</span> { prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">'../utils/prisma'</span>;
+<span class="hljs-keyword">import</span> { Bike } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/Bike"</span>;
+
+<span class="hljs-keyword">export</span> interface IBikePersistence {
+    createBike(bike: Bike): <span class="hljs-built_in">Promise</span>&lt;Bike&gt;;
+    getAllBikes(): <span class="hljs-built_in">Promise</span>&lt;Bike[]&gt;
+    getBikeById(id:number): <span class="hljs-built_in">Promise</span>&lt;Bike | <span class="hljs-literal">undefined</span>&gt;
+    updateBike(id: number, <span class="hljs-attr">bike</span>: Partial&lt;Bike&gt;): <span class="hljs-built_in">Promise</span>&lt;Bike | <span class="hljs-literal">undefined</span>&gt;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CockroachDBBikePersistence</span> <span class="hljs-title">implements</span> <span class="hljs-title">IBikePersistence</span> </span>{
+
+    private _prisma;
+
+    <span class="hljs-keyword">constructor</span>() {
+        <span class="hljs-keyword">this</span>._prisma = prisma;
+    }
+
+    <span class="hljs-keyword">async</span> createBike(bike: Bike): <span class="hljs-built_in">Promise</span>&lt;Bike&gt; {
+        <span class="hljs-keyword">const</span> input: Prisma.BikeCreateInput = {
+            <span class="hljs-attr">id</span>: bike.id!,
+        }
+        <span class="hljs-keyword">const</span> newBike = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.bike.create({ <span class="hljs-attr">data</span>: input });
+        <span class="hljs-keyword">return</span> newBike;
+    }
+
+    <span class="hljs-keyword">async</span> getAllBikes(): <span class="hljs-built_in">Promise</span>&lt;Bike[]&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._prisma.bike.findMany();        
+    }
+
+    <span class="hljs-keyword">async</span> getBikeById(id: number): <span class="hljs-built_in">Promise</span>&lt;Bike | <span class="hljs-literal">undefined</span>&gt; {
+        <span class="hljs-keyword">const</span> bike = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.bike.findFirst({
+            <span class="hljs-attr">where</span>: {
+              id,
+            },
+            <span class="hljs-attr">include</span>: {
+                <span class="hljs-attr">dock</span>: <span class="hljs-literal">true</span>,
+            },
+          });        
+        <span class="hljs-keyword">return</span> bike <span class="hljs-keyword">as</span> Bike;
+    }
+
+    <span class="hljs-keyword">async</span> updateBike(id: number, <span class="hljs-attr">bike</span>: Partial&lt;Bike&gt;): <span class="hljs-built_in">Promise</span>&lt;Bike | <span class="hljs-literal">undefined</span>&gt; {
+        <span class="hljs-keyword">const</span> data: Prisma.BikeUpdateInput = bike <span class="hljs-keyword">as</span> Prisma.BikeUpdateInput;
+        <span class="hljs-keyword">if</span>(bike.dock) {
+            data.dock = { <span class="hljs-attr">connect</span>: { <span class="hljs-attr">id</span>: bike.dock?.id }};
+        } <span class="hljs-keyword">else</span> {
+            data.dock = { <span class="hljs-attr">disconnect</span>: <span class="hljs-literal">true</span>};
+        }                
+        <span class="hljs-keyword">const</span> updatedBike = <span class="hljs-keyword">await</span> prisma.bike.update({
+            <span class="hljs-attr">where</span>: { id },
+            data
+        });
+        <span class="hljs-keyword">return</span> updatedBike;
+    }
+}
+</div></code></pre>
+<ul>
+<li>Ya tenemos la persistencia, podemos crear nuestro servicio</li>
+<li>Pero antes creemos el cliente que se conecta al dock</li>
+<li>En service creo DockClient.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'../proto/Dock'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9081</span>; <span class="hljs-comment">//puerto del server de Dock</span>
+<span class="hljs-keyword">const</span> DOCK_PROTO_FILE = <span class="hljs-string">'./../../../proto/Dock.proto'</span>;
+
+<span class="hljs-keyword">const</span> dockPackageDef = protoLoader.loadSync(path.resolve(__dirname, DOCK_PROTO_FILE)); <span class="hljs-comment">//creo la definición del paquete pasándole la ruta del proto</span>
+<span class="hljs-keyword">const</span> dockGrpcObj = (grpc.loadPackageDefinition(dockPackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType; <span class="hljs-comment">//creo el objeto para crear la instancia del servicio</span>
+
+<span class="hljs-keyword">const</span> channelCredentials = grpc.credentials.createInsecure(); <span class="hljs-comment">//de momento inseguro</span>
+<span class="hljs-keyword">const</span> dockServiceClient = <span class="hljs-keyword">new</span> dockGrpcObj.DriveYourCity.IDockService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials) <span class="hljs-comment">//creo el servicio y lo mapeo al puerto   </span>
+
+<span class="hljs-keyword">const</span> dockClient = {  <span class="hljs-comment">//solo necesito interactuar con el Dock para saber si está disponible</span>
+    <span class="hljs-attr">isDockAvailable</span>: <span class="hljs-keyword">async</span> (dockId: number): <span class="hljs-built_in">Promise</span>&lt;boolean&gt; =&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            dockServiceClient.IsDockAvailable({dockId}, (err, response) =&gt; { <span class="hljs-comment">//el servicio recibe el id (que recoge con el call.request) </span>
+                                                                              <span class="hljs-comment">//y el callback con el error de primer parámetro y la response de segundo</span>
+                <span class="hljs-keyword">if</span>(response) {
+                    resolve(response.isAvalable <span class="hljs-keyword">as</span> boolean); <span class="hljs-comment">// si hay response resolvemos la promesa devolviendo el isAvaliable como boolean   </span>
+                }
+                reject(err); <span class="hljs-comment">// si no hay respuesta usamos reject y devolvemnos el error</span>
+            });
+        }) 
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    dockClient
+}
+</div></code></pre>
+<ul>
+<li>Encapsula y divide muy bien las responsabilidades</li>
+<li>Usaré este cliente para comunicarme con dock-microservice desde bike-microservice</li>
+<li>Entonces lo que he hecho es <strong>crear un cliente en bike-microservice que se conecte al puerto de dock-microservice con una nueva instancia de DockService, e implementar el código con el cliente para interactuar con el servicio</strong></li>
+<li>Vayamos con el BikeService. Dónde está?
+<ul>
+<li>En src/proto/DriveYourCity/IBikeService</li>
+<li>Contiene todas las definiciones. la que nos interesa es <strong>IBikeServiceHandlers</strong></li>
+</ul>
+</li>
+<li>Quiero explicar este código:</li>
+</ul>
+<pre class="hljs"><code><div>[name: string]: <span class="hljs-keyword">import</span>(<span class="hljs-string">"@grpc/grpc-js"</span>).UntypedHandleCall;
+</div></code></pre>
+<ul>
+<li><strong>[name: string]</strong>:
+<ul>
+<li>Esto es una sintaxis de TypeScript para definir un índice de propiedad en una interfaz. Significa que cualquier propiedad del objeto puede tener un nombre de tipo string.</li>
+</ul>
+</li>
+<li><strong>import(&quot;@grpc/grpc-js&quot;).UntypedHandleCall</strong>:
+<ul>
+<li>Esto se refiere a un tipo que está siendo importado desde el módulo @grpc/grpc-js. En este caso, UntypedHandleCall es un tipo exportado por este módulo.</li>
+</ul>
+</li>
+<li><strong>import(&quot;@grpc/grpc-js&quot;)</strong> es la forma de importar tipos o valores desde un módulo externo en TypeScript sin necesidad de hacer una importación explícita en la parte superior del archivo.</li>
+<li>Creo una instancia de new CockroachDBBikePersistence()</li>
+<li>Para el attach de la bici al dock abro un try catch (como en los casos anteriores)</li>
+<li>extraigo las propiedades del body con call.request.propiedad</li>
+<li>Si tengo bikeId y dockId uso el dockClient para ver si el dock esta disponible y uso la instancia de la db de bike (bikePersistence) para obtener la bici por id</li>
+<li>Si no hay dock mando un error con el callback</li>
+<li>Si el dock de la bici es distinto de null es que ya está ligada a un dock</li>
+<li>Y si no usamos updatedBike, le paso el id, actualizo el total de km de la bici y le indico el id del dock</li>
+<li>Si no es ninguno de estos casos lanzo un custom error de invalid arguments y en el catch recojo el error no manejado (de haberlo)</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ServerUnaryCall, handleUnaryCall, sendUnaryData } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> { Status } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js/build/src/constants"</span>;
+<span class="hljs-keyword">import</span> { IBikeServiceHandlers } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/IBikeService"</span>;
+<span class="hljs-keyword">import</span> { BikeRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/BikeRequest"</span>;
+<span class="hljs-keyword">import</span> { BikeResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/BikeResponse"</span>;
+<span class="hljs-keyword">import</span> { GetBikeByIdRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/GetBikeByIdRequest"</span>;
+<span class="hljs-keyword">import</span> { AttachBikeToDockRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/AttachBikeToDockRequest"</span>;
+<span class="hljs-keyword">import</span> { CockroachDBBikePersistence } <span class="hljs-keyword">from</span> <span class="hljs-string">"../persitence/BikePersistence"</span>;
+<span class="hljs-keyword">import</span> { dockClient } <span class="hljs-keyword">from</span> <span class="hljs-string">"./DockClient"</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-built_in">InternalError</span>, InvalidArgumentError, NotFoundError } <span class="hljs-keyword">from</span> <span class="hljs-string">"../utils/gRPC"</span>;
+<span class="hljs-keyword">import</span> { UnAttachBikeFromDockRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/UnAttachBikeFromDockRequest"</span>;
+
+<span class="hljs-keyword">const</span> bikePersistence = <span class="hljs-keyword">new</span> CockroachDBBikePersistence();
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BikeService</span> <span class="hljs-title">implements</span> <span class="hljs-title">IBikeServiceHandlers</span> </span>{
+
+    [name: string]: <span class="hljs-keyword">import</span>(<span class="hljs-string">"@grpc/grpc-js"</span>).UntypedHandleCall; <span class="hljs-comment">//explicación de este código arriba!</span>
+    
+    <span class="hljs-keyword">async</span> AttachBikeToDock(call: ServerUnaryCall&lt;AttachBikeToDockRequest__Output, BikeResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;BikeResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> bikeId = call.request.bikeId;
+            <span class="hljs-keyword">const</span> dockId = call.request.dockId;
+            <span class="hljs-keyword">const</span> totalKm = call.request.totalKms ? call.request.totalKms : <span class="hljs-number">0</span>;
+    
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'AttachBikeToDock'</span>, { bikeId, dockId, totalKm });
+            <span class="hljs-keyword">if</span>(bikeId &amp;&amp; dockId) {            
+                <span class="hljs-keyword">const</span> isDockAvailable = <span class="hljs-keyword">await</span> dockClient.isDockAvailable(dockId);
+                <span class="hljs-keyword">const</span> bike = <span class="hljs-keyword">await</span> bikePersistence.getBikeById(bikeId);
+                <span class="hljs-keyword">if</span>(!isDockAvailable) {                                          
+                    callback({ <span class="hljs-attr">code</span>: Status.FAILED_PRECONDITION, <span class="hljs-attr">message</span>: <span class="hljs-string">`dock with id <span class="hljs-subst">${dockId}</span> not available`</span> }, { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+                } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(bike?.dock !== <span class="hljs-literal">null</span>) {
+                    callback({ <span class="hljs-attr">code</span>: Status.FAILED_PRECONDITION, <span class="hljs-attr">message</span>: <span class="hljs-string">`bike with id <span class="hljs-subst">${bikeId}</span> is attached to the dock <span class="hljs-subst">${bike?.dock?.id}</span>`</span> }, { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+                }<span class="hljs-keyword">else</span> {
+                    <span class="hljs-keyword">const</span> updatedBike = <span class="hljs-keyword">await</span> bikePersistence.updateBike(bikeId, { <span class="hljs-attr">totalKm</span>: bike?.totalKm! + totalKm!, <span class="hljs-attr">dock</span>: { <span class="hljs-attr">id</span>: dockId } });
+                    callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">bike</span>: updatedBike });                    
+                }
+            } 
+            callback(InvalidArgumentError([<span class="hljs-string">'dockId'</span>, <span class="hljs-string">'bikeId'</span>]), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+        }        
+    }
+
+    <span class="hljs-keyword">async</span> UnAttachBikeFromDock(call: ServerUnaryCall&lt;UnAttachBikeFromDockRequest__Output, BikeResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;BikeResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> bikeId = call.request.bikeId;
+
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'UnAttachBikeFromDock'</span>, { bikeId });
+            <span class="hljs-keyword">if</span>(bikeId) {
+                <span class="hljs-keyword">const</span> bike = <span class="hljs-keyword">await</span> bikePersistence.getBikeById(bikeId);
+                <span class="hljs-keyword">if</span>(bike?.dock !== <span class="hljs-literal">null</span>) {
+                    <span class="hljs-keyword">const</span> updatedBike = <span class="hljs-keyword">await</span> bikePersistence.updateBike(bikeId, { <span class="hljs-attr">dock</span>: <span class="hljs-literal">null</span> });
+                    callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">bike</span>: updatedBike });
+                } <span class="hljs-keyword">else</span> {
+                    callback({ <span class="hljs-attr">code</span>: Status.FAILED_PRECONDITION, <span class="hljs-attr">message</span>: <span class="hljs-string">`bike with id <span class="hljs-subst">${bikeId}</span> is not attached to any dock`</span> }, { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+                }
+            }            
+
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+        }         
+    }
+    
+    <span class="hljs-keyword">async</span> CreateBike(call: ServerUnaryCall&lt;BikeRequest__Output, BikeResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;BikeResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> bike = call.request.bike;
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'CreateBike'</span>, { bike });
+            <span class="hljs-keyword">if</span>(bike) {
+                <span class="hljs-keyword">const</span> newBike = <span class="hljs-keyword">await</span> bikePersistence.createBike(bike);
+                callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">bike</span>: newBike });
+            }
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });
+        }         
+    }
+
+    <span class="hljs-keyword">async</span> GetBikeById(call: ServerUnaryCall&lt;GetBikeByIdRequest__Output, BikeResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;BikeResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> bikeId = call.request.bikeId; <span class="hljs-comment">//extraigo el id de la request</span>
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'GetBikeById'</span>, { bikeId });
+            <span class="hljs-keyword">if</span> (bikeId) {            
+                <span class="hljs-keyword">const</span> bike = <span class="hljs-keyword">await</span> bikePersistence.getBikeById(bikeId); <span class="hljs-comment">//uso el método               </span>
+                <span class="hljs-keyword">const</span> error = bike ? <span class="hljs-literal">null</span> : NotFoundError(<span class="hljs-string">'bike'</span>, bikeId); <span class="hljs-comment">//si hay bike el error es null, si no mando el custom error</span>
+                callback(error, { bike }); <span class="hljs-comment">//retorno con el callback el error y la bike</span>
+            }
+        callback(InvalidArgumentError([<span class="hljs-string">'dockId'</span>]), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> }); <span class="hljs-comment">//si no es ninguno de esos casos es que el argumento no es válido</span>
+        } <span class="hljs-keyword">catch</span> (err) {
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">bike</span>: <span class="hljs-literal">undefined</span> });<span class="hljs-comment">// si hay un error lo capturo con el catch</span>
+        }        
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    BikeService
+}
+</div></code></pre>
+<ul>
+<li>Creo el server.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">// @ts-ignore</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/proto/Bike'</span>;
+<span class="hljs-keyword">import</span> { BikeService } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/service/BikeService'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9082</span>;
+<span class="hljs-keyword">const</span> BIKE_PROTO_FILE = <span class="hljs-string">'./../proto/Bike.proto'</span>;
+
+<span class="hljs-keyword">const</span> bikePackageDef = protoLoader.loadSync(path.resolve(__dirname, BIKE_PROTO_FILE));
+<span class="hljs-keyword">const</span> bikeGrpcObj = (grpc.loadPackageDefinition(bikePackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType;
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = getServer();    
+    <span class="hljs-keyword">const</span> serverCredentials = grpc.ServerCredentials.createInsecure();
+
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, serverCredentials,
+        (err, port) =&gt; {
+            <span class="hljs-keyword">if</span> (err) {
+                <span class="hljs-built_in">console</span>.error(err)
+                <span class="hljs-keyword">return</span>
+            }
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`ride server as started on port <span class="hljs-subst">${port}</span>`</span>)
+            server.start()
+        })
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getServer</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = <span class="hljs-keyword">new</span> grpc.Server();
+
+    server.addService(bikeGrpcObj.DriveYourCity.IBikeService.service, <span class="hljs-keyword">new</span> BikeService())
+
+    <span class="hljs-keyword">return</span> server
+}
+
+main()
+</div></code></pre>
+<ul>
+<li>Creo el .env</li>
+</ul>
+<pre class="hljs"><code><div>DATABASE_URL=&quot;postgresql://root@localhost:26000/driveyourcity?sslmode=disable&quot;
+</div></code></pre>
+<ul>
+<li>Debemos iniciar los dos servers, el de dock y el de bike</li>
+<li>En POSTMAN uso createBike y le paso un objeto con id:1, dock: {}</li>
+<li>Para añadir la bici al dock mando en el objeto el dockId, el bikeId, y el totalkm</li>
+<li>Si intento asociar la misma bici me salta error de que la bici con id tal ya está asociada al dock con id tal</li>
+</ul>
+<hr>
+<h2 id="07-grpc---rideservice-%C3%BAltima-secci%C3%B3n">07 gRPC - RideService (última sección)</h2>
+<ul>
+<li>Nos quedan tres casos de uso
+<ul>
+<li>Comenzar el viaje</li>
+<li>A medida que se desarrolla el viaje enviar información del viaje</li>
+<li>Terminar el viaje</li>
+</ul>
+</li>
+<li>RideService se conecta al Dockservice y al BikeService</li>
+<li>A futuro podemos pensar en un componente IoT que esté instalado en las biciletas que transmita y se comunique con estos servicios, ofreciendo o consumiendo los servicios gRPC</li>
+<li>Creado todo el scafolding, los scripts, el cliente de prisma y los archivos de codigo fuente basado en los .proto, creo las carpetas persistence, service, etc</li>
+<li>Creo src/persistence/RidePeristence.ts</li>
+<li>Importo Prisma de @prisma/client y la conexión que cree con la DB de /utils/prisma</li>
+<li>Para <strong>createRide</strong> creo el input seteando el km a 0, conectando el id de la bike y el id del dock de origen</li>
+<li>Retorno el .create pasándole en la data el input</li>
+<li>Para el <strong>getRideById</strong> uso .findFirst.</li>
+<li>En la cláusula where le paso el id y en include quiero bike, originDock y targetDock en true para obtenerlos</li>
+<li>Devuelvo el ride</li>
+<li>Para el <strong>updateRide</strong> creo la data con el ride y lo casteo a Prisma.RideUpdateInput</li>
+<li>Si hay un targetDock conecto el id, si no pongo el disconnect en true</li>
+<li>Utilizo _prisma.ride.update donde el where tiene el id, le paso la data y en include tengo el bike, originDock y targetDock en true</li>
+<li>Retorno el updateRide</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { Prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">'@prisma/client'</span>;
+<span class="hljs-keyword">import</span> { prisma } <span class="hljs-keyword">from</span> <span class="hljs-string">'../utils/prisma'</span>;
+<span class="hljs-keyword">import</span> { Ride } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/Ride"</span>;
+
+<span class="hljs-keyword">export</span> interface IRidePersistence {
+    createRide(ride: Ride): <span class="hljs-built_in">Promise</span>&lt;Ride&gt;;
+    getAllRides(): <span class="hljs-built_in">Promise</span>&lt;Ride[]&gt;
+    getRideById(id:number): <span class="hljs-built_in">Promise</span>&lt;Ride | <span class="hljs-literal">undefined</span>&gt;
+    updateRide(id: number, <span class="hljs-attr">ride</span>: Ride): <span class="hljs-built_in">Promise</span>&lt;Ride | <span class="hljs-literal">undefined</span>&gt;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CockroachDBRidePersistence</span> <span class="hljs-title">implements</span> <span class="hljs-title">IRidePersistence</span> </span>{
+
+    private _prisma;
+
+    <span class="hljs-keyword">constructor</span>() {
+        <span class="hljs-keyword">this</span>._prisma = prisma; <span class="hljs-comment">//de utils/prisma</span>
+    }
+
+    <span class="hljs-keyword">async</span> createRide(ride: Ride): <span class="hljs-built_in">Promise</span>&lt;Ride&gt; {
+        
+        <span class="hljs-keyword">const</span> input: Prisma.RideCreateInput = {            
+            <span class="hljs-attr">km</span>: <span class="hljs-number">0</span>,
+            <span class="hljs-attr">bike</span>: {
+                <span class="hljs-attr">connect</span>: { <span class="hljs-attr">id</span>: ride.bike?.id! }
+            },             
+            <span class="hljs-attr">originDock</span>: {
+                <span class="hljs-attr">connect</span>: { <span class="hljs-attr">id</span>: ride.originDock!.id! } <span class="hljs-comment">//conecto el dock de origen con el id del nuevo viaje</span>
+            }
+        };       
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._prisma.ride.create({ <span class="hljs-attr">data</span>: input });
+        
+    }
+    getAllRides(): <span class="hljs-built_in">Promise</span>&lt;Ride[]&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._prisma.ride.findMany()
+    }
+
+    <span class="hljs-keyword">async</span> getRideById(id: number): <span class="hljs-built_in">Promise</span>&lt;Ride | <span class="hljs-literal">undefined</span>&gt; {
+        <span class="hljs-keyword">const</span> ride = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.ride.findFirst({
+            <span class="hljs-attr">where</span>: {
+                id,
+            },
+            <span class="hljs-attr">include</span>: {
+                <span class="hljs-attr">bike</span>: <span class="hljs-literal">true</span>,
+                <span class="hljs-attr">originDock</span>: <span class="hljs-literal">true</span>,
+                <span class="hljs-attr">targetDock</span>: <span class="hljs-literal">true</span>,
+            }
+        });
+        <span class="hljs-keyword">return</span> ride <span class="hljs-keyword">as</span> Ride;
+    }
+
+    <span class="hljs-keyword">async</span> updateRide(id: number, <span class="hljs-attr">ride</span>: Ride): <span class="hljs-built_in">Promise</span>&lt;Ride | <span class="hljs-literal">undefined</span>&gt; {
+        <span class="hljs-keyword">const</span> data: Prisma.RideUpdateInput = ride <span class="hljs-keyword">as</span> Prisma.RideUpdateInput; <span class="hljs-comment">//creo el objeto de datos a actualizar</span>
+        <span class="hljs-comment">//para actualizar el targetDock, en caso de que no sea nulo lo conecto a la llave foránea que me están enviando como dock de destino</span>
+        <span class="hljs-comment">//en el caso de que no exista anulo cualquier tipo de conexión</span>
+        data.targetDock = ride.targetDock ? { <span class="hljs-attr">connect</span>: { <span class="hljs-attr">id</span>: ride.targetDock.id }} : { <span class="hljs-attr">disconnect</span>: <span class="hljs-literal">true</span> };
+        
+        <span class="hljs-keyword">let</span> updatedRide = <span class="hljs-keyword">await</span> <span class="hljs-keyword">this</span>._prisma.ride.update({
+            <span class="hljs-attr">where</span>: { id },
+            data,
+            <span class="hljs-attr">include</span>: {
+                <span class="hljs-attr">bike</span>: <span class="hljs-literal">true</span>,
+                <span class="hljs-attr">originDock</span>: <span class="hljs-literal">true</span>,
+                <span class="hljs-attr">targetDock</span>: <span class="hljs-literal">true</span>,
+            }
+        });
+    
+        
+        <span class="hljs-keyword">return</span> updatedRide;
+    }
+
+}
+</div></code></pre>
+<ul>
+<li>La conexión a la DB de /utiuls/prisma es tal que así</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { PrismaClient } <span class="hljs-keyword">from</span> <span class="hljs-string">'@prisma/client'</span>;
+
+declare global {
+  <span class="hljs-keyword">var</span> prisma: PrismaClient | <span class="hljs-literal">undefined</span>;
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> prisma = global.prisma || <span class="hljs-keyword">new</span> PrismaClient();
+
+<span class="hljs-keyword">if</span> (process.env.NODE_ENV !== <span class="hljs-string">'production'</span>) {
+  global.prisma = prisma;
+}
+
+<span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">connectDB</span>(<span class="hljs-params"></span>) </span>{
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">await</span> prisma.$connect();
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'? Database connected successfully'</span>);
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-built_in">console</span>.log(error);
+    process.exit(<span class="hljs-number">1</span>);
+  } <span class="hljs-keyword">finally</span> {
+    <span class="hljs-keyword">await</span> prisma.$disconnect();
+  }
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> connectDB;
+</div></code></pre>
+<ul>
+<li>También en /utils tengo el mismo archivo de errores custom que creé en los otros microservicios importando Status de grpc-js</li>
+<li>/utils/gRPC.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { Status } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js/build/src/constants"</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> NotFoundError = <span class="hljs-function">(<span class="hljs-params">entity: string, id: number</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.NOT_FOUND, <span class="hljs-attr">message</span>: <span class="hljs-string">`<span class="hljs-subst">${entity}</span> with id <span class="hljs-subst">${id}</span> not found`</span> });
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> InvalidArgumentError = <span class="hljs-function">(<span class="hljs-params">args: string[]</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.INVALID_ARGUMENT, <span class="hljs-attr">message</span>: <span class="hljs-string">`<span class="hljs-subst">${args.join(<span class="hljs-string">', '</span>)}</span> missing arguments.`</span> });
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-built_in">InternalError</span> = <span class="hljs-function">(<span class="hljs-params">message: string</span>) =&gt;</span> ({ <span class="hljs-attr">code</span>: Status.INTERNAL, message });
+</div></code></pre>
+<ul>
+<li>Necesito construir los clientes para comunciar ride con bikes y docks</li>
+<li>Creo en src/services/DockClient.ts (reutilizo el archivo escrito anteriormente) y BikeClient.ts</li>
+<li>DockClient.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'../proto/Dock'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9081</span>;
+<span class="hljs-keyword">const</span> DOCK_PROTO_FILE = <span class="hljs-string">'./../../../proto/Dock.proto'</span>;
+
+<span class="hljs-keyword">const</span> dockPackageDef = protoLoader.loadSync(path.resolve(__dirname, DOCK_PROTO_FILE));
+<span class="hljs-keyword">const</span> dockGrpcObj = (grpc.loadPackageDefinition(dockPackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType;
+
+<span class="hljs-keyword">const</span> channelCredentials = grpc.credentials.createInsecure();
+<span class="hljs-keyword">const</span> dockServiceClient = <span class="hljs-keyword">new</span> dockGrpcObj.DriveYourCity.IDockService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials)   
+
+<span class="hljs-keyword">const</span> dockClient = {
+    <span class="hljs-attr">isDockAvailable</span>: <span class="hljs-keyword">async</span> (dockId: number): <span class="hljs-built_in">Promise</span>&lt;boolean&gt; =&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            dockServiceClient.IsDockAvailable({dockId}, (err, response) =&gt; {
+                <span class="hljs-keyword">if</span>(response) {
+                    resolve(response.isAvalable <span class="hljs-keyword">as</span> boolean);     
+                }
+                reject(err);
+            });
+        }) 
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    dockClient
+}
+</div></code></pre>
+<ul>
+<li>Del BikeClient necesito el getBikeById, el attach Bike y unattachBike</li>
+<li>Creo el objeto de BikeClient y construyo los métodos</li>
+<li>Para resolver esta tarea asíncrona uso una promesa empleando resolve, reject</li>
+<li>Llamo al servicio y le paso el bikeId, en el callback tengo el error y la response</li>
+<li>Si hay response uso el resolve y devuelvo el response.bike como Bike</li>
+<li>Si no uso reject y devuelvo el error</li>
+<li>El BikeClient.ts</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'../proto/Bike'</span>;
+<span class="hljs-keyword">import</span> { Bike } <span class="hljs-keyword">from</span> <span class="hljs-string">'../proto/DriveYourCity/Bike'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9082</span>;
+<span class="hljs-keyword">const</span> BIKE_PROTO_FILE = <span class="hljs-string">'./../../../proto/Bike.proto'</span>;
+
+<span class="hljs-keyword">const</span> bikePackageDef = protoLoader.loadSync(path.resolve(__dirname, BIKE_PROTO_FILE));
+<span class="hljs-keyword">const</span> bikeGrpcObj = (grpc.loadPackageDefinition(bikePackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType;
+
+<span class="hljs-keyword">const</span> channelCredentials = grpc.credentials.createInsecure();
+<span class="hljs-keyword">const</span> bikeServiceClient = <span class="hljs-keyword">new</span> bikeGrpcObj.DriveYourCity.IBikeService(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, channelCredentials)   
+
+<span class="hljs-keyword">const</span> bikeClient = {
+    <span class="hljs-attr">getBikeById</span>: <span class="hljs-keyword">async</span> (bikeId: number): <span class="hljs-built_in">Promise</span>&lt;Bike&gt; =&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            bikeServiceClient.GetBikeById({bikeId}, (err, response) =&gt; {
+                <span class="hljs-keyword">if</span>(response) {
+                    resolve(response.bike <span class="hljs-keyword">as</span> Bike);     
+                }
+                reject(err);
+            });
+        }) 
+    },
+
+    <span class="hljs-attr">unAttachBikeFromDock</span>: <span class="hljs-keyword">async</span> (bikeId: number): <span class="hljs-built_in">Promise</span>&lt;Bike&gt; =&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            bikeServiceClient.UnAttachBikeFromDock({bikeId}, (err, response) =&gt; {
+                <span class="hljs-keyword">if</span>(response) {
+                    resolve(response.bike <span class="hljs-keyword">as</span> Bike);     
+                }
+                reject(err);
+            });
+        }) 
+    },
+
+        <span class="hljs-comment">//si compruebo en el archivo .proto que necesito para el attach es el bikeId, el dockId y el totalKms</span>
+    <span class="hljs-attr">attachBikeToDock</span>: <span class="hljs-keyword">async</span> (bikeId: number, <span class="hljs-attr">dockId</span>: number, <span class="hljs-attr">totalKms</span>: number): <span class="hljs-built_in">Promise</span>&lt;Bike&gt; =&gt; {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Promise</span>(<span class="hljs-function">(<span class="hljs-params">resolve, reject</span>) =&gt;</span> {
+            bikeServiceClient.AttachBikeToDock({bikeId, dockId, totalKms}, (err, response) =&gt; {
+                <span class="hljs-keyword">if</span>(response) {
+                    resolve(response.bike <span class="hljs-keyword">as</span> Bike);     
+                }
+                reject(err);
+            });
+        }) 
+    }
+}
+
+<span class="hljs-keyword">export</span> {    
+    bikeClient
+}
+</div></code></pre>
+<ul>
+<li>RideService.ts</li>
+<li>RideService imlementa RideServiceHandlers desde IRideService</li>
+<li>Al ser métodos async devuelven una promesa</li>
+<li>Creo la instancia de CockroachDBRidePersistence</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-keyword">import</span> { ServerDuplexStream, ServerUnaryCall, ServerWritableStream, sendUnaryData } <span class="hljs-keyword">from</span> <span class="hljs-string">"@grpc/grpc-js"</span>;
+<span class="hljs-keyword">import</span> { IRideServiceHandlers } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/IRideService"</span>;
+<span class="hljs-keyword">import</span> { CockroachDBRidePersistence } <span class="hljs-keyword">from</span> <span class="hljs-string">"../persitence/RidePersistence"</span>;
+<span class="hljs-keyword">import</span> { EndRideRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/EndRideRequest"</span>;
+<span class="hljs-keyword">import</span> { EndRideResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/EndRideResponse"</span>;
+<span class="hljs-keyword">import</span> { RideResponse } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/RideResponse"</span>;
+<span class="hljs-keyword">import</span> { StartRideRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/StartRideRequest"</span>;
+<span class="hljs-keyword">import</span> { UpdateRideRequest, UpdateRideRequest__Output } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/UpdateRideRequest"</span>;
+<span class="hljs-keyword">import</span> { bikeClient } <span class="hljs-keyword">from</span> <span class="hljs-string">"./BikeClient"</span>;
+<span class="hljs-keyword">import</span> { Ride } <span class="hljs-keyword">from</span> <span class="hljs-string">"../proto/DriveYourCity/Ride"</span>;
+<span class="hljs-keyword">import</span> { dockClient } <span class="hljs-keyword">from</span> <span class="hljs-string">"./DockClient"</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-built_in">InternalError</span>, InvalidArgumentError, NotFoundError } <span class="hljs-keyword">from</span> <span class="hljs-string">"../utils/gRPC"</span>;
+
+<span class="hljs-keyword">const</span> ridePersistence = <span class="hljs-keyword">new</span> CockroachDBRidePersistence();
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RideService</span> <span class="hljs-title">implements</span> <span class="hljs-title">IRideServiceHandlers</span> </span>{
+    [name: string]: <span class="hljs-keyword">import</span>(<span class="hljs-string">"@grpc/grpc-js"</span>).UntypedHandleCall;
+
+    <span class="hljs-keyword">async</span> StartRide(call: ServerUnaryCall&lt;StartRideRequest__Output, RideResponse&gt;, <span class="hljs-attr">callback</span>: sendUnaryData&lt;RideResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            
+            <span class="hljs-keyword">const</span> bikeId = call.request.bikeId;   
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'StartRide'</span>, { bikeId });         
+            <span class="hljs-keyword">if</span>(bikeId) {
+                <span class="hljs-keyword">let</span> bike = <span class="hljs-keyword">await</span> bikeClient.getBikeById(bikeId);  <span class="hljs-comment">//si tengo el bikeId obtengo la bike                   </span>
+                <span class="hljs-keyword">const</span> ride: Ride = {          <span class="hljs-comment">//creo el objeto de ride</span>
+                    bike,          
+                    <span class="hljs-attr">originDock</span>: bike.dock
+                }                 
+                <span class="hljs-keyword">await</span> bikeClient.unAttachBikeFromDock(bikeId); <span class="hljs-comment">//con el cliente de bike desviculo la bici del dock</span>
+                <span class="hljs-keyword">const</span> newRide = <span class="hljs-keyword">await</span> ridePersistence.createRide(ride); <span class="hljs-comment">// creo el ride en la DB   </span>
+                callback(<span class="hljs-literal">null</span>, { <span class="hljs-attr">ride</span>: newRide }); <span class="hljs-comment">//devuelvo en el callback el error en null y el newRide</span>
+            }
+            callback(InvalidArgumentError([<span class="hljs-string">'bikeId'</span>]), { <span class="hljs-attr">ride</span>: <span class="hljs-literal">undefined</span> }); <span class="hljs-comment">//si no hay bikeId devuelvo el custom error</span>
+        } <span class="hljs-keyword">catch</span> (err) {            
+            callback(<span class="hljs-built_in">InternalError</span>(err <span class="hljs-keyword">as</span> string), { <span class="hljs-attr">ride</span>: <span class="hljs-literal">undefined</span> }); <span class="hljs-comment">//en el catch capturo el error no manejado</span>
+        }
+    }
+
+    <span class="hljs-keyword">async</span> UpdateRide(call: ServerDuplexStream&lt;UpdateRideRequest__Output, RideResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-comment">//al ser un streaming dispongo del método .on donde tengo la data y end</span>
+        call.on(<span class="hljs-string">'data'</span>, <span class="hljs-keyword">async</span> (request: UpdateRideRequest) =&gt; {<span class="hljs-comment">//el callback de la request de tipo UpdateRideRequest es async pq consultaré la DB</span>
+            <span class="hljs-keyword">const</span> newKms = request.newKms!; <span class="hljs-comment">//extraigo la data de la request</span>
+            <span class="hljs-keyword">const</span> rideId = request.rideId!;
+
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'UpdateRide'</span>, { rideId, newKms });
+            <span class="hljs-keyword">const</span> ride = <span class="hljs-keyword">await</span> ridePersistence.getRideById(rideId); <span class="hljs-comment">//obtengo el ride por el id</span>
+            <span class="hljs-keyword">if</span> (ride) {                                   <span class="hljs-comment">//si tengo el ride actualizo pasándole el id del ride y la suma de los nuevos kms</span>
+                <span class="hljs-keyword">const</span> updatedRide = <span class="hljs-keyword">await</span> ridePersistence.updateRide(rideId, { <span class="hljs-attr">km</span>: ride.km! + newKms }); 
+                call.write({<span class="hljs-attr">ride</span>: updatedRide}); <span class="hljs-comment">//uso .write para escribir por el streaming</span>
+            } <span class="hljs-keyword">else</span> {
+                call.end(); <span class="hljs-comment">//si no hay ride cierro la conexión</span>
+            }            
+        });
+
+        call.on(<span class="hljs-string">'end'</span>, () =&gt; {
+            call.end(); <span class="hljs-comment">//me aseguro de cerrar la conexión cuando no hay más data</span>
+        });
+    }
+
+    <span class="hljs-keyword">async</span> EndRide(call: ServerWritableStream&lt;EndRideRequest__Output, EndRideResponse&gt;): <span class="hljs-built_in">Promise</span>&lt;<span class="hljs-keyword">void</span>&gt; {
+        <span class="hljs-keyword">try</span> {
+            <span class="hljs-keyword">const</span> rideId = call.request.rideId; <span class="hljs-comment">//extraigo la data de la request</span>
+            <span class="hljs-keyword">const</span> targetDockId = call.request.dockId;
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'EndRide'</span>, { rideId, targetDockId });
+            <span class="hljs-keyword">if</span>(rideId &amp;&amp; targetDockId) { 
+                <span class="hljs-keyword">const</span> ride = <span class="hljs-keyword">await</span> ridePersistence.getRideById(rideId); <span class="hljs-comment">//obtengo el ride por el id                                </span>
+                <span class="hljs-keyword">if</span>(ride &amp;&amp; ride.originDock &amp;&amp; ride.targetDock === <span class="hljs-literal">null</span>) { <span class="hljs-comment">// si tengo el ride y el originDock, pero el targetDock es null es que el viaje puede terminar busco un dock disponible</span>
+                    <span class="hljs-keyword">const</span> isDockAvailable = <span class="hljs-keyword">await</span> dockClient.isDockAvailable(targetDockId);            
+                    <span class="hljs-keyword">if</span>(isDockAvailable) {                                           
+                        <span class="hljs-keyword">const</span> updatedRide = <span class="hljs-keyword">await</span> ridePersistence.updateRide(rideId, { <span class="hljs-attr">targetDock</span>: { <span class="hljs-attr">id</span>: targetDockId } }); <span class="hljs-comment">// si hay un dock disponible actualizo el id del targetDock y le asigno el targetDock al bike                                                                 </span>
+                        <span class="hljs-keyword">const</span> updatedBike = <span class="hljs-keyword">await</span> bikeClient.attachBikeToDock(ride.bike?.id!, updatedRide?.targetDock?.id!, ride.km!);
+
+                        <span class="hljs-comment">//creo el objeto que quiero transmitir por streaming</span>
+                        <span class="hljs-keyword">const</span> informData = [
+                            <span class="hljs-string">`ride with id: <span class="hljs-subst">${updatedRide?.id}</span> finished`</span>,
+                            <span class="hljs-string">`origin dock = <span class="hljs-subst">${updatedRide?.originDock?.id}</span>`</span>,
+                            <span class="hljs-string">`target dock = <span class="hljs-subst">${updatedRide?.targetDock?.id}</span>`</span>,                            
+                            <span class="hljs-string">`Total Kms = <span class="hljs-subst">${updatedRide?.km}</span>`</span>,
+                            <span class="hljs-string">`bike with id <span class="hljs-subst">${updatedBike.id}</span> and new total Kms <span class="hljs-subst">${updatedBike?.totalKm}</span>`</span>,
+                        ]
+
+                        informData.forEach(<span class="hljs-function"><span class="hljs-params">info</span> =&gt;</span> call.write({info})); <span class="hljs-comment">// al ser streaming escribo la data con .write</span>
+                        call.end(); <span class="hljs-comment">//cierro la conexión</span>
+                    }
+                    <span class="hljs-comment">//en streaming no dispongo del callback, dispongo de .emit para emitir un error </span>
+                    call.emit(<span class="hljs-string">'error'</span>, <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">`dock with id <span class="hljs-subst">${ride.originDock.id}</span> is not available for handle more bikes.`</span>));
+
+                } <span class="hljs-keyword">else</span> {
+                    call.emit(<span class="hljs-string">'error'</span>, <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">`ride with id <span class="hljs-subst">${rideId}</span> is not available to end.`</span>));                    
+                }
+            }
+        } <span class="hljs-keyword">catch</span> (err) {            
+            call.emit(<span class="hljs-string">'error'</span>, err); <span class="hljs-comment">//capturo un posible error no manejado                               </span>
+        }        
+    }
+}
+
+<span class="hljs-keyword">export</span> {
+    RideService
+}
+</div></code></pre>
+<ul>
+<li>Creo el server.ts en la raiz de ride-service</li>
+</ul>
+<pre class="hljs"><code><div><span class="hljs-comment">// @ts-ignore</span>
+<span class="hljs-keyword">import</span> path <span class="hljs-keyword">from</span> <span class="hljs-string">'path'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> grpc <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/grpc-js'</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> protoLoader <span class="hljs-keyword">from</span> <span class="hljs-string">'@grpc/proto-loader'</span>
+<span class="hljs-keyword">import</span> { ProtoGrpcType } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/proto/Ride'</span>;
+<span class="hljs-keyword">import</span> { RideService } <span class="hljs-keyword">from</span> <span class="hljs-string">'./src/service/RideService'</span>;
+
+<span class="hljs-keyword">const</span> PORT = <span class="hljs-number">9083</span>;
+<span class="hljs-keyword">const</span> RIDE_PROTO_FILE = <span class="hljs-string">'./../proto/Ride.proto'</span>;
+
+<span class="hljs-keyword">const</span> ridePackageDef = protoLoader.loadSync(path.resolve(__dirname, RIDE_PROTO_FILE));
+<span class="hljs-keyword">const</span> rideGrpcObj = (grpc.loadPackageDefinition(ridePackageDef) <span class="hljs-keyword">as</span> unknown) <span class="hljs-keyword">as</span> ProtoGrpcType;
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">main</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = getServer();
+    <span class="hljs-comment">//const serverCredentials = SSLService.getServerCredentials();</span>
+    <span class="hljs-keyword">const</span> serverCredentials = grpc.ServerCredentials.createInsecure();
+
+    server.bindAsync(<span class="hljs-string">`0.0.0.0:<span class="hljs-subst">${PORT}</span>`</span>, serverCredentials,
+        (err, port) =&gt; {
+            <span class="hljs-keyword">if</span> (err) {
+                <span class="hljs-built_in">console</span>.error(err)
+                <span class="hljs-keyword">return</span>
+            }
+            <span class="hljs-built_in">console</span>.log(<span class="hljs-string">`ride server as started on port <span class="hljs-subst">${port}</span>`</span>)
+            server.start()
+        })
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getServer</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> server = <span class="hljs-keyword">new</span> grpc.Server();
+
+    server.addService(rideGrpcObj.DriveYourCity.IRideService.service, <span class="hljs-keyword">new</span> RideService())
+
+    <span class="hljs-keyword">return</span> server
+}
+
+main()
+</div></code></pre>
+<ul>
+<li>En el archivo .env coloco el string de conexión</li>
+</ul>
+<pre class="hljs"><code><div>DATABASE_URL=&quot;postgresql://root@localhost:26000/driveyourcity?sslmode=disable&quot;
+</div></code></pre>
+<ul>
+<li>Debo levantar todos los servers corriendo Docker de fondo para poder probar la funcionalidad de ride ( y las otras) con POSTMAN</li>
+</ul>
+<hr>
+<h2 id="conclusiones">Conclusiones</h2>
+<ul>
+<li>Vale la pena tomar el tiempo para diseñar y construir con proto para luego pasar a la implementación</li>
+<li>gRPC nos permite comunicarnos de una forma rápida y económica entre servicios</li>
+<li>Una vez hecho el scaffolding la implementación es bastante rápida</li>
+<li>Cuando presentes un proyecto así, en lugar de comentarlo por funcionalidad cuenta una historia que haga que cobre sentido todo el trabajo</li>
+<li>gRPC se adapata de una manera muy elegante, escalable, util, sencilla para construir software eficiente</li>
+</ul>
+
+</body>
+</html>

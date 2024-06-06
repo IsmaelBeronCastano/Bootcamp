@@ -14,7 +14,6 @@
 > nmap -sS 192.168.1.1-35
 
 - Puedo usar un archivo para los inputs
-+
 
 > nano targets.file
 
@@ -47,16 +46,16 @@ scanme.nmap.org
 
 > nmap facebook.com/24 -sL
 
-- ping scan es más intrusivo. Solo devuelve los hosts activos -sn es discovery only (random ips)
+- ping scan es más intrusivo. Solo devuelve los hosts activos
 
-A nmap 192.168.1.1/24 -sn
+> nmap 192.168.1.1/24 -sn
 
 - -Pn trata todos los hosts como si estuvieran online (se salta el host discovery)
 - Puedo enviar paquetes TCP,SYN/ACK UDP o STCP a puertos específicos con -PS/PA/PU/PY
 
 > nmap 192.168.1.1-5 -PS22-25,80,113,1050,35000 -v -sn
 
--
+- 
 
 
 
@@ -86,7 +85,5 @@ A nmap 192.168.1.1/24 -sn
 
 
 
-
--+-+
 
 
