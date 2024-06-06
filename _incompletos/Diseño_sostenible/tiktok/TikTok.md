@@ -1,0 +1,40 @@
+- Aprendre el patró adaptador en poc més d'un minut
+- Quan utilitzem llibreries de tercers correm el risc de que es desactualitzin o necessitar fer servir d'altres a la vegada
+- També pot ser que necessiti fer servir diferents bases de dades
+- Per que els canvis no siguin dolorosos i el codi sigui sostenible farem servir el patró adaptador
+- Genero una interfaç de pagament amb els mètodes obtenir dades d'un client que retorna un client i el càrrec que retorna un número
+- Client es un tipus que no existeix predefinit, per tant el definiexio jo
+- Faig la classe pagament amb els mètodes obtenirdadesClientEuros que retorna un objecte de tipus client amb nom i IBAN
+- L'altre mètode retorna un número com haviem indicat a la interfaç
+- Amb el pagament amb dolars faig el mateix
+- L'adaptador amb euros implementa la interfaç de pagament. Això vol dir que haurà de tenir els mètodes declarats previament a la interfaç
+- Al generar l'adaptador de pagament amb euros,li passo al constructor la propietat de tipus pagamentEuros
+- Utilitzo el this per referir-me a la propietat pagament de la classe que hi ha afora del constructor 
+- Implemento els mètodes que em demana la interfaç. 
+- Utilitzo this.pagament per fer servir els mètodes que vaig implementar a la classe PagamentEuros que he injectat al constructor
+- Amb l'adaptador de dòlars es exactament el mateix
+- Creo la classe Botiga i guardo a la propietat pagamentAPI el pagament que li passo al constructor  
+- Creo un mètode que anomeno procèss implementant els dos mètodes dels que disposo
+- Ara només cal instanciar cada classe passant-li com argument el que em demana
+- També ho puc fer amb una sola linea
+
+
+- Interfaç
+- Saps que es una interfaç? Bé, de fet aquesta paraula no existeix en català
+- Però veiem un exemple amb TypeScript!
+- Una interfaç es com un contracte que m'obliga a que un objecte o una classe tingui unes propietats o mètodes concrets
+- Això es molt útil quan vull assegurar-me de que tot funcioni com jo vull, i també de rebre la data tal i com jo la vull
+- Puc crear la interfaç d'un gat amb nom, edat, data de neixament, i al costat poso el tipus de la propietat
+- El nom de la interfaç comença amb una I majúscula. No es obligatori, es fa així per convenció. Així les podem diferenciar de les classes que també comencen amb majúscules per convenció
+- Pot ser un número, un text, pot ser qualsevol cosa! null, un mètode, un altre interfaç o un tipus que jo mateix hagi creat
+- Si t'hi fixes menjar_prefeerit es de tipus menjar_preferit. 
+- Aquest tipus no existeix a TypeScript, al menys de moment, es un tipus que he creat jo, en aquest cas un enum
+- Aprofitem per veure per sobre com es un enum. I aqui el tenim!
+- L'enum no necessita que li defineixi cap valor a las variables que hi declaro, ell sol li assignarà un número que s'aniria autoincrementant
+- Però treballar d'aquesta manera es més llegible i còmode
+- L'enum em serveix per tenir una llista de valors agrupats que guarden relació entre si
+- Ara puc crear un gat de tipus ImajúsculaGat, de nom Cueta
+- Cueta te un nom, una data de neixament, una raça...i el stipus d'aquests propietats respecten els declarats a la interfaç
+- Nom es de tipus text, edat es un número. I menjar preferit es de tipus menjar preferit, en aquest cas d'au
+- Ja ho tens! I recorda: fot li al codi, a la ment i al body
+- Maik zen
