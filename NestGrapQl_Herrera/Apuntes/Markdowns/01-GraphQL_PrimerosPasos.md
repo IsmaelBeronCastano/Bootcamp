@@ -219,4 +219,226 @@ export class AppModule {}
 
 ## Todo Resolver y Custom Object Type
 
-- 
+- Genero en la carpeta todo el todo.module, el todo.resolver(*nest g r todo*) el todo.service y las carpetas dto, entity y types
+- Lo generaremos automáticamente, ahora lo hacemos manual
+- El resolver no es más que una simple clase con el decorador @Resolver
+- hacemos el CRUD entero a lo GraphQL
+- todo.resolver
+- Uso @Mutation cuando voy a mutar data
+
+~~~js
+import { Resolver, Query, Args, Int, Mutation } from '@nestjs/graphql';
+import { TodoService } from './todo.service';
+import { Todo } from './entity/todo.entity';
+
+import { CreateTodoInput, UpdateTodoInput, StatusArgs } from './dto';
+import { AggregationsType } from './types/aggregations.type';
+
+@Resolver( () => Todo )
+export class TodoResolver {
+
+    constructor(
+        private readonly todoService: TodoService
+    ){}
+
+
+    @Query( () => [Todo], { name: 'todos' })
+    findAll(
+        @Args() statusArgs: StatusArgs
+    ): Todo[] {
+        return this.todoService.findAll( statusArgs );
+    }
+
+    @Query( () => Todo, { name: 'todo' })
+    findOne(
+        @Args('id', { type: () => Int } ) id: number
+    ) {
+        return this.todoService.findOne( id );
+    }
+
+    @Mutation( () => Todo, { name: 'createTodo' })
+    createTodo(
+        @Args('createTodoInput') createTodoInput: CreateTodoInput
+    ) {
+        return this.todoService.create( createTodoInput );
+    }
+
+    @Mutation( () => Todo, { name: 'updateTodo' })
+    updateTodo(
+        @Args('updateTodoInput') updateTodoInput: UpdateTodoInput
+    ) {
+        return this.todoService.update( updateTodoInput.id, updateTodoInput );
+    }
+
+    @Mutation( () => Boolean )
+    removeTodo(
+        @Args('id', { type: () => Int }) id: number
+    ) {
+        return this.todoService.delete( id );
+    }
+
+
+    // Aggregations
+    @Query( () => Int, { name: 'totalTodos' })
+    totalTodos(): number {
+        return this.todoService.totalTodos;
+    }
+
+    @Query( () => Int, { name: 'pendingTodos' })
+    pendingTodos(): number {
+        return this.todoService.pendingTodos;
+    }
+
+    @Query( () => Int, { name: 'completedTodos' })
+    completedTodos(): number {
+        return this.todoService.completedTodos;
+    }
+
+    @Query( () => AggregationsType )
+    aggregations(): AggregationsType {
+        return {
+            completed: this.todoService.completedTodos,
+            pending: this.todoService.pendingTodos,
+            total: this.todoService.totalTodos,
+            totalTodosCompleted: this.todoService.totalTodos,
+        }
+    }
+}
+~~~
+
+- types/AggregationsType
+- Para crear un tipo personalizado acabaremos usando los tipos Int, Float, String, Boolean, ID
+- Uso @ObjectType para definirlo como un tipo de graphQL
+- Uso @Field para indicarle a graphQL el tipo
+
+~~~js
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+
+
+@ObjectType({ description: 'Todo quick aggregations' })
+export class AggregationsType {
+
+    @Field( () => Int )
+    total: number;
+
+    @Field( () => Int )
+    pending: number;
+
+    @Field( () => Int )
+    completed: number;
+
+    @Field( () => Int, { deprecationReason: 'Most use completed instead' })
+    totalTodosCompleted: number;
+
+}
+~~~
+
+- El todo.service (como no usamos DB de momento el código es más complejo de lo que debería)
+
+~~~js
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateTodoInput, UpdateTodoInput } from './dto/inputs';
+import { Todo } from './entity/todo.entity';
+import { StatusArgs } from './dto/args/status.args';
+
+@Injectable()
+export class TodoService {
+
+    private todos: Todo[] = [
+        { id: 1, description: 'Piedra del Alma', done: false },
+        { id: 2, description: 'Piedra del Espacio', done: true },
+        { id: 3, description: 'Piedra del Poder', done: false },
+        { id: 4, description: 'Piedra del Tiempo', done: false },
+    ];
+
+    get totalTodos() {
+        return this.todos.length;
+    }
+
+    get pendingTodos() {
+        return this.todos.filter( todo => todo.done === false ).length;
+    }
+
+    get completedTodos() {
+        return this.todos.filter( todo => todo.done === true ).length;
+    }
+
+
+
+    findAll(  statusArgs: StatusArgs ): Todo[] {
+        
+        const { status } = statusArgs;
+        if( status !== undefined ) return this.todos.filter( todo => todo.done === status );
+        
+        return this.todos;
+    }
+
+    findOne( id: number ): Todo {
+
+        const todo = this.todos.find( todo => todo.id === id );
+
+        if ( !todo ) throw new NotFoundException(`Todo with id ${ id } not found`);
+
+        return todo;
+    }
+
+    create( createTodoInput: CreateTodoInput ): Todo {
+
+        const todo = new Todo();
+        todo.description = createTodoInput.description;
+        todo.id = Math.max( ...this.todos.map( todo=> todo.id ), 0 ) + 1
+
+        this.todos.push( todo );
+
+        return todo;
+    }
+
+
+    update( id: number, updateTodoInput: UpdateTodoInput ) {
+        const { description, done } = updateTodoInput;
+        const todoToUpdate = this.findOne( id );
+
+        if ( description ) todoToUpdate.description = description;
+        if ( done !== undefined ) todoToUpdate.done = done;
+
+        this.todos = this.todos.map( todo => {
+            return ( todo.id === id ) ? todoToUpdate : todo;
+        });
+
+        return todoToUpdate;
+
+    }
+
+    delete( id: number ):Boolean {
+        const todo = this.findOne( id );
+
+        this.todos = this.todos.filter( todo => todo.id !== id );
+
+        return true;
+    }
+}
+~~~
+
+
+- entity/todo.entity
+- @ObjectType en lugar de @Entity para decirle que es mi objeto personalizado de graphQL
+  - Puedo añadir en el mismo archivo @Entity para trabajar con mongoose  
+- @Field para indicar el tipo para graphQL
+
+~~~js
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+
+@ObjectType()
+export class Todo {
+
+    @Field( () => Int )
+    id: number;
+
+    @Field( () => String )
+    description: string;
+
+    @Field( () => Boolean )
+    done: boolean = false;
+
+}
+~~~
