@@ -1,0 +1,87 @@
+# MODELOS 3D UNITY
+
+## Uso e importación de Modelos 3D
+
+- Importar archivos 3D
+- Formatos de importación
+    - Formato 3D Exportación: Unity puede leer cualquiera de estos formatos
+        - .obj(MALLA), .FBX, .3DS(3DMAX), .dae, .dxf(AUTOCAD)
+        - Este tipo de conversión lo puedo hacer con Unity
+    - Son archivos pequeños de peso
+    - Comodidad para diseño modular
+    - En contra: más lento el flujo de trabajo entre la exportación y la importación
+    - Formato 3D Propietario: también puedo importar
+        - Max
+        - Maya
+        - Blender
+        - Cinema 4D
+        - Modo
+        - Lightwave
+        - Cheeta3D
+    - A favor:
+        - El inicio es rápido y simple el flujo de trabajo.
+        - Es una solución bastante rápida para prototipar
+    - En contra:
+        - Se importan con mucha info innecesaria
+- Contenido FBX: son de los más potentes
+    - Mallas poligonales
+    - tipo de Animación FK e IK. En FBX puedo almacenar las animaciones y huesos
+    - Blend Shapes. Soporta deformaciones
+    - Grupos de suavizados (Smoothing Groups). Todos los soportan
+    - Materiales. Todos los formatos lo soportan
+    - Vertex colors, normales y hasta 2 UV sets. UV mapos es como se dibuja la textura por encima de la malla
+----
+
+## Importación de Modelos 3D - Flujo de Trabajo
+
+- Importar el modelo
+    - En la carpeta Assets creo la carpeta Models
+    - En la ventana de Proyectos, donde aparecen los assets, clic derecho/Import new Asset
+    - Desde el menú Assets/Import new asset
+    - Si no puedo arrastrar el archivo directamente a la ventana de Proyectos
+- Cuando selecciono el Modelo 3D que he importado en el inspector aparecen opciones de importación: Model, Rig, Animation, Materials
+- En la ventana de Proyectos el Modelo aparece con el icono como una caja con cinta
+- Los iconos de una malla se refiere a poligonos (mallas)
+- Unity crea un GameObject por cada malla que detecta
+- Incorpora todos los materiales
+- Puedo **seleccionar el padre** y ver toda la información que ofrece/interpreta Unity
+    - Model: unidades, visibilidad, si quiero camara
+    - Rig: es la parte de los huesos. Hay varias genericas. Puedo ponerle Rig: None (Apply)
+    - Animation: la opción de importarlas. Puedo ponerle Animation: None (Apply) pq en este caso el modelo no tiene 
+    - Materiales: me puede decir que tiene materiales pero no ha conectado con ellos
+        - Material Creation Model: Import via Material Description
+        - Location: use embeded Materials
+        - Materials: Extract Materials. Me pregunta dónde los quiero extraer. Lo hago en la carpeta Assets/Materials del proyecto
+        - Ahora ya conecta los materiales
+- La pestaña de Models tiene algunas opciones muy avanzadas y otras más básicas
+- Básicas:
+    - Scale Factor: la escala del modelo
+    - Convert Units: por defecto viene marcado, luego con el Scale Factor me encargo de redimensionar
+    - Import BlendShapes: curvas de animación
+    - Import visibility, camera, lights: para importarlo del modelo. En este caso dejo solo visibilidad marcada
+    - Sort Herarchy By Name: ordenar la jerarquía por nombre
+    - Compresión de malla: no quiero compresión de malla. Si tengo un modelo muy pesado me lo planteo
+    - Read&Write Enabled: activado puedo acceder a los vértices, las aristas del modelo. En este caso desactivado
+    - Optimizar la malla: Everything, que optimice todo
+    - Generate Colliders: genera mallas de colisión, puede ocasionar problemas de rendimiento. Desactivado, no es una buena práctica
+    - Keep Quads y Geometry: va a triangular la malla. Desactivado
+    - Weld Vertices: si quiero pegar los vertices. Activado
+- Las que siguen son más avanzadas
+    - A veces se retoca por fallos de iluminación en los modelos, porque modifica la interpretación de las caras
+- Generate LightMaps UVs: se usa cuando necesito almacenar la info de la iluminación en las texturas. Así me ahorro el cálculo a tiempo real
+- Apply
+- Si selecciono el icono de malla en el Modelo la info es:
+    - Me da info de vértices y cuantas submallas tiene
+    - Abajo hay una ventana de vista previa, da la info de cuantos triangulos, vértices, etc. Puede ser flotante
+    - En el menu Shaded hay más info interesante
+        - UV Checked: me dice que info de mapeo tiene el modelo. Cuando tengo una malla 3D y le quiero proyectar una textura, necesito decirle donde quiero cada parte de la textura. Eso es hacer un mapeo
+        - Normals: es una linea recta que sale de cada vertice y si esa dirección está a hacia afuera y le enfoca la cámara me dibuja la malla
+            - Si es opuesta a la cam no me la dibuja. Si el modelo tiene un agujero hay que revisar las normales en el programa 3D
+        - Tangentes: otra info de la malla
+- Para trabajar con el modelo creo un nuevo Prefab clic derecho/Create/PreFab
+    - Lo abro/selecciono y arrastro el modelo de la ventana de Proyecto a la jerarquía
+    - Lo puedo editar aisladamente como un PreFab
+- Para redimensionar el modelo es mejor usar Scale Factor que el Transform. Si está al doble de tamaño (lo puedo comparar con un cubo que mide un metro) lo pongo a 0.5. Así la escala sigue siendo 1 1 1
+- Si es un coche, el eje Z ( el azul ) tiene que estar delante, para que si yo lo muevo con código hacia adelante vaya hacia adelante
+----
+

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sign in</title>
+</head>
+<body>
+    
+    <h1>Google Sign In</h1>
+    <hr>
+    
+    <div id="g_id_onload"
+       data-client_id="316623172064-bjqdtma10uf7e47f16rm2ne1permn984.apps.googleusercontent.com"
+       data-auto_prompt="false"
+       data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="outline"
+       data-text="sign_in_with"
+       data-shape="rectangular"
+       data-logo_alignment="left">
+    </div>
+
+    <button id="sign_out" onClick="cerrarSesion()">SignOut</button>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+  function handleCredentialResponse(response) {
+     // decodeJwtResponse() is a custom function defined by you
+     // to decode the credential response.
+     const body = {googleToken: response.credential} // este body lo paso al JSON.stringify
+
+     fetch('http://localhost:8080/api/auth/google',{
+      method: "POST",
+      headers:{'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+     })
+            .then(resp=> resp.json())
+            .then(resp=>{
+               console.log(resp) // esta es la respuesta que mi backend va a regresar
+
+               //después de hacer la autenticación puedo grabarla en el LocalStorage
+               localStorage.setItem('email', resp.usuario.correo)
+
+            })
+            .catch(console.warn) //por si algo sale mal
+  }
+
+  //selecciono el botón de sign_out
+  const button = document.getElementById("sign_out")
+
+  //le añado el evento
+  /*button.onclick =()=>{
+   //tengo acceso al estar loggeado al google.account.id
+   //console.log(google.account.id)
+
+   //para hacer el logout llamo al método revoke
+
+   google.account.id.revoke(localStorage.getItem('email'), done=>{
+      //cuando acaba el proceso llama al callback, limpio el localStorage
+
+      localStorage.clear()
+      location.reload()//recargar la página y vaciarla 
+   })
+   
+  } */
+
+  function cerrarSesion(){
+   google.accounts.id.disableAutoSelect()
+   google.accounts.id.revoke(localStorage.getItem('email'), done=>{
+      localStorage.clear(
+         location.reload()
+      )
+   })
+  }
+
+
+</script>
+</body>
+</html>    
+

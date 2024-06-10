@@ -1,0 +1,15 @@
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\bin\Debug\net7.0\Profesores.exe
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\bin\Debug\net7.0\Profesores.deps.json
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\bin\Debug\net7.0\Profesores.runtimeconfig.json
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\bin\Debug\net7.0\Profesores.dll
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\bin\Debug\net7.0\Profesores.pdb
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.csproj.AssemblyReference.cache
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.AssemblyInfoInputs.cache
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.AssemblyInfo.cs
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.csproj.CoreCompileInputs.cache
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.dll
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\refint\Profesores.dll
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.pdb
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\Profesores.genruntimeconfig.cache
+C:\Users\castd\Documents\Unity\APUNTESC#\UniversidadMasterDev\Profesores\obj\Debug\net7.0\ref\Profesores.dll

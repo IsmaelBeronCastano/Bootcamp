@@ -1,0 +1,56 @@
+# Compresión y uso de audios
+
+- Los audios hay que comprimirlos porque repercuten en la memoria. Para ejecutarlos hay que descomprimirlos y eso consume memoria
+- En el inspector aparecen varias opciones
+    - Load Type: como quieres que lo cargue a la hora de guardarlo en la escena
+    - Compression Format:
+         - PCM
+         - Vorbiss
+         - ADPPCM
+- Si yo arrastro desde la ventana Proyectos el audio a la escena ( en la jerarquía ) automáticamente me crea un GameObject con Audio Source y el archivo
+- Unity almacena esta info en la memoria y desde ahi la lee. Tiene varios formatos de lectura
+    - No es lo mismo comprimido en la memoria que descomprimido en la memoria
+        - Descompressed OnLoad: cada vez que cargues esta escena descomprime este audio
+        - Compressed in Memory: comprimir y descomprimir tiene un coste de rendimiento
+            - Un sonido muy largo conviene descomprimirlo al inicio (Decompressed OnLoad)
+- Formatos de audio que soporta Unity:
+    - Audios normales: .aif, .wav, .mp3, .ogg
+    - Track Modules: archivos que contienen info de cuanta modulación le van a aplicar al punto de sonido. Son livianos. Rollo 8 bits
+        -.xm, .mod, .it, s3m 
+- Formatos de Compresión:
+    - PCM=> Sin compresión, conserva el audio tal cual viene. Uso de CPU bajo, audios claros, pequeños clips que se usen mucho
+    - ADPCM=> Compresión: X3.5, Uso de CPU Medio, Sonidos Pequeños pero con ruido (Pasos, por ejemplo)
+    - Vorbis/ MP3=>: Compresión: puedo llegar hasta X10, Uso de CPU Alto, Música y SFX de Med/Larg duración
+- Ya tengo el formato de compresión, ahora debo decidir cómo lo voy a leer
+- Tipos de carga:
+    - Compressed in Memory: se almacena en RAM, y será descomprimido cada vez que se necesite. Tiene coste de descompresión en runtime. La más usada con pequeños clips de audio
+    - Streaming: el audio se almacenará en la memoria del dispositivo y se hace streaming de data cuando se ejecuta. El menos costosos, no usa RAM. Depende del dispoistivo puede tardar en leerlo. Hay que tener muy controlado todo el flujo de rendimiento del juego para usarlo.
+    - Decompressed On Load: será almacenado en RAM descomprimido. Es la que más memoria ocupa pero ya queda almacenado desde el inicio descomprimido
+- Consejos de uso y optimización
+    - Músicas y sonidos ambiente: Compressed o Streaming con Vorbiss
+    - Para uso frecuente y Audio Clips cortos(menos de 3s): Decompress On Load con PCM o ADPCM
+    - Para uso frecuente y Audio Clips medios ( entre 3 y 10s): Compressed in Memory y ADPCM
+    - Para uso muy puntual y Audio Clips cortos: Compressed in Memory y ADPCM
+    - Para uso muy puntual y Audio Clips medios: Compressed in Memory y Vorbis
+----
+
+## Compresión de audios- Flujo de Trabajo
+
+- Importo los audios a la ventana de Proyectos
+- En el inspector hay varias opciones
+    - Force To Mono: en lugar de ser stereo pasarlo a Mono. Me da la opción de Normalize
+    - Load in Background: si quiero que el audio se cargue cuando carga la escena. Toda la opción de compresión queda inutilizada. Poco recomendable
+    - Ambisionic: si el dispositivo soporta este tipo de audios Unity a través de código me deja trabajar con este proceso
+- Pestaña Default
+    - Es donde se realiza la compresión
+    - Load Type
+    - PreLoad Audio/Data viene marcado por defecto. Si esta marcado va a hacer un override y va a buscar si esta marcado LoadingInBackground
+        - Solo va a afectar si esta marcado LoadingInBackground
+    - Compression format
+        - Vorbis permite elegir la calidad
+    - Sample Rate Setting: Preserve Sample Rate. Mejor no tocarlo. No cambia gran cosa
+- Pestaña Pantalla/Android
+    - Puedo hacer un override y comprimirlo como a mi me gustaría en la plataforma elegida
+- RECUERDA: dar a APPLY para que se paliquen los cambios
+- Abajo hay un reproductor. Tiene para escuchar en loop. Puede ser ventana flotante
+- El flujo suele ser compresión por defecto y luego ya afino en cada plataforma si lo necesito
