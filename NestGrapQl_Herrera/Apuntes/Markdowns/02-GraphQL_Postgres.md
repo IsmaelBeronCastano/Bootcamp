@@ -1,5 +1,9 @@
 # 02 Nest GraphQL  - AnyList (Postgres)
 
+- Actualización del código
+
+> npm i @nestjs/apollo @nestjs/common @nestjs/config @nestjs/core @nestjs/graphql @nestjs/platform-express @nestjs/typeorm apollo-server-core apollo-server-express class-transformer class-validator graphql typeorm pg  
+
 - Harermos un CRUD que impacte una DB con graphQL
 - Todavía no hay autenticación ni paginación
 - Necesito un Schema con al menos un query para poder levantar el server con graphQL
@@ -86,25 +90,24 @@ bootstrap();
 ## Docker - Levantar base de datos
 
 - docker-compose.yml
-- *NOTA*: para ver la dfocumentacion acudir a **docker hub** y buscar postgres
+- *NOTA*: para ver la dfocumentacion acudir a **docker hub** y buscar postgres. Uso el puerto 5434 porque el 5432 cesta ocupado
+- Si no encuentra la DB y está levantada en Docker, con el user y password correctos, cambia el puerto!
+
 
 ~~~yml
-version: '3'
-
-
 services:
   db:
     image: postgres:14.4
     restart: always
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USERNAME: ${DB_USERNAME}
     container_name: anylistDB
     volumes:
       - ./postgres:/var/lib/postgresql/data
-
 ~~~
 
 - Defino las .env
@@ -115,10 +118,16 @@ STATE=dev
 DB_PASSWORD=123456
 DB_NAME=AnyList
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5434
 DB_USERNAME=postgres
 ~~~
 
+
 - Uso docker compose. Tiene que estar docker corriendo ( si ya tienes la imagen es rápido)
 
-> docker compose up 
+> docker compose up -d
+
+- -d es detouch (desacoplado de la terminal)
+- Debe estar el ConfigModule.onRoot() en app.module para usar las variables de entorno
+----
+

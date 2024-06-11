@@ -33,6 +33,7 @@ import { ItemsModule } from './items/items.module';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       synchronize: true,
+      entities:[],
       autoLoadEntities: true,
     }),
 
