@@ -18,10 +18,10 @@ import { ItemsModule } from './items/items.module';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       // debug: false,
-      playground: false,
+      playground: true,
       autoSchemaFile: join( process.cwd(), 'src/schema.gql'), 
       plugins: [
-        ApolloServerPluginLandingPageLocalDefault
+        //ApolloServerPluginLandingPageLocalDefault
       ]
     }),
 
