@@ -1,4 +1,4 @@
-# GraphQL NEST - Primeros pasos
+# 01 Nest GraphQL - Primeros pasos
 
 - GraphQL me servirá para que el frontend se autoabastezca de lo que necesite haciendo una petición a un único endpoint
 - *LINKS DE INTERÉS*
@@ -136,7 +136,7 @@ type Query {
 - Para poder visualizarlo tiene que estar el playground en true en el app.module
 - Escribo mi primera query desde el navegador
 
-~~~graphql
+~~~js
 query{
     helloWorld   //le paso el nombre de la Query (de la función que usé como Query)
 }
@@ -154,7 +154,7 @@ query{
 
 - Puedo renombrar la consulta (es lo que mandaría desde el frontend)
 
-~~~graphql
+~~~js
 query{
     hola: helloWorld  
 }
@@ -173,7 +173,7 @@ query{
 
 - La query
 
-~~~graphql
+~~~js
 query{
     hello
 }
@@ -306,34 +306,8 @@ export class TodoResolver {
 }
 ~~~
 
-- types/AggregationsType
-- Para crear un tipo personalizado acabaremos usando los tipos Int, Float, String, Boolean, ID
-- Uso @ObjectType para definirlo como un tipo de graphQL
-- Uso @Field para indicarle a graphQL el tipo
-
-~~~js
-import { Field, Int, ObjectType } from '@nestjs/graphql';
-
-
-@ObjectType({ description: 'Todo quick aggregations' })
-export class AggregationsType {
-
-    @Field( () => Int )
-    total: number;
-
-    @Field( () => Int )
-    pending: number;
-
-    @Field( () => Int )
-    completed: number;
-
-    @Field( () => Int, { deprecationReason: 'Most use completed instead' })
-    totalTodosCompleted: number;
-
-}
-~~~
-
 - El todo.service (como no usamos DB de momento el código es más complejo de lo que debería)
+- Uso @Injectable porque lo inyectaré en el resolver
 
 ~~~js
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -419,11 +393,12 @@ export class TodoService {
 }
 ~~~
 
-
-- entity/todo.entity
 - @ObjectType en lugar de @Entity para decirle que es mi objeto personalizado de graphQL
   - Puedo añadir en el mismo archivo @Entity para trabajar con mongoose  
-- @Field para indicar el tipo para graphQL
+- Para crear un tipo personalizado acabaremos usando los tipos Int, Float, String, Boolean, ID
+- Uso @ObjectType para definirlo como un tipo de graphQL
+- Uso @Field para indicarle a graphQL el tipo del campo
+- entity/todo.entity
 
 ~~~js
 import { Field, Int, ObjectType } from '@nestjs/graphql';
@@ -442,3 +417,326 @@ export class Todo {
 
 }
 ~~~
+
+- Si quiero consultar las descripciones de todos uso todos
+
+~~~js
+query{
+    todos {description}
+}
+~~~
+
+- Si quiero cambiearle el nombre a tareas
+
+~~~js
+query{
+    tareas:todos {
+        description
+        }
+}
+~~~
+
+- Cuando consulto el schema en el playground, si aparece Int! es que SIEMPRE voy a recibir un Int
+- Lo mismo con los argumentos. Si no pongo el **nullable:true** es que el argumento será obligatorio y aparecerá argumento:Int! (si es un entero) 
+- Para usar los argumentos (en todo por id, por ejemplo) y retornar algo en especifico
+- resolver
+
+~~~js
+@Query( () => Todo, { name: 'todo' })
+findOne(
+    @Args('id', { type: () => Int } ) id: number
+) {
+    return this.todoService.findOne( id );
+}
+~~~
+
+- Para hacer la consulta le indico el id. Necesito especificarle los campos
+
+~~~js
+{
+    todo(id:1){
+        id
+        description
+        done
+    }
+}
+~~~
+
+- Para comentar un campo en la petición (haciendo puebas) uso #
+- Puedo dividir el query en varios todos
+
+~~~js
+{
+  todo1: todo(id:1){
+    description
+  }
+  todo2: todo(id:2){
+    description
+    done
+  }
+  
+}
+~~~
+
+- Para no tener que repetir todos los campos (id, description, done) de todos los todos por id que quiero recibir usaré fragments
+- Son unidades reutilizables para hacer grupos de campos
+- Se escriben fuera del query, se usa con el spread en los campos
+
+~~~js
+{
+  todo1: todo(id:1){
+    ...fields
+  }
+  todo2: todo(id:2){
+	...fields
+  }
+  
+}
+
+  fragment fields on Todo {
+  	description
+    done
+    id
+  }
+~~~
+----
+
+## Mutation e inputs
+
+- Las **MUTATIONS** son querys que sirven para modificar la data almacenada y retornar un valor
+- El **tipo Input** en una mutación, es la información que llamariamos body en una petición REST tradicional 
+- En la mutation, le paso lo mismo, el tipo de retrono y el nombre
+
+~~~js
+@Mutation( () => Todo, { name: 'createTodo' })
+createTodo(
+    @Args('createTodoInput') createTodoInput: CreateTodoInput
+) {
+    return this.todoService.create( createTodoInput );
+}
+~~~
+
+- En dtos/inputs/
+
+~~~js
+import { Field, InputType } from '@nestjs/graphql';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+
+@InputType()
+export class CreateTodoInput {
+
+    @Field( () => String, { description: 'What needs to be done' })
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(20)
+    description: string;
+}
+~~~
+-----
+
+## Filtros
+
+- Para agregar **FILTROS**, por ejemplo al findAll
+
+~~~js
+@Query( () => [Todo], { name: 'todos' })
+    findAll(
+        @Args() statusArgs: StatusArgs
+    ): Todo[] {
+        return this.todoService.findAll( statusArgs );
+    }
+~~~
+
+- dtos/statusArgs
+
+~~~js
+import { ArgsType, Field } from "@nestjs/graphql";
+import { IsBoolean, IsOptional } from "class-validator";
+
+@ArgsType()
+export class StatusArgs {
+
+    @Field( () => Boolean, { nullable: true })
+    @IsOptional()
+    @IsBoolean()
+    status?: boolean;
+
+}
+~~~
+
+- El query sería
+
+~~~js
+{
+  pending: todos(status:false){
+    ...fields
+  }
+
+  completed: todos(status:true){
+    ...fields
+  }
+  
+}
+
+  fragment fields on Todo{
+  	description
+    done
+    id
+  }
+~~~
+
+- De esta manera en una sola petición tengo los todos en un json dentro de data en dos arreglos diferentes, pending y completed
+
+~~~json
+{ 
+  "data": {
+    "pending": [
+      {
+        "description": "Piedra del Alma",
+        "done": false,
+        "id": 1
+      },
+      {
+        "description": "Piedra del Poder",
+        "done": false,
+        "id": 3
+      },
+      {
+        "description": "Piedra del Tiempo",
+        "done": false,
+        "id": 4
+      }
+    ],
+    "completed": [
+      {
+        "description": "Piedra del Espacio",
+        "done": true,
+        "id": 2
+      }
+    ]
+  }
+}
+~~~
+----
+
+## Agregar conteos como campos adicionales
+
+- Más adelante trabajando con la DB veremos la paginación
+- Ahora veremos cómo saber la cantidad de todos totales, pendientes...
+- Creo los nuevos Query en el resolver que regresarán un Int
+
+~~~js
+// Aggregations
+@Query( () => Int, { name: 'totalTodos' })
+totalTodos(): number {
+    return this.todoService.totalTodos;
+}
+
+@Query( () => Int, { name: 'pendingTodos' })
+pendingTodos(): number {
+    return this.todoService.pendingTodos;
+}
+
+@Query( () => Int, { name: 'completedTodos' })
+completedTodos(): number {
+    return this.todoService.completedTodos;
+}
+~~~
+
+- En el servicio creo los getters
+
+~~~js
+get totalTodos() {
+    return this.todos.length;
+}
+
+get pendingTodos() {
+    return this.todos.filter( todo => todo.done === false ).length;
+}
+
+get completedTodos() {
+    return this.todos.filter( todo => todo.done === true ).length;
+}
+~~~
+
+- Puedo hacer el query así
+
+~~~js
+{
+totalTodos
+  completedTodos
+  todos(status:true){
+    ...fields
+  }
+  
+}
+
+  fragment fields on Todo{
+  	description
+    done
+    id
+  }
+~~~
+----
+
+## ObjectTypes - Aggregations
+
+- 
+
+~~~js
+import { Field, Int, ObjectType } from '@nestjs/graphql';
+
+
+@ObjectType({ description: 'Todo quick aggregations' })
+export class AggregationsType {
+
+    @Field( () => Int )
+    total: number;
+
+    @Field( () => Int )
+    pending: number;
+
+    @Field( () => Int )
+    completed: number;
+
+    @Field( () => Int, { deprecationReason: 'Most use completed instead' }) //ejemplo de warning por deprecado
+    totalTodosCompleted: number;
+
+}
+~~~
+
+- El totalTodosCompleted aparece en Apollo Studio con un warning. Si clico me dice que *is deprecated*
+- El Query aggregations agrupa los getters, devuelve el objeto AggregationsType
+
+~~~js
+@Query( () => AggregationsType )
+aggregations(): AggregationsType {
+    return {
+        completed: this.todoService.completedTodos,
+        pending: this.todoService.pendingTodos,
+        total: this.todoService.totalTodos,
+        totalTodosCompleted: this.todoService.totalTodos,
+    }
+}
+~~~
+
+- Para hacer la consulta
+
+~~~js
+{
+aggregations{
+  completed
+}
+  todos(status:true){
+    ...fields
+  }
+  
+}
+
+  fragment fields on Todo{
+  	description
+    done
+    id
+  }
+~~~ 
+
