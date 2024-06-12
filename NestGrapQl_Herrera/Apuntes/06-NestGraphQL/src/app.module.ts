@@ -16,10 +16,10 @@ import { AuthModule } from './auth/auth.module';
     ConfigModule.forRoot(),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      playground: false,
+      playground: true,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       plugins: [
-        ApolloServerPluginLandingPageLocalDefault
+        //ApolloServerPluginLandingPageLocalDefault
       ]
     }),
     TypeOrmModule.forRoot({
