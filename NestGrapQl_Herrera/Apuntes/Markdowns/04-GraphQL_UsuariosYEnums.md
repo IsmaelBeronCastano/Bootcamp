@@ -64,6 +64,7 @@ bootstrap();
 - He importado el AuthModule y he inyectado el JwtService para inyectarlko en el useFactory y usarlo como servicio, por lo que ahora si coloco el forRoot() al ConfigModule
 - Con el useFactory tengo el context desde donde puedo extraer la request
 - Puedo comprobar si tengo el token y decodificarlo
+- De esta manera puedo bloquear el schema con la autenticación
 
 ~~~js
 import { join } from 'path';
@@ -87,6 +88,7 @@ import { AuthModule } from './auth/auth.module';
 
     ConfigModule.forRoot(),
 
+    //esta configuración es para bloquear el schema a través de autenticación JWT
     GraphQLModule.forRootAsync({
       driver: ApolloDriver,
       imports: [ AuthModule ],
@@ -636,7 +638,7 @@ query Users{
 async findAll( roles: ValidRoles[] ): Promise<User[]> {
 
   if ( roles.length === 0 ) 
-    return this.usersRepository.find();
+    return this.usersRepository.find()
 
   //necesito tener el role de admin o superuser
   return this.usersRepository.createQueryBuilder()
@@ -761,6 +763,7 @@ blockUser(
 ~~~
 
 - Para añadir la relación ManyToOne en la entidad
+- ManyToOne porque el mismo usuario puede estar en muchas actualizaciones, muchas personas y se van a relacionar con una 
 
 ~~~js
 import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
@@ -800,10 +803,11 @@ export class User {
   })
   @Field( () => Boolean )
   isActive: boolean;
-  
-  @ManyToOne( () => User, (user) => user.lastUpdateBy, { nullable: true, lazy: true })
-  @JoinColumn({ name: 'lastUpdateBy' })
-  @Field( () => User, { nullable: true })
+              //User (el ObjectType), como se va a relacionar user con lastUpdateBy
+  @ManyToOne( () => User, (user) => user.lastUpdateBy, { nullable: true, lazy: true }) //lazy es para que cargue la relación
+  @JoinColumn({ name: 'lastUpdateBy' }) //para que typeorm cargue la información de este campo, 
+                                        //uso el name para ponerle mi nombre personalizado a la columna en la tabla
+  @Field( () => User, { nullable: true }) //hay que indicarle a graphQL que tipo de dato va a tener con Field
   lastUpdateBy?: User;
 
 }
@@ -824,3 +828,269 @@ async block( id: string, adminUser: User ): Promise<User> {
 }
 ~~~
 
+- Para obtener el lastUpdateBy yo podría hacer esto, pero esto me sigue regresando valores null ya que entra en el array con el queryBuilder
+
+~~~js
+async findAll( roles: ValidRoles[] ): Promise<User[]> {
+
+  if ( roles.length === 0 ) 
+    return this.usersRepository.find({
+    relations: {
+     lastUpdatebY: true
+  }});
+
+  //necesito tener el role de admin o superuser
+  return this.usersRepository.createQueryBuilder()
+    .andWhere('ARRAY[roles] && ARRAY[:...roles]')
+    .setParameter('roles', roles )
+    .getMany();
+}
+~~~
+
+- El eager en true funciona (excepto en el query builder) para cargar la relación
+- Puedo usar el **lazy en true**, es una forma de decirle cuando se cargue, carga esto también
+
+~~~js
+import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity({ name: 'users' })
+@ObjectType()
+export class User {
+  
+  @PrimaryGeneratedColumn('uuid')
+  @Field( () => ID )
+  id: string;
+
+  @Column()
+  @Field( () => String )
+  fullName: string;
+
+  @Column({ unique: true })
+  @Field( () => String )
+  email: string;
+
+  @Column()
+  // @Field( () => String )
+  password: string;
+
+  @Column({
+    type: 'text',
+    array: true,
+    default: ['user']
+  })
+  @Field( () => [String] )
+  roles: string[]
+
+  @Column({
+    type: 'boolean',
+    default: true
+  })
+  @Field( () => Boolean )
+  isActive: boolean;
+              //User (el ObjectType), como se va a relacionar user con lastUpdateBy
+  @ManyToOne( () => User, (user) => user.lastUpdateBy, { nullable: true, lazy: true }) //lazy es para que cargue la relación
+  @JoinColumn({ name: 'lastUpdateBy' })                                               //ya que el eager en true no funciona con el queryBuilder
+  lastUpdateBy?: User;                                                                //que es lo que tengo en el findAll
+
+}
+~~~
+
+- Entonces no es necesario añadir al find la relación para que la cargue porque usamos el lazy en la relación desde la entidad
+
+~~~js
+async findAll( roles: ValidRoles[] ): Promise<User[]> {
+
+  if ( roles.length === 0 ) 
+    return this.usersRepository.find({
+      // TODO: No es necesario porque tenemos lazy la propiedad lastUpdateBy
+      // relations: {
+      //   lastUpdateBy: true
+      // }
+    });
+
+  // ??? tenemos roles ['admin','superUser']
+  return this.usersRepository.createQueryBuilder()
+    .andWhere('ARRAY[roles] && ARRAY[:...roles]')
+    .setParameter('roles', roles )
+    .getMany();
+
+
+}
+~~~
+-----
+
+## Update
+
+- Hagamos una mutation en el users.resolver
+- Solo el admin puede acceder
+- Le paso el id, el dto y el user al servicio
+~~~js
+  @Mutation(() => User, { name: 'updateUser' })
+  async updateUser(
+    @Args('updateUserInput') updateUserInput: UpdateUserInput,
+    @CurrentUser([ValidRoles.admin ]) user: User
+  ): Promise<User> {
+    return this.usersService.update(updateUserInput.id, updateUserInput, user );
+  }
+~~~
+
+- Recordemos el dto
+- Es un @InputType para graphQL ya que lo recibo del body de la petición
+- Extiendo la clase con Partial (lo que indica que todos los parámetros son opcionales) de CreateUserDto
+- Coloco el id como obligatorio y los otros dos opcionales
+- Uso los decoradores para validar
+
+~~~js
+import { InputType, Field, Int, PartialType, ID } from '@nestjs/graphql';
+import { IsArray, IsBoolean, IsOptional, IsUUID } from 'class-validator';
+
+import { CreateUserInput } from './create-user.input';
+import { ValidRoles } from './../../auth/enums/valid-roles.enum';
+
+
+@InputType()
+export class UpdateUserInput extends PartialType(CreateUserInput) {
+  
+  @Field(() => ID)
+  @IsUUID()
+  id: string;
+
+  @Field( () => [ValidRoles], { nullable: true })
+  @IsArray()
+  @IsOptional()
+  roles?: ValidRoles[];
+
+  @Field( () => Boolean, { nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
+}
+~~~
+
+- En el users.service guardo en user usando el repositorio con el método preload y esparzo el dto, para pasarle el id y el body
+- preload si no lo encuentra mandará el error al catch
+- Actualizo el lastUpdateBY
+- Salvo los cambios
+
+~~~js
+  async update(
+    id: string, 
+    updateUserInput: UpdateUserInput,
+    updateBy: User
+  ): Promise<User> {
+
+    try {
+      const user = await this.usersRepository.preload({
+        ...updateUserInput,
+        id
+      });
+
+      user.lastUpdateBy = updateBy;
+
+      return await this.usersRepository.save( user );
+
+    } catch (error) {
+      this.handleDBErrors( error );
+    } 
+  }
+~~~
+------
+
+## Bloquear GQLSchema
+
+- signup y login no tienen que estar protegidos, porque si no no podríamos ingresar
+- Usualmente se crean en un REST API, y el token generado desde ahi se usa para el schema
+- Si el usuario no está autenticado con un token válido no va a poder acceder a los endpoints
+- Lo que voy a hacer es bloquear la manera en la que el schema se obtiene mcon el JwtService
+- Uso **forRootAsync**. El driver es obligatorio. 
+- Importo el AuthModule donde tengo el JwtService
+- Inyecto el JwtService
+- Uso el useFactory para inyectar el JwtService
+- Le indico el playground en true porque lo quiero usar desde el navegador para hacer las consultas en localhost:3000/graphql
+- Le indico el path del schema de graphQL
+- Si uso el ApolloPlugin... el playground debe de estar en false, y entonces usar Apollo Studio
+- En el useFactory tengo el context, que trae la información de mi schema, del que puedo desestructurar la req
+- **Si no dejo un espacio después de Bearer usando el replace** para eliminar esto de la request y quedarme solo con el token, **me quedaría el token con un espacio al principio**, lo que daría error
+- Debo ponerle ? al authorization porque puede no venir
+- Si el payload es null lanzo el error
+- De esta manera **TAMBIÉN ESTOY PIDIENDO UN TOKEN PARA EL SIGNIN Y EL SIGNUP** por lo que **lo voy a dejar comentado de momento**
+- app.module
+
+~~~js
+import { join } from 'path';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ConfigModule } from '@nestjs/config';
+import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
+
+import { ItemsModule } from './items/items.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+
+
+@Module({
+  imports: [
+
+    ConfigModule.forRoot(),
+
+    GraphQLModule.forRootAsync({
+      driver: ApolloDriver,
+      imports: [ AuthModule ],
+      inject: [ JwtService ],
+      useFactory: async( jwtService: JwtService ) => ({
+        playground: true,
+        autoSchemaFile: join( process.cwd(), 'src/schema.gql'), 
+        plugins: [
+          //ApolloServerPluginLandingPageLocalDefault
+        ],
+        context({ req }) {              //es importante el espacio despues de Bearer, si no dará error!!
+          // const token = req.headers.authorization?.replace('Bearer ','');
+          // if ( !token ) throw Error('Token needed');
+
+          // const payload = jwtService.decode( token );
+          // if ( !payload ) throw Error('Token not valid');
+          
+        }
+      })
+    }),
+
+    // TODO: configuración básica
+    // GraphQLModule.forRoot<ApolloDriverConfig>({
+    //   driver: ApolloDriver,
+    //   // debug: false,
+    //   playground: false,
+    //   autoSchemaFile: join( process.cwd(), 'src/schema.gql'), 
+    //   plugins: [
+    //     ApolloServerPluginLandingPageLocalDefault
+    //   ]
+    // }),
+
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: +process.env.DB_PORT,
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      synchronize: true,
+      autoLoadEntities: true,
+    }),
+
+    ItemsModule,
+
+    UsersModule,
+
+    AuthModule,
+  ],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+~~~
