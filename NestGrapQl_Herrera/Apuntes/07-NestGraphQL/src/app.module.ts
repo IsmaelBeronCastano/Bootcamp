@@ -24,10 +24,10 @@ import { AuthModule } from './auth/auth.module';
       imports: [ AuthModule ],
       inject: [ JwtService ],
       useFactory: async( jwtService: JwtService ) => ({
-        playground: false,
+        playground: true,
         autoSchemaFile: join( process.cwd(), 'src/schema.gql'), 
         plugins: [
-          ApolloServerPluginLandingPageLocalDefault
+          //ApolloServerPluginLandingPageLocalDefault
         ],
         context({ req }) {
           // const token = req.headers.authorization?.replace('Bearer ','');
