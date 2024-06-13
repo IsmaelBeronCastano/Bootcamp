@@ -143,22 +143,25 @@ export class AppModule {}
 ~~~
 
 - Los enumTypes en GraphQl funcionan ingual que en TypeScript
-- Registro el enum con la función registerEnumType de nestjs/graphql
+- Registro el enum con la función registerEnumType de nestjs/graphql para poder usarlo como tipo de dato GraphQL
 - src/auth/enums/valid-roles.enum
 
 ~~~js
 import { registerEnumType } from "@nestjs/graphql";
 
+//aqui es un enum de typescript
 export enum ValidRoles {
     admin     = 'admin', 
     user      = 'user',  
     superUser = 'superUser'
 }
 
+//aqui hago el enum un tipo de GraphQL
 registerEnumType( ValidRoles, { name: 'ValidRoles', description: 'Fiesta en tu casa a las 3' } )
 ~~~
 
 - Creo el @ArgsType para pasarle los roles que me interesa devolver en el findAll
+- Uso @IsArray
 - Puede ser nulo
 - user/dto/args/roles.args
 
@@ -169,10 +172,10 @@ import { ValidRoles } from '../../../auth/enums/valid-roles.enum';
 
 @ArgsType()
 export class ValidRolesArgs {
-
+                  //para poder colocar el enum aqui como tipo de dato debo haberlo registrado con registerEnumType
     @Field( () => [ValidRoles], { nullable: true })
     @IsArray()
-    roles: ValidRoles[] = []
+    roles: ValidRoles[] = [] //declararlo como un arreglo vacío por defecto indica que por defecto será nulo
         
 
 }
@@ -180,12 +183,12 @@ export class ValidRolesArgs {
 
 - El users.resolver queda así
 - El Resolver devuelve siempre algo de tipo User
-- Coloco el @UseGuards a nivel de Resolver y le paso el JwtAuthGuard
+- **Coloco el @UseGuards a nivel de Resolver y le paso el JwtAuthGuard**
 - En **findAll** como argumento le paso el tipo que he creado ValidRolesArg
   - En el custom decorator @CurrentUser le digo que solo pueden acceder a la ruta admin y superUser
   - @CurrentUser user devolverá un user de tipo User
   - El método findAll devolverá una promesa de tipo arreglo de User
-  - En el servicio crearé un QueryBuilder para recorrer los roles y sacar los usuarios
+  - En el servicio crearé un QueryBuilder para recorrer los roles y sacar los usuarios (explicado más adelante)
 - En el updateUser y blockUser necesito pasarle también el user 
 - En updateUser lo necesito para el campo lastUpdateBy
 - En blockUser para colocarle el isActive en false
@@ -296,6 +299,7 @@ export class UsersService {
 
   }
 
+  
   async findAll( roles: ValidRoles[] ): Promise<User[]> {
 
     if ( roles.length === 0 ) 
@@ -473,4 +477,350 @@ export class UpdateUserInput extends PartialType(CreateUserInput) {
 }
 ~~~
 
-- 
+- Para hacer el query de findAll debo estar logeado
+- Primero creo el usuario y le pido que me devuelva el fullName y el token
+
+~~~js
+mutation CreateUser($signUp: SignupInput!){
+  signup(signupInput: $signUp){
+    user{
+      fullName
+    }
+    token
+  }
+}
+~~~
+
+- En las variables le paso los valores a $signUp
+
+~~~json
+{
+  "signUp": {
+    "email": "miguel@gmail.com",
+    "fullName": "Miguel",
+    "password": "123456"
+  }
+}
+~~~
+
+- Me devuelve el objeto data
+
+~~~json
+{
+  "data": {
+    "signup": {
+      "user": {
+        "fullName": "Miguel"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3MjVlNDU1LTdhY2EtNDBlNi1hY2M1LTE0ZjYxM2YwOGMxZiIsImlhdCI6MTcxODI2NTQxMywiZXhwIjoxNzE4Mjc5ODEzfQ.eNt7pTns8-1U8eHupL3mz0pKV6yEDDNhXcrNoh6qYJE"
+    }
+  }
+}
+~~~
+
+- Copio el token y hago el login pasándole en HTTP HEADERS el "Authorization": "Bearer token_aqui"
+
+~~~js
+mutation LoginUser($loginInput: LoginInput!){
+  login(loginInput: $loginInput){
+    user{
+      fullName
+    }
+    token
+  }
+}
+~~~
+
+- En las variables le paso a la variable loginInput el email y password
+
+~~~json
+{
+  "loginInput": {
+    "email": "miguel@gmail.com",
+    "password": "123456"
+  }
+}
+~~~
+
+- En HTTP HEADERS le paso el token del signup
+
+~~~json
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3MjVlNDU1LTdhY2EtNDBlNi1hY2M1LTE0ZjYxM2YwOGMxZiIsImlhdCI6MTcxODI2NTQxMywiZXhwIjoxNzE4Mjc5ODEzfQ.eNt7pTns8-1U8eHupL3mz0pKV6yEDDNhXcrNoh6qYJE"
+}
+~~~
+
+- Esto me devuelve el objeto data con los campos que le solicité (fullName y el token)
+
+~~~json
+{
+  "data": {
+    "login": {
+      "user": {
+        "fullName": "Miguel"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3MjVlNDU1LTdhY2EtNDBlNi1hY2M1LTE0ZjYxM2YwOGMxZiIsImlhdCI6MTcxODI2NTc5OSwiZXhwIjoxNzE4MjgwMTk5fQ.QeDFAdelsK_tWb35kTSz1UbtQf_lAXypvA7LralbpRo"
+    }
+  }
+}
+~~~
+- Ya puedo usar el token para acceder a los endpoints
+- Ahora tengo el role user por defecto, habrá endpoints a los que no podré acceder, creo otro usuario con role admin y nombre admin
+- Le cambio el role desde TablePlus
+- Para hacer la query, le paso el argumento roles y le pido que me devuelva aquellos que sean user
+
+~~~js
+query Users{
+  users(roles: user ){
+    fullName
+  }
+}
+~~~
+
+- En HTTP HEADERS le coloco el token extraido del login de un usuario al que le he cambiado el role desde TablePlus a admin
+
+~~~json
+{
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3MGJlZjkwLTQzMGUtNDdmZS1iYThkLTc5OGI4N2YwZjAxOCIsImlhdCI6MTcxODI2NjA2NCwiZXhwIjoxNzE4MjgwNDY0fQ.uv3-yWS-l5LPtaXksK2cbLKG5m7XHTpiEcLtnDJ4q-U"
+}
+~~~
+
+- Si miro el tipo ValidRolesArg que he creado con @ArgsType y he colocado en el query findAll, tiene un campo llamado role
+- Por eso no ha hecho falta colocar el argumento como string entre los paréntesis de @Args() validRoles: ValidRolesArg en el query del resolver, ya que he declarado el tipo y este ya incluye role
+- Para hacer la consulta
+
+~~~js
+query Users{
+  users(roles: user ){
+    fullName
+  }
+}
+~~~
+
+- Me devuelve esto
+
+~~~json
+{
+  "data": {
+    "users": [
+      {
+        "fullName": "Miguel"
+      }
+    ]
+  }
+}
+~~~
+
+- Miremos el users.service, creo el queryBuilder
+- Podría usar el where. Usando andWhere todos los andWhere que vengan detrás **se tienen que cumplir**
+- Le indico que busque en un ARRAY según la documentación para hacer querys sobre arreglos
+
+~~~
+'ARRAY[nombre_del_arreglo_en_la_DB]'
+~~~
+
+- Le indico con && (agrego otra condición, debe de estar mi argumento que lo indico con :) y esparzo roles con el spread ...
+
+~~~
+'ARRAY[roles] && '[:...roles]'
+~~~
+
+- Le estoy diciendo que el arreglo que le voy a mandar de roles como parámetro, al menos uno tiene que hacer match con la tabla de roles
+- Por eso uso :...roles. : Para indicar que es un parámetro que introduzco desde fuera (como en los endpoints /:id) y ...roles para esparcir el arreglo en caso de mandar más de un role como parámetro
+- Uso setParameter para establecer este parámetro de :roles que he indicado en el andWhere
+- También ayuda a escapar caracteres especiales, evitar inyecciones de querys, etc
+- El primer 'roles' es el nombre que le puse al parametro :...roles. El segundo parámetro roles es el valor que le estoy pasando como parámetro a findAll(roles) <--- este roles
+- Uso getMany para obtener varios resultados
+
+~~~js
+async findAll( roles: ValidRoles[] ): Promise<User[]> {
+
+  if ( roles.length === 0 ) 
+    return this.usersRepository.find();
+
+  //necesito tener el role de admin o superuser
+  return this.usersRepository.createQueryBuilder()
+    .andWhere('ARRAY[roles] && ARRAY[:...roles]')
+    .setParameter('roles', roles )
+    .getMany();
+}
+~~~
+
+- Para poder acceder a findAll necesito ser admin o superuser
+
+~~~js
+@Query(() => [User], { name: 'users' })
+async findAll(
+  @Args() validRoles: ValidRolesArgs,
+  @CurrentUser([ValidRoles.admin, ValidRoles.superUser ]) user: User
+):Promise<User[]> {
+
+  //const users = await this.usersService.findAll( validRoles.roles );
+  //console.log(users);
+  return this.usersService.findAll( validRoles.roles );
+}
+~~~
+
+- **findOne**
+- user.resolver
+- Es un query porque solo queremos traer data, no vamos a impactar la DB
+
+~~~js
+@Query(() => User, { name: 'user' })
+findOne( 
+  @Args('id', { type: () => ID }, ParseUUIDPipe ) id: string,
+  @CurrentUser([ValidRoles.admin, ValidRoles.superUser ]) user: User
+): Promise<User> {
+  
+  return this.usersService.findOneById(id);
+}
+~~~
+
+- En el users.service uso el findOnByOrFail en un try catch por si lanza el error atraparlo con el catch
+- Por eso lo de 'OrFail'
+
+~~~js
+async findOneById( id: string ): Promise<User> {
+  try {
+    return await this.usersRepository.findOneByOrFail({ id });
+  } catch (error) {
+    throw new NotFoundException(`${ id } not found`);
+  }
+}
+
+
+//el findOneByEmail es igual, lo usaremos en otros lugares
+async findOneByEmail( email: string ): Promise<User> {
+  try {
+    return await this.usersRepository.findOneByOrFail({ email });
+  } catch (error) {
+    throw new NotFoundException(`${ email } not found`);
+    // this.handleDBErrors({
+    //   code: 'error-001',
+    //   detail: `${ email } not found`
+    // });
+  }
+}
+~~~
+
+- Para hacer la query debo ser admin o superuser
+- Le pido que me devuelva el fullName, el email y el role
+~~~js
+query User($id: ID!){
+  user(id: $id ){
+    fullName
+    email
+    roles
+  }
+}
+~~~
+
+- Le paso un token de algun usuario con role admin
+- En variables le paso el id
+
+~~~json
+{
+  "id": "c725e455-7aca-40e6-acc5-14f613f08c1f"
+}
+~~~
+
+- Me devuelve esto
+
+~~~json
+{
+  "data": {
+    "user": {
+      "fullName": "Miguel",
+      "email": "miguel@gmail.com",
+      "roles": [
+        "user"
+      ]
+    }
+  }
+}
+~~~
+----
+
+## Bloquear un usuario - ManyToOne
+
+- Para bloquear un usuario voy a cambiar el estado de activo a false. Eso sería muy sencillo
+- Con objetivos didácticos crearemos una nueva columna en la tabla de usuarios llamada lastUpdatedBy
+- Nos dirá quien fue la última persona que hizo un cambio en esta tabla
+- Esto nos servirá para aprender la relación ManyToOne
+- Debe hacerlo un admin, le paso el id, lo valido con el UUIDPipe para asegurarme de que sea un UUID
+- user.resolver
+
+~~~js
+@Mutation(() => User, { name: 'blockUser' })
+blockUser( 
+  @Args('id', { type: () => ID }, ParseUUIDPipe ) id: string,
+  @CurrentUser([ ValidRoles.admin ]) user: User
+): Promise<User> {
+  return this.usersService.block(id, user );
+}
+~~~
+
+- Para añadir la relación ManyToOne en la entidad
+
+~~~js
+import { ObjectType, Field, Int, ID } from '@nestjs/graphql';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity({ name: 'users' })
+@ObjectType()
+export class User {
+  
+  @PrimaryGeneratedColumn('uuid')
+  @Field( () => ID )
+  id: string;
+
+  @Column()
+  @Field( () => String )
+  fullName: string;
+
+  @Column({ unique: true })
+  @Field( () => String )
+  email: string;
+
+  @Column()
+  // @Field( () => String )
+  password: string;
+
+  @Column({
+    type: 'text',
+    array: true,
+    default: ['user']
+  })
+  @Field( () => [String] )
+  roles: string[]
+
+  @Column({
+    type: 'boolean',
+    default: true
+  })
+  @Field( () => Boolean )
+  isActive: boolean;
+  
+  @ManyToOne( () => User, (user) => user.lastUpdateBy, { nullable: true, lazy: true })
+  @JoinColumn({ name: 'lastUpdateBy' })
+  @Field( () => User, { nullable: true })
+  lastUpdateBy?: User;
+
+}
+~~~
+
+- En el users.service
+
+~~~js
+async block( id: string, adminUser: User ): Promise<User> {
+  
+  const userToBlock = await this.findOneById( id );
+
+  userToBlock.isActive = false;
+  userToBlock.lastUpdateBy = adminUser;
+
+  return await this.usersRepository.save( userToBlock );
+
+}
+~~~
+
