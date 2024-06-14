@@ -24,8 +24,6 @@ export class Item {
   @Field( () => String, { nullable: true } )
   quantityUnits?: string; // g, ml, kg, tsp
 
-  // stores
-  // user
   @ManyToOne( () => User, (user) => user.items, { nullable: false, lazy: true })
   @Index('userId-index')
   @Field( () => User )
