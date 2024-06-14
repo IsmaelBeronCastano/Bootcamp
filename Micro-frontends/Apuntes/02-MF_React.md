@@ -281,6 +281,25 @@ const ColorList = ({ colorsList = [], handleClickClearColors }) => {
 export default ColorList;
 ~~~
 
+- En el App.jsx tengo esto
+
+~~~js
+import React from "react";
+import ReactDOM from "react-dom";
+import ColorList from "./components/ColorList";
+
+const App = () => {
+  return (
+    <>
+      <ColorList colorsList={[]} />
+      <ColorList colorsList={["#0fcc7a", "#c90fcc", "#cc480f"]} />
+    </>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById("app"));
+~~~
+ 
 - Es en el index.html del host dónde tengo bootstrap
 
 ~~~html
@@ -310,4 +329,21 @@ export default ColorList;
   </body>
 </html>
 ~~~
+
+- He usado el mismo index.css para todos los microfrontend
+
+~~~css
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.container {
+  font-size: 3rem;
+  margin: auto;
+  max-width: 800px;
+  margin-top: 20px;
+}
+~~~
+
+- 
 
