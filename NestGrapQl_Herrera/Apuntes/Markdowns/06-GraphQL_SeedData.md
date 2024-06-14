@@ -745,12 +745,12 @@ export class SeedService {
             users.push( await this.usersService.create( user ) )
         }
 
-        return users[0];
+        return users[0]; //He dicho que devolvería una promesa de tipo User! retorno el primer resultado del arreglo
 
     }
 
 
-    async loadItems( user: User ): Promise<void> {
+    async loadItems( user: User ): Promise<void> { //Aquí devuelvo una Promesa vacía (no hay return)
 
         const itemsPromises = [];
 
