@@ -762,6 +762,14 @@ export class SeedService {
     }
 }
 ~~~
+
+- Para ejecutar el seed
+
+~~~js
+mutation executeSeed{
+  executeSeed
+}
+~~~
 ----
 
 ## README
