@@ -287,3 +287,4 @@ environment:
 
 - En la consola dirá que corre en el puerto 4000 pewro para mi será el 8080
 - En mi navegador apuntaré a localhost:8080
+- Si quiero subir la imagen en dockerHub creo un repositorio y subo la imagen
