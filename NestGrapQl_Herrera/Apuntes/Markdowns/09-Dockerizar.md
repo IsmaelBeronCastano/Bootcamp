@@ -285,6 +285,6 @@ environment:
 
 >  docker run --env-file=.env.prod -p 8080:4000 nest-graphql-prod
 
-- En la consola dirá que corre en el puerto 4000 pewro para mi será el 8080
+- En la consola dirá que corre en el puerto 4000 pero para mi será el 8080
 - En mi navegador apuntaré a localhost:8080
 - Si quiero subir la imagen en dockerHub creo un repositorio y subo la imagen
