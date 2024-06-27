@@ -27,6 +27,8 @@ RUN npm run build
 
 RUN npm ci -f --only=production && npm cache clean --force
 
+# si la variable de entorno no está definida este comando no se ejecutará
+# uso args en el docker-compose.prod.yml
 RUN npx prisma generate
 
 
