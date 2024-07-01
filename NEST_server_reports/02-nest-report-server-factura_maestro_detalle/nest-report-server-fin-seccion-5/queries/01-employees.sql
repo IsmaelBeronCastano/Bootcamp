@@ -29,4 +29,5 @@ VALUES
 ('Roberto Castillo', 'Contador', '2017-12-12', '09:00', 8, 'Lunes a Viernes, 9am - 5pm'),
 ('Adriana Reyes', 'Desarrolladora', '2021-06-25', '09:30', 7, 'Lunes a Viernes, 9:30am - 4:30pm'),
 ('Santiago García', 'Soporte Técnico', '2020-01-13', '08:00', 8, 'Lunes a Viernes, 8am - 4pm'),
-('Verónica Ríos', 'Recursos Humanos', '2019-04-17', '09:00', 7, 'Lunes a Viernes, 9am - 4pm');
+('Verónica Ríos', 'Recursos Humanos', '2019-04-17', '09:00', 7, 'Lunes a Viernes, 9am - 4pm'),
+('Miguel Castaño', 'Desarrollador de software', '2024-07-21', '09:00', 5, 'Lunes a Viernes, 9am - 2pm');

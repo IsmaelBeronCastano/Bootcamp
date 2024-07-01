@@ -61,6 +61,33 @@ export class BasicReportsService extends PrismaClient implements OnModuleInit {
     return doc;
   }
 
+  async employmentLetterByIdMedusa(employeeId: number) {
+    const employee = await this.employees.findUnique({
+      where: {
+        id: employeeId,
+      },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with id ${employeeId} not found`);
+    }
+
+    const docDefinition = getEmploymentLetterByIdReport({
+      employerName: 'Luis Felipe Sayavedra',
+      employerPosition: 'CTO',
+      employeeName: employee.name,
+      employeePosition: employee.position,
+      employeeStartDate: employee.start_date,
+      employeeHours: employee.hours_per_day,
+      employeeWorkSchedule: employee.work_schedule,
+      employerCompany: 'Medusa Lab',
+    });
+
+    const doc = this.printerService.createPdf(docDefinition);
+
+    return doc;
+  }
+
   async getCountries() {
     const countries = await this.countries.findMany({
       where: {

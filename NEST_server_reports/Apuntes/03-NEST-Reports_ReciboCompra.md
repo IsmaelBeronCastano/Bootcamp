@@ -1,4 +1,4 @@
-# NEST REPORTS - MAESTRO DETALLE
+# NEST REPORTS - TABLA PAISES
 
 - Reutilizar componentes
 - Número a pie de página
@@ -671,7 +671,8 @@ export class CurrencyFormatter {
 - Podemos crear nuestors propios layouts
 - Las configuración es estraña. Es cuando se configura la impresora
 - Se hace en el objeto de opciones que le mandamos a la impresora
-- En el tipo de retorno uso Record, sirve para tipar llaves dinámicas que pueden ser cualquier cantidad de elementos
+- En el tipo de retorno
+-  uso Record, sirve para tipar llaves dinámicas que pueden ser cualquier cantidad de elementos
 - La llave será un string y el valor un CustomTableLayout
 - Lo llamo customLayout01
 - Para definir un layout necesito definir las opciones que vienen en el ejemplo de la documentación (este)
@@ -690,7 +691,7 @@ const customTableLayouts: Record<string, CustomTableLayout> = {
       return 0;
     },
     hLineColor: function (i) {
-      return i === 1 ? 'black' : '#bbbbbb';
+      return i === 1 ? 'black' : '#bbbbbb'; //color lineas de la tabla
     },
     paddingLeft: function (i) {
       return i === 0 ? 0 : 8;
@@ -706,7 +707,7 @@ const customTableLayouts: Record<string, CustomTableLayout> = {
         return '#acb3c1';
       }
 
-      return i % 2 === 0 ? '#f3f3f3' : null;
+      return i % 2 === 0 ? '#f3f3f3' : null; //intercalado de colores por pares e impares
     },
   },
 };
@@ -730,3 +731,5 @@ export class PrinterService {
   }
 }
 ~~~
+
+- 

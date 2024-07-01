@@ -39,6 +39,20 @@ export class BasicReportsController {
     pdfDoc.pipe(response);
     pdfDoc.end();
   }
+  
+  @Get('employment-letter/medusa/:employeeId')
+  async employmentLetterByIdMedusa(
+    @Res() response: Response,
+    @Param('employeeId') employeeId: string,
+  ) {
+    const pdfDoc =
+      await this.basicReportsService.employmentLetterByIdMedusa(+employeeId);
+
+    response.setHeader('Content-Type', 'application/pdf');
+    pdfDoc.info.Title = 'Employment-Letter';
+    pdfDoc.pipe(response);
+    pdfDoc.end();
+  }
 
   //countries
   @Get('countries')

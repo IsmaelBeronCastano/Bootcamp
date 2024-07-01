@@ -2,18 +2,18 @@ import { Content } from 'pdfmake/interfaces';
 import { DateFormatter } from 'src/helpers';
 
 const logo: Content = {
-  image: 'src/assets/tucan-code-logo.png',
-  width: 100,
-  height: 100,
+  image: 'src/assets/medusa.jpg',
+  width: 120,
+  height: 120,
   alignment: 'center',
-  margin: [0, 0, 0, 20],
+  margin: [40, 20, 0, 20],
 };
 
 const currentDate: Content = {
   text: DateFormatter.getDDMMMMYYYY(new Date()),
   alignment: 'right',
   margin: [20, 30],
-  width: 150,
+  width: 170,
 };
 
 interface HeaderOptions {
@@ -35,8 +35,8 @@ export const headerSection = (options: HeaderOptions): Content => {
         alignment: 'center',
         margin: [0, 2, 0, 0],
         style: {
-          fontSize: 16,
-          bold: true,
+          fontSize: 18,
+          italics: true,
         },
       }
     : null;
@@ -47,7 +47,7 @@ export const headerSection = (options: HeaderOptions): Content => {
           {
             text: title,
             alignment: 'center',
-            margin: [0, 15, 0, 0],
+            margin: [0, 15, 0, 10],
             style: {
               bold: true,
               fontSize: 22,
