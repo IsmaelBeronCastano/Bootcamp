@@ -116,7 +116,7 @@ export class StoreReportsService extends PrismaClient implements OnModuleInit {
 ## Creación del reporte
 
 - En src/reports/orderById.reports.ts creo varias interfaces
-- 
+- Piensa en la composición del documento como filas horizontales (y verticales, si delimitas columnas)
 
 ~~~js
 import type {
@@ -147,6 +147,7 @@ const styles: StyleDictionary = {
   },
 };
 
+// esta interfaz sale de Paste JSON as Code con el resultado de un objeto vacío del método serializado con JSON.stringify
 export interface CompleteOrder {
   order_id: number;
   customer_id: number;
@@ -184,7 +185,9 @@ export interface Products {
 interface ReportValues {
   title?: string;
   subTitle?: string;
-  data: CompleteOrder;
+  data: CompleteOrder; //para sacar esta interfaz he ejecutado order= orderByIdReport({}) con un objeto vacío
+                      //y he hecho un console.log(JSON.stringify(order, null, 2)) que me da un JSON válido
+                      //copio la respuesta a Paste JSON as Code para que me de las interfaces
 }
 
 export const orderByIdReport = (value: ReportValues): TDocumentDefinitions => {
@@ -192,12 +195,13 @@ export const orderByIdReport = (value: ReportValues): TDocumentDefinitions => {
 
   const { customers, order_details } = data;
 
+//uso un reduce para obtener el total
   const subTotal = order_details.reduce(
     (acc, detail) => acc + detail.quantity * +detail.products.price,
     0,
   );
 
-  const total = subTotal * 1.15;
+  const total = subTotal * 1.15; //Le sumo el 15% de IVA
 
   return {
     styles: styles,
@@ -217,7 +221,7 @@ export const orderByIdReport = (value: ReportValues): TDocumentDefinitions => {
           {
             text: '15 Montgomery Str, Suite 100, \nOttawa ON K2Y 9X1, CANADA\nBN: 12783671823\nhttps://devtalles.com',
           },
-          {
+          { //para aplicar estilos en la misma linea puedo encerrar el texto entre corchetes y aplicar style:, o bold:true
             text: [
               {
                 text: `Recibo No. ${data.order_id}\n`,
@@ -230,7 +234,7 @@ export const orderByIdReport = (value: ReportValues): TDocumentDefinitions => {
         ],
       },
 
-      // QR
+      // QR   CON SOLO ESTO YA CREO EL QR, fit para el tamaño
       { qr: 'https://devtalles.com', fit: 75, alignment: 'right' },
 
       // Dirección del cliente
@@ -251,9 +255,9 @@ export const orderByIdReport = (value: ReportValues): TDocumentDefinitions => {
         margin: [0, 20],
         table: {
           headerRows: 1,
-          widths: [50, '*', 'auto', 'auto', 'auto'],
+          widths: [50, '*', 'auto', 'auto', 'auto'], //5 columnas
           body: [
-            ['ID', 'Descripción', 'Cantidad', 'Precio', 'Total'],
+            ['ID', 'Descripción', 'Cantidad', 'Precio', 'Total'], //Las 5 columnas
 
             ...order_details.map((detail) => [
               detail.order_detail_id.toString(),
@@ -401,3 +405,60 @@ enum continents {
   South_America @map("South America")
 }
 ~~~
+----
+
+## Código QR
+
+- Crear el código QR es sencillo
+- Tan fácil como escribir
+
+~~~js
+const docDefinition={
+  content:[
+    {qr: "Texto dentro del qr"}
+  ]
+  
+}
+~~~
+## Relaciones de las tablas
+
+- Cómo sería la relación para la orden 10250
+~~~
+SELECT
+*
+FROM
+    ORDERS
+    INNER JOIN  ORDER_DETAILS ON ORDERS.ORDER_ID = ORDER_DETAILS.ORDER.ID
+WHERE
+    ORDERS.ORDER_id = 10250    
+~~~
+
+- DE ESTA MANERA SABEMOS CUANTOS PRODUCTOS SE LLEVA PERO NO TENEMOS LA INFO DEL PRODUCTO
+
+~~~
+SELECT
+*
+FROM
+    ORDERS
+    INNER JOIN  ORDER_DETAILS ON ORDERS.ORDER_ID = ORDER_DETAILS.ORDER.ID
+    INNER JOIN products on  ORDER_DETAILS.product_id = products.product_id 
+WHERE
+    ORDERS.ORDER_id = 10250
+~~~
+
+- De esta manera ya tenemos el nombre del producto, la categoría, el precio...
+- Necesitamos otro INNER JOIN para el cliente
+
+~~~
+SELECT
+*
+FROM
+    ORDERS
+    INNER JOIN  ORDER_DETAILS ON ORDERS.ORDER_ID = ORDER_DETAILS.ORDER.ID
+    INNER JOIN products on  ORDER_DETAILS.product_id = products.product_id 
+    INNER JOIN customers on orders.customer.id = customers.customer_id
+WHERE
+    ORDERS.ORDER_id = 10250
+~~~
+
+
