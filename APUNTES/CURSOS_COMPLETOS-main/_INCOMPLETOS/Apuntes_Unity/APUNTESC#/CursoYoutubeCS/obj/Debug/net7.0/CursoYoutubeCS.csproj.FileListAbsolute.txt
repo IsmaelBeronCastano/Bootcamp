@@ -1,0 +1,15 @@
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\bin\Debug\net7.0\CursoYoutubeCS.exe
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\bin\Debug\net7.0\CursoYoutubeCS.deps.json
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\bin\Debug\net7.0\CursoYoutubeCS.runtimeconfig.json
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\bin\Debug\net7.0\CursoYoutubeCS.dll
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\bin\Debug\net7.0\CursoYoutubeCS.pdb
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.csproj.AssemblyReference.cache
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.AssemblyInfoInputs.cache
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.AssemblyInfo.cs
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.csproj.CoreCompileInputs.cache
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.dll
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\refint\CursoYoutubeCS.dll
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.pdb
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\CursoYoutubeCS.genruntimeconfig.cache
+C:\Users\castd\Documents\UnityApuntes\APUNTESC#\CursoYoutubeCS\obj\Debug\net7.0\ref\CursoYoutubeCS.dll
