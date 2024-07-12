@@ -7,7 +7,7 @@
 > npm i -g @nestjs/cli
 
 - Genero un nuevo proyecto. Usaré npm
-- 
+
 > nest new sleepr
 
 - Haremos un **monorepo** que compartirá código a través de una librería entre las diferentes aplicaciones
@@ -268,5 +268,153 @@ async findOne(filterQuery: FilterQuery<TDocument>)Promise<TDocument>{
 }
 ~~~
 
-- Hagamos el update. También usaremos filterQuery
+- Hagamos el update. También usaremos FilterQuery y UpdateQuery
+- Pongo el new en true para que me devuelva el objeto y el lean en true
+- Verifico que encuentar el documento, si no lo encuentra uso el logger y lanzo un error
+- Retorno el documento
 
+~~~js
+ async findOneAndUpdate(
+    filterQuery: FilterQuery<TDocument>,
+    update: UpdateQuery<TDocument>,
+  ): Promise<TDocument> {
+    const document = await this.model
+      .findOneAndUpdate(filterQuery, update, {
+        new: true,
+      })
+      .lean<TDocument>(true);
+
+    if (!document) {
+      this.logger.warn('Document was not found with filterQuery', filterQuery);
+      throw new NotFoundException('Document was not found');
+    }
+
+    return document;
+  }
+~~~
+
+- Hacemos un findAll
+- En el lean también debo tiparlo como un arreglo de TDocument
+
+~~~js
+ async find(filterQuery: FilterQuery<TDocument>): Promise<TDocument[]> {
+    return this.model.find(filterQuery).lean<TDocument[]>(true);
+  }
+~~~
+
+- Hacemos el delete. Paso la clase AbstractRepository entera
+
+~~~js
+import { Logger, NotFoundException } from '@nestjs/common';
+import { FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
+import { AbstractDocument } from './abstract.schema';
+
+export abstract class AbstractRepository<TDocument extends AbstractDocument> {
+  protected abstract readonly logger: Logger;
+
+  constructor(protected readonly model: Model<TDocument>) {}
+
+  async create(document: Omit<TDocument, '_id'>): Promise<TDocument> {
+    const createdDocument = new this.model({
+      ...document,
+      _id: new Types.ObjectId(),
+    });
+    return (await createdDocument.save()).toJSON() as unknown as TDocument;
+  }
+
+  async findOne(filterQuery: FilterQuery<TDocument>): Promise<TDocument> {
+    const document = await this.model
+      .findOne(filterQuery)
+      .lean<TDocument>(true);
+
+    if (!document) {
+      this.logger.warn('Document was not found with filterQuery', filterQuery);
+      throw new NotFoundException('Document was not found');
+    }
+
+    return document;
+  }
+
+  async findOneAndUpdate(
+    filterQuery: FilterQuery<TDocument>,
+    update: UpdateQuery<TDocument>,
+  ): Promise<TDocument> {
+    const document = await this.model
+      .findOneAndUpdate(filterQuery, update, {
+        new: true,
+      })
+      .lean<TDocument>(true);
+
+    if (!document) {
+      this.logger.warn('Document was not found with filterQuery', filterQuery);
+      throw new NotFoundException('Document was not found');
+    }
+
+    return document;
+  }
+
+  async find(filterQuery: FilterQuery<TDocument>): Promise<TDocument[]> {
+    return this.model.find(filterQuery).lean<TDocument[]>(true);
+  }
+
+  async findOneAndDelete(
+    filterQuery: FilterQuery<TDocument>,
+  ): Promise<TDocument> {
+    return this.model.findOneAndDelete(filterQuery).lean<TDocument>(true);
+  }
+}
+~~~
+
+- De esta manera no tendremos que replicar la lógica en ninguna parte
+----------
+
+## Reservations CRUD
+
+- Creemos el primer microservicio dentro de nuestro monorepo, genero apps y dentro reservations
+
+> nest g app reservations
+
+- Hasta ahora nuestro código estaba en una carpeta llamada sleepr
+- Con este comando del CLI se genera un **directorio apps** que engloba sleepr y reservations por separado
+- Si voy al nest-cli.json, veré que ha agregado estos dos recursos en projects
+- Puedo borrar sleepr y cambiar el root de apps/sleepr a apps/reservations
+- Me aseguro de cambiar el tsconfigPath a **apps/reservations/tsconfig.app.json**
+- sourceRoot también debe cambiar a reservations
+
+~~~json
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/reservations/src", //aqui también!
+  "projects": {
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    },
+    "reservations": {
+      "type": "application",
+      "root": "apps/reservations",
+      "entryFile": "main",
+      "sourceRoot": "apps/reservations/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/reservations/tsconfig.app.json"
+      }
+    },
+  },
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/reservations/tsconfig.app.json" //correct path!
+  },
+  "monorepo": true,
+  "root": "apps/reservations" //apps/reservations
+}
+~~~
+
+- Borramos sleepr y nos quedamos solo con reservations
+- **NOTA**: sleepr es el proyecto que generamos al principio con el CLI usando nest new sleepr, y que ahora borramos pues teniendo la estructura podemos empezar a construir el monorepo dentro del apps que hemos generado
+- 
