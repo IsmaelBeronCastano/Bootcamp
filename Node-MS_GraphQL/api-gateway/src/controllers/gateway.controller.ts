@@ -19,6 +19,7 @@ export class gatewayController {
               requestData,
               event
             })
+           
             return res.status(200).json({
               message: "Success!!",
               data
@@ -26,11 +27,9 @@ export class gatewayController {
 
           } catch (error) {
             return res.status(500).json({
-              message: "Error",
-              error
+              message: "Error gateway",
+              
             })       
           }
         }
-
-    
 }

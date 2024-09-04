@@ -601,8 +601,176 @@ export const productsApi = axios.create({
 
 export const getAllProducts = async()=>{
     
-        const {data} = await productsApi.get('/all') //llamo al endpoint con la instancia de axios
+        const {data} = await productsApi.get('/all') //llamo al endpoint de products con la instancia de axios
 
         return data
 }
 ~~~
+----
+
+## Enumeración Eventos
+
+- Generaremos el evento de usuarios y después crearemos la API
+- En el event-broker/src/enums/users.enum.ts
+
+~~~js
+export enum UserEvent{
+    CREATE_USER = 'CREATE_USER',
+    UPDATE_USER = 'UPDATE_USER',
+    DELETE_USER = 'DELETE_USER',
+    GET_USER = 'GET_USER',
+    GET_USERS = 'GET_USER'
+}
+~~~
+
+- Creo también el controlador de users en el event-broker
+- Usaremos funciones de flecha en vez de clases para los controllers
+- El api-gateway está expuesto en http://localhost:3000/api/v1/all, desde aquí llamo al endpoint events del event-broker
+- api-gatway.controller
+
+~~~js
+import axios from "axios";
+import { Request, Response } from "express";
+
+export class gatewayController {
+
+    constructor(){}
+
+    static async getAll(req: Request, res: Response){
+
+        const {event, data: requestData} = req.body
+
+        if(!event){
+
+            return res.status(400).json({message: "Event is required"})
+        }        
+      
+          try {
+            const {data} = await axios.post("http://localhost:3001/events",{
+              requestData,
+              event
+            })
+           
+            return res.status(200).json({
+              message: "Success!!",
+              data
+            })
+
+          } catch (error) {
+            return res.status(500).json({
+              message: "Error gateway",
+              
+            })       
+          }
+        }
+}
+~~~
+
+- este all es el que expongo como POST en api-gateway/routes.ts
+
+~~~js
+import { Router } from 'express';
+import { gatewayController } from '../controllers/gateway.controller';
+
+
+
+
+export class AppRoutes {
+
+
+  static get routes(): Router {
+
+    const router = Router();
+    
+    router.post('/all', gatewayController.getAll)
+ 
+
+
+
+    return router;
+  }
+
+}
+~~~
+
+- En el event-broker hago las validaciones del event y llamo al controlador que se requiere
+
+~~~js
+import { Request, Response } from "express";
+import { getAllProducts } from "./products.controller";
+import { ProductsEvent } from "../enums/products.enum";
+import { UserEvent } from "../enums/users.enum";
+import { getAllUsers } from "./users.controller";
+
+export class EventBrokerController {
+
+    constructor(){}
+
+    static async getAll(req: Request, res: Response){
+        
+        const {event, data}= req.body
+
+
+
+        if(event === ProductsEvent.GET_PRODUCTS){
+            
+                const products = await getAllProducts()
+                return res.status(200).json({
+                    products
+                })
+                
+            }
+
+        if(event === UserEvent.GET_USERS){
+            const users = await getAllUsers()
+
+            return res.status(200).json({
+                users
+            })
+
+        }
+        res.status(500).json({
+            message: "Internal Server Error - users"
+        })
+   }
+}
+~~~ 
+
+- event-broker/src/controllers/user.controller.ts
+
+~~~js
+import axios from 'axios'
+
+
+export const usersApi = axios.create({
+    baseURL: 'http://localhost:3004/users'
+})
+
+
+export const UsersController =async ()=>{
+     const getAllUsers = async()=>{
+    
+        const {data} = await usersApi.get('/all')
+
+        return data
+}
+
+}
+~~~
+
+- En el server de users (por ejemplo), marco la ruta cuando ejecuto this.routes en el microservicio de users
+
+~~~js
+  this.app.use( "/users", this.routes );
+~~~
+
+- Y el /all lo marco en el routes.ts del microservicio de users
+
+~~~js
+router.post('/all', gatewayController.getAll)
+~~~
+
+
+
+
+

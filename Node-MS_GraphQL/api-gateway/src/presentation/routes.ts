@@ -12,6 +12,7 @@ export class AppRoutes {
     const router = Router();
     
     router.post('/all', gatewayController.getAll)
+ 
 
 
 

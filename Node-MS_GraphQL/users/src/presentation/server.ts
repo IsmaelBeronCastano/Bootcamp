@@ -38,7 +38,7 @@ export class Server {
     this.app.use( express.static( this.publicPath ) );
 
     //* Routes
-    this.app.use( this.routes );
+    this.app.use( "/users", this.routes );
 
     
 

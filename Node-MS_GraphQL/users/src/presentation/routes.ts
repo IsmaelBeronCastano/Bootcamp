@@ -14,7 +14,7 @@ export class UserRoutes {
     const productsController= new UserController()
 
 
-    router.get('/products/todos', productsController.getAllProducts)
+    router.get('/all', productsController.getAllUsers)
 
     return router;
   }

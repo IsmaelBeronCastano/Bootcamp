@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { getAllProducts } from "./products.controller";
 import { ProductsEvent } from "../enums/products.enum";
+import { UserEvent } from "../enums/users.enum";
+import { getAllUsers } from "./users.controller";
 
 export class EventBrokerController {
 
@@ -10,7 +12,7 @@ export class EventBrokerController {
         
         const {event, data}= req.body
 
-        console.log(event)
+
 
         if(event === ProductsEvent.GET_PRODUCTS){
             
@@ -21,11 +23,16 @@ export class EventBrokerController {
                 
             }
 
-        res.status(404).json({
-            message: "Event not found!"
+        if(event === UserEvent.GET_USERS){
+            const users = await getAllUsers()
+
+            return res.status(200).json({
+                users
+            })
+
+        }
+        res.status(500).json({
+            message: "Internal Server Error - users"
         })
-
-
-
-    }
+   }
 }
