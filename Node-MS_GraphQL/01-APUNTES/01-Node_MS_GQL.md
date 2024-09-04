@@ -555,7 +555,7 @@ export class AppRoutes {
 }
 ~~~
 
-- Este endpoint apunta al event-broker.controller, que es dónde evalúo el event y sirvo los productos
+- Este endpoint apunta al event-broker.controller, que es dónde evalúo el event y sirvo los productos llamando al getAllProducts del controlador de products que tengo en el event-broker
 
 ~~~js
 import { Request, Response } from "express";
@@ -587,3 +587,22 @@ export class EventBrokerController {
 
     }
 }
+~~~
+
+- event-broker/src/controllers/products.controller.ts
+
+~~~js
+import axios from "axios"
+
+
+export const productsApi = axios.create({
+    baseURL: 'http://localhost:3002/products'
+})
+
+export const getAllProducts = async()=>{
+    
+        const {data} = await productsApi.get('/all') //llamo al endpoint con la instancia de axios
+
+        return data
+}
+~~~
