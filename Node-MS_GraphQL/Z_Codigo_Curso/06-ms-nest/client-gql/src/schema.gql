@@ -1,0 +1,113 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Auth {
+  """id of the user"""
+  id: String!
+
+  """name of the user"""
+  name: String!
+
+  """email of the user"""
+  email: String!
+
+  """jwt of the user"""
+  token: String
+}
+
+type UserJWT {
+  """id of the user"""
+  id: String!
+
+  """email of the user"""
+  email: String!
+}
+
+type Token {
+  """jwt of the user"""
+  token: String
+
+  """user data"""
+  user: UserJWT!
+}
+
+type Course {
+  """ID by course"""
+  id: String!
+
+  """title by course"""
+  title: String!
+
+  """description by course"""
+  description: String!
+
+  """Author ID by course"""
+  author_id: String!
+}
+
+type Query {
+  """Get a random number"""
+  getRandomNumber: Int!
+  verifyJWT: Token!
+  getAllCourses(paginationInput: PaginationInput!): [Course!]!
+  getCourseById(id: String!): Course
+}
+
+input PaginationInput {
+  """Page number"""
+  page: Int
+
+  """Limit results"""
+  limit: Int
+}
+
+type Mutation {
+  login(loginInput: LoginInput!): Auth!
+  register(registerInput: RegisterInput!): Auth!
+  createCourse(createCourseInput: CreateCourseInput!): Course!
+  updateCourse(updateCourseInput: UpdateCourseInput!): Course!
+  deleteCourse(id: String!): Course!
+}
+
+input LoginInput {
+  """User email"""
+  email: String!
+
+  """User password"""
+  password: String!
+}
+
+input RegisterInput {
+  """User email"""
+  email: String!
+
+  """Username"""
+  username: String!
+
+  """User password"""
+  password: String!
+}
+
+input CreateCourseInput {
+  """Course title"""
+  title: String!
+
+  """Course description"""
+  description: String!
+
+  """Course Author ID"""
+  author_id: String
+}
+
+input UpdateCourseInput {
+  """Course title"""
+  title: String
+
+  """Course description"""
+  description: String
+
+  """Course Author ID"""
+  author_id: String
+  id: String!
+}

@@ -1,0 +1,25 @@
+{
+  "name": "01-nivelacion",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "@apollo/datasource-rest": "^6.0.1",
+    "@apollo/server": "^4.7.1",
+    "@types/graphql": "^14.5.0",
+    "@types/node": "^20.2.5",
+    "graphql": "^16.6.0",
+    "typescript": "^5.1.3"
+  }
+}

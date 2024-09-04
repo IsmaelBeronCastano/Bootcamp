@@ -1,0 +1,7 @@
+export enum SalesEvent {
+  CREATE_SALE = "CREATE_SALE",
+  UPDATE_SALE = "UPDATE_SALE",
+  DELETE_SALE = "DELETE_SALE",
+  GET_SALE = "GET_SALE",
+  GET_SALES = "GET_SALES",
+}

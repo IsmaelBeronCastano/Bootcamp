@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google SignIn</title>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Google SSO</h1>
+
+    <div
+      id="g_id_onload"
+      data-client_id="303570499103-sjs3kb3k0313ldgc0ih7khhdi87iq9k7.apps.googleusercontent.com"
+      data-auto_prompt="false"
+      data-callback="handleCredentialResponse"
+    ></div>
+    <div
+      class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="sign_in_with"
+      data-shape="rectangular"
+      data-logo_alignment="left"
+    ></div>
+
+    <button onclick="logout()">Log out</button>
+
+    <script>
+      async function handleCredentialResponse(response) {
+        const token = response.credential;
+
+        const res = await fetch("/auth/google", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await res.json();
+
+        localStorage.setItem("email", data.user.email);
+      }
+
+      async function logout() {
+        const account = google.accounts.id;
+
+        account.disableAutoSelect();
+
+        const email = localStorage.getItem("email");
+
+        account.revoke(email, (res) => {
+          if (res.successful) {
+            localStorage.clear();
+            location.reload();
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

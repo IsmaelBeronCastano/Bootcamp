@@ -1,0 +1,10 @@
+6Dd7LzJQ2EjaRKIvcNcEv7JRUvvL6uvy
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=4c6d2d2e96fb
+MYSQL_RANDOM_ROOT_PASSWORD=true
+GOSU_VERSION=1.16
+MYSQL_MAJOR=8.0
+MYSQL_VERSION=8.0.34-1.el8
+MYSQL_SHELL_VERSION=8.0.34-1.el8
+HOME=/root
