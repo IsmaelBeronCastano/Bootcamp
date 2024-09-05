@@ -9,6 +9,13 @@ const books = [
   },
 ];
 
+
+const resolvers = {
+  Query: {
+    books: ()=> books
+  }
+}
+
 export const booksQuery = {
   books: () => books,
 };

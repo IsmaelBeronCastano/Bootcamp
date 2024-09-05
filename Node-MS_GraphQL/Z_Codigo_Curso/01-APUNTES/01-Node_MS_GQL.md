@@ -770,7 +770,331 @@ export const UsersController =async ()=>{
 router.post('/all', gatewayController.getAll)
 ~~~
 
+- Conviene usar una función para pasar el event todo a mayúsculas antes de evaluarlo
+
+~~~js
+import axios from "axios";
+import { Request, Response } from "express";
+
+export class gatewayController {
+
+    constructor(){}
+
+    static async getAll(req: Request, res: Response){
+
+        const {event, data: requestData} = req.body
+
+        if(!event){
+
+            return res.status(400).json({message: "Event is required"})
+        }        
+      
+          try {
+            const {data} = await axios.post("http://localhost:3001/events",{
+              requestData,
+              event: event.toUpperCase() //lo paso a mayúsculas
+            })
+           
+            return res.status(200).json({
+              message: "Success!!",
+              data
+            })
+
+          } catch (error) {
+            return res.status(500).json({
+              message: "Error gateway",
+              
+            })       
+          }
+        }
+}
+~~~
+----
+
+## Microservicio Sales
+
+- Creo en event-broker/src/enums/sales.enum.ts
+
+~~~JS
+export enum SalesEvent{
+    CREATE_SALES = 'CREATE_SALES',
+    UPDATE_SALES = 'UPDATE_SALES',
+    DELETE_SALES = 'DELETE_SALES',
+    GET_SALE = 'GET_SALE',
+    GET_SALES = 'GET_SALES'
+}
+~~~
+
+- A parte de crear una ruta para todos, quiero crear una ruta para crear una venta
+- sales/src/presentation/routes.ts
+
+~~~js
+import { Router } from 'express';
+import { SalesController } from '../controllers/sales.controller';
 
 
+const salesController = new SalesController()
+
+export class SalesRoutes {
+     get routes(): Router {
+
+    const router = Router();
+    const productsController= new SalesController()
+
+
+    router.get('/all', salesController.getAll)
+    router.post('create', salesController.createSale)
+
+    return router;
+  }
+
+}
+~~~
+
+- Apunto a http://localhost:3003/sales/create
+- sales/src/controller/sales.controller.ts
+
+~~~js
+import { Request, Response } from "express";
+
+
+interface Sale{
+    user: Object,
+    product: Object,
+    quantity: number,
+    price: number
+}
+
+
+export class SalesController{
+
+
+
+    public  getAll= async(req:Request,res:Response)=>{
+        return res.status(200).json({
+            message: "OK",
+            data:{
+                sales:{
+                    user: {},
+                    product: {},
+                    quantity: 0,
+                    price: 0
+                }
+            }
+        })
+    }
+
+    public createSale(req: Request, res: Response){
+        const sales = []
+        const {data}: any = req.body
+
+        const {uid, product_id, quantity} = data
+
+        const sale: Sale = {
+            user: {},
+            product: {},
+            quantity,
+            price: 0
+
+        }
+        sales.push(sale)
+    
+        return res.status(200).json({
+            message: "OK!",
+            sale
+        })
+        
+        
+    }
+}
+~~~
+
+- En el sales server tengo
+
+~~~js
+import express, { Router } from 'express';
+import cors from 'cors'
+
+interface Options {
+  port: number;
+  routes: Router;
+  public_path?: string;
+}
+
+
+export class Server {
+
+  public readonly app = express();
+  private serverListener?: any;
+  private readonly port: number;
+  private readonly publicPath: string;
+  private readonly routes: Router;
+
+  constructor(options: Options) {
+    const { port, routes, public_path = 'public' } = options;
+    this.port = port;
+    this.publicPath = public_path;
+    this.routes = routes;
+  }
+
+  
+  
+  async start() {
+    
+
+    //* Middlewares
+    this.app.use(cors())
+    this.app.use( express.json() ); // raw
+    this.app.use( express.urlencoded({ extended: true }) ); // x-www-form-urlencoded
+    
+    //* Public Folder
+    this.app.use( express.static( this.publicPath ) );
+    
+    //* Routes
+    this.app.use( "/sales", this.routes );
+
+    
+
+    this.serverListener = this.app.listen(this.port, () => {
+      console.log(`Server running on port ${ this.port }`);
+    });
+
+  }
+
+  public close() {
+    this.serverListener?.close();
+  }
+
+}
+~~~
+------
+
+## Comunicar varios microservicios
+
+- Instalo axios en sales
+- Genero una instancia de axios como eventBroker dentro de sales.controller
+- Este código es algo complejo porque estoy usando la db en memoria
+- **NOTA**: este código da error. No usaremos un broker de esta manera, en memoria...usaremos RabbitMQ
+
+~~~js
+import { Request, Response } from "express";
+import axios from 'axios'
+
+
+
+const eventBroker = axios.create({
+    baseURL: 'http://localhost:3001'
+})
+
+
+export class SalesController{
+
+
+
+    public  getAll= async(req:Request,res:Response)=>{
+        return res.status(200).json({
+            message: "OK",
+            data:{
+                sales:{
+                    user: {},
+                    product: {},
+                    quantity: 0,
+                    price: 0
+                }
+            }
+        })
+    }
+
+    public async createSale(req: Request, res: Response){
+        const sales = []
+        const {data}: any = req.body
+
+        const {uid, product_id, quantity} = data
+
+        try {
+            
+            const {data: user} = await eventBroker.post(`/events`,{
+                event: "GET_USERS",
+    
+            })
+    
+            const {data: product} = await eventBroker.post('/events',{
+                event:'GET_PRODUCTS'
+            })
+    
+            const sale = {
+                user: user.users[0],
+                product: product.products[0],
+                quantity,
+                price: {
+                    unit: product[0]?.products.price, //puede no existir
+                    total: product[0]?.products.price * quantity
+                }
+    
+            }
+            sales.push(sale)
+        
+            return res.status(200).json({
+                message: "OK!",
+                sale
+            })
+            
+            
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({
+                message: "internal server error -sales.controller"
+            })    
+        }     
+    }
+}
+~~~
+
+- Cambio el SalesController a controladores de funciones de flecha
+
+~~~js
+import axios from "axios";
+import { Request, Response } from "express";
+
+const eventBroker = axios.create({
+  baseURL: "http://localhost:3001",
+});
+
+const sales: any[] = [];
+
+export const getAll = (req: Request, res: Response) => {
+  return res.status(200).json({ message: "OK", sales });
+};
+
+export const createSale = async (req: Request, res: Response) => {
+  const { data } = req.body;
+
+  const { quantity } = data;
+
+  const { data: user } = await eventBroker.post("/events", {
+    event: "GET_USERS",
+  });
+
+  const { data: product } = await eventBroker.post("/events", {
+    event: "GET_PRODUCTS",
+  });
+
+  const sale = {
+    user: user.data.users[0],
+    product: product.data.products[0],
+    quantity,
+    price: {
+      unit: product.data.products[0]?.price,
+      total: product.data.products[0]?.price * quantity,
+    },
+  };
+
+  sales.push(sale);
+
+  return res.status(200).json({ message: "OK", sales: sale });
+};
+~~~
+- **NOTA**: pasamos directamente a Node con GraphQL usando el código del curso
+-----
 
 

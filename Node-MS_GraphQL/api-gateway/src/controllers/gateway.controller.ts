@@ -17,7 +17,7 @@ export class gatewayController {
           try {
             const {data} = await axios.post("http://localhost:3001/events",{
               requestData,
-              event
+              event: event.toUpperCase()
             })
            
             return res.status(200).json({

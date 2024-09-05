@@ -1,20 +1,20 @@
 import { Router } from 'express';
-import { SalesController } from '../controllers/sales.controller';
-
+import { createSale, getAll } from '../controllers/sales.controller';
 
 
 
 export class SalesRoutes {
 
 
-
-  static get routes(): Router {
+    static get routes(): Router {
 
     const router = Router();
-    const productsController= new SalesController()
+ 
 
 
-    router.get('/products/todos', productsController.getAllProducts)
+    router.get('/all', getAll )
+    router.post('/create',createSale
+    )
 
     return router;
   }
