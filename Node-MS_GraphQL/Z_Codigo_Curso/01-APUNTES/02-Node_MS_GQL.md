@@ -520,6 +520,7 @@ query getAllProducts($input: EventBorkerInput){
 - Si no voy a tener que estar estructurando querys, definiendo tipos...
 - En el index.ts de los resolvers borro los querys que habían
 - Indico que el service me retorne el string de API-GATEWAY (no hará nada más)
+- resolvers/index.ts
 
 ~~~js
 import { eventBrokerMutation } from "./eventBroker.resolvers";
@@ -533,6 +534,7 @@ export const resolvers = {
 
 - Para comprobar que funciona DEBO BORRAR los type Query de typeDefs.ts y colocar el service
 - Le añado un **!** porque siempre lo va a retornar
+- typeDefs/typeDefs.ts
 
 ~~~js
 export const typeDefs = `#graphql
@@ -600,6 +602,192 @@ export const baseTypes = `#graphql
 - Unión significa **une varios tipos**. La respuesta puede ser de tipo Products, Users, etc
 - Lo coloco en el mismo archivo dentro del objeto graphql de typeDefs
 - Creo el archivo api-gateway/src/resolvers/EventBrokerMutation.resolver.ts
+- El context es con lo que nos vamos a conectar con los datasources
 
 ~~~js
+export const eventBrokerMutation = {
+  sendEvent: (_, input, context)=>{
+    return   {
+    __typename: "Product",
+    name: "Teclado Mecanico",
+    price: 150,
+  },
+  
+  }
+}
 ~~~
+
+- En resolvers/index.ts le paso el Mutation
+
+~~~js
+import { eventBrokerMutation } from "./eventBroker.resolvers";
+
+export const resolvers = {
+  Query: {
+    service: () => "API Gateway",
+  },
+  Mutation: {
+    ...eventBrokerMutation,
+  },
+};
+~~~
+
+- Ahora el query es una mutation
+- Al ser la respuesta de tipo Response como definimos en typeDefs, puede ser de tipo Product (y otros que no hemos definido en la union)
+- Este código me devuelve el error de **Abstract type**, gql no sabe de que tipo es
+~~~gql
+mutation($input: EvenetBrokerInput){
+  sendEvent(input: $input){
+    __typename
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "GET_PRODUCTS"
+  }
+}
+~~~
+
+- Debo definir el __typename en el **EventBrokerMutation**, si no gql no sabe de que tipo es
+
+~~~js
+export const eventBrokerMutation = {
+  sendEvent: (_, input, context)=>{
+    return   {
+    __typename: "Product",
+    name: "Teclado Mecanico",
+    price: 150,
+  },
+  
+  }
+}
+~~~
+
+- Si trato de obtener el name directamente en la query me da error  de Cannot query field "name", puede que sea un fragment de Product
+- Para obtener el name debo usar una sintaxis concreta, como el spread operator, donde le digo toda la respuesta (...) conviertela a tipo Product
+
+~~~gql
+mutation($input: EventBrokerInput!){
+  sendEvent(input: $input){
+    ... on Product  #Vuelve la respuesta de tipo Product
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "GET_PRODUCTS",
+    "queryData": "",
+    "type": "Product"
+  }
+}
+~~~
+
+- Con esto vamos a diferenciar el tipo de respuesta
+- GraphQL ya crea un diccionario de estos desde ApolloServer
+- Root/Mutation/sendEvent (click on) 
+- Me dice **Possible Types**
+  - Product (name, price)
+- Si en las variables desde ApolloServer coloco queryData como un objeto vacío me marca error
+- Me pide que sea String como tipé anteriormente
+- Necesito tipar el input de otra manera, le añado la propiedad type
+  - (borro el __typename anterior del BrokerMutation)
+
+~~~js
+export const baseTypes = `#graphql
+  input QueryData {
+    sales: CreateSalesInput
+  }
+
+  input EventBrokerInput {
+    type: String! # añado el type forzoso
+    event: String!
+    queryData: QueryData
+  }
+
+  type Query {
+    service: String!
+  }
+
+  type Mutation {
+    sendEvent(input: EventBrokerInput!): Response!
+  }
+`;
+~~~
+
+~~~js
+export const eventBrokerMutation = {
+  sendEvent: (_, {input}, context)=>{
+    return   {
+    //__typename: "Product",
+    name: "Teclado Mecanico",
+    price: 150,
+  },
+  
+  }
+}
+~~~
+
+- En las VARIABLES de la query debo añadir el type
+- ApolloServer
+~~~gql
+mutation($input: EventBrokerInput!){
+  sendEvent(input: $input){
+    ... on Product { #Vuelve la respuesta de tipo Product
+      name # Obtengo el name de Product
+    }
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "GET_PRODUCTS",
+    "queryData": "",
+    "type": "Product"
+  }
+}
+~~~
+
+- Desestructuremos algunas cosas del input desde eventBrokerMutation
+- Filtro y convierto todo a minúsculas, para buscar el tipo que inlcuya el parámetro (que también paso a minúsculas) 
+- Me lo devuelve como un arreglo, paso el arreglo a string con toString y le concateno una s al final 
+- api-gateway/src/resolvers/eventBroker.resolver.ts
+
+~~~js
+import { typeList } from "../typelist";
+
+export const eventBrokerMutation = {
+  sendEvent: async (_, { input }, context) => {
+    const { type, event, queryData } = input;
+
+    const typename =
+      typeList
+        .filter((t) => type.toLowerCase().includes(t.toLowerCase()))
+        .toString() + "s"; //
+
+
+    return {
+      __typename: typename,
+      name: "teclado mecánico",
+      price: 100
+    };
+  },
+};
+~~~
+
+- Creo en api-gateway/src/typeList/typeList.ts
+- Puedo declarar todos los tipos que quiera en este typeList
+
+~~~js
+export const typeList = ["Product", "Sale"];
+~~~
+-----
+
+## Obtener datos del EventBroker
+
