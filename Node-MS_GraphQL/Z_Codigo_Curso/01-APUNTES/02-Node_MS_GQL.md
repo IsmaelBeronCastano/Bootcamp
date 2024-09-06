@@ -321,11 +321,12 @@ export const resolvers ={
 ## Comunicar GraphQL con el event-broker
 
 - Instalamos con npm i **@apollo/datasource-rest**
-- Creo el directorio api-gateawy/src/datasources/eventbrouker.datasource.ts
+- Creo el directorio api-gateawy/src/datasources/eventbroker.datasource.ts
 - Uso override para sobreescribir la baseURL que apunta al event-broker
 - Uso el método emitEvent que me pide el event (string) y la data (any, no te compliques)
 - **Retorno** la petición **POST a /events** usando **this** (tengo disponible .post en el this por implementar **RESTDataSource**)
 - Deben ir **dentro** de la propiedad **body**
+- Esto lo que hace es enviar la petición (emitEvent, no tiene porqué llamarse así)
 
 ~~~js
 import { RESTDataSource } from "@apollo/datasource-rest";
@@ -385,6 +386,220 @@ console.log(`GraphQL API Gateway started: ${url}`);
 - Ahora ya puedo usar el eventBroker!
 -----
 
-## ProdeuctsQuery
+## ProductsQuery
 
-- 
+- Creo en api-gateway/src/resolvers/products.resolvers.ts
+- Creo productsQeury, que será un objeto que reúna todos mis querys
+- getAllProducts es una función de flecha con lo que a mi me interesa
+  - Desestructuro el event del input y el context. el guión bajo es porque el primer parámetro no me interesa
+
+~~~js
+export const productsQuerys = {
+  getAllProducts: (_, { input: { event } }, context) => {
+    //console.log(event)
+
+    return {
+      name: "Teclado Mecanico",
+      price: 150,
+    };
+  },
+};
+~~~
+
+- Debo definir el tipo product
+- Si lo tuviera todo dentro de una variable llamada typeDefs sería así
+- En Query debo decirle a graphQL que getAllProducts me devolverá un objeto de tipo Product (con name y price)
+- api-gateway/src/typeDefs/typeDefs.ts
+
+~~~js
+export const typeDefs = `#graphql
+
+  type Product {
+    name: String
+    price: Int
+  }
+
+  type Query {
+    books: [Book]
+    getAllProducts: Product
+  }
+
+`;
+~~~
+
+- Debo registrar el resolver!
+- qpi-gateway/src/resolvers/index
+
+~~~js
+imports (...)
+
+export const resolvers = {
+  Query: {
+    ...booksQuery,
+    ...productsQuery
+  },
+  
+};
+~~~
+
+- Para hacer el query desde Apollo (en localhost:3000)
+
+~~~gql
+query {
+  getAllProducts{
+    name
+    price
+  }
+}
+~~~
+
+- Esta no es la manera óptima de trabajar, es solo con fines didácticos
+- Crearemos un input que nos permita captar la info del input y el context del getAllProducts
+-----
+
+## EventBrokerInput
+
+- Debo definir un input para todos los eventos 
+- Cualquier evento ('GET_PRODUCTS', etc) siempre vendrá en forma de input
+- Más adelante este input será más avanzado y haremos tipados más complejos
+- fetAllProducts recibirá un input de tipo EventBrokerInput y retornará algo de tipo Product
+- En typeDefs.ts
+~~~js
+export const typeDefs = `#graphql
+  
+  input EventBrokerInput {
+    event: String
+    data: String
+    
+  }
+
+  type Product {
+    name: String
+    price: Int
+  }
+
+  type Query {
+    books: [Book]
+    getAllProducts(input: EventBrokerInput): Product
+  }
+
+`;
+~~~
+
+- Ahora en la query debo pasarle el input
+- Guardo el tipo EventBrokerInput en $input y se lo paso a getAllProducts
+- En el apartado VARIABLES de ApolloServer coloco el event dentro de input
+
+~~~gql
+query getAllProducts($input: EventBorkerInput){
+  getAllProducts(input: $input){
+    name
+    price
+  }
+}
+
+//VARIABLES
+
+{
+  "input":{
+    "event": "GET_PRODUCTS"
+  }
+}
+~~~
+
+- Puedo hacer un console.log al event para ver que realmente lo estoy recibiendo
+- En realidad lo que queremos es solo un input, una llave de entrada y una de salida
+- La emisión de un evento y ya está
+- Lo hemos hecho de esta manera para entender cómo funciona
+-----
+
+## Cambiar Querys por Mutation
+
+- Usar **un query para cada petición no es óptimo**
+- Porqué usar **Mutation**?
+- Si no voy a tener que estar estructurando querys, definiendo tipos...
+- En el index.ts de los resolvers borro los querys que habían
+- Indico que el service me retorne el string de API-GATEWAY (no hará nada más)
+
+~~~js
+import { eventBrokerMutation } from "./eventBroker.resolvers";
+
+export const resolvers = {
+  Query: {
+    service: () => "API Gateway",
+  }
+};
+~~~
+
+- Para comprobar que funciona DEBO BORRAR los type Query de typeDefs.ts y colocar el service
+- Le añado un **!** porque siempre lo va a retornar
+
+~~~js
+export const typeDefs = `#graphql
+  
+  input EventBrokerInput {
+    event: String
+    data: String
+    
+  }
+
+  type Product {
+    name: String
+    price: Int
+  }
+
+  type Query {
+   service: String! ## lo coloco aquí!!
+  }
+
+`;
+~~~
+
+- La consulta ahora sería
+
+~~~gql
+query{
+  service
+}
+~~~
+
+- Me retorna "API Gateway"
+- Defino un nuevo type Mutation
+- Mutation porque puedo enviar datos, objetos vacíos, puedo mandar data y **mutarla**
+- Diré que recibe un input de tipo EventBrokerInput y **siempre retornará** algo de tipo Response
+- En el EventBroker hago el event será **obligatorio**, lo marco con **!**
+- Si no coloco un ! **es opcional**
+- El queryData será de tipo string **de momento**
+- qpi-gateway/src/typeDefs/typeDefs.ts
+
+~~~js
+export const baseTypes = `#graphql
+  input QueryData {
+    sales: CreateSalesInput
+  }
+
+  input EventBrokerInput {
+    service: String!
+    event: String!
+    queryData: String ##recibe la data de la query
+  }
+
+  union response = Product
+
+  type Query {
+    service: String!
+  }
+
+  type Mutation {
+    sendEvent(input: EventBrokerInput!): Response!
+  }
+`;
+~~~
+
+- Vamos a definir la Response como una **unión**
+- Unión significa **une varios tipos**. La respuesta puede ser de tipo Products, Users, etc
+- Lo coloco en el mismo archivo dentro del objeto graphql de typeDefs
+- Creo el archivo api-gateway/src/resolvers/EventBrokerMutation.resolver.ts
+
+~~~js
+~~~
