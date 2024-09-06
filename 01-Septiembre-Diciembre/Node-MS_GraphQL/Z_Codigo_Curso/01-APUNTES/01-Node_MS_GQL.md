@@ -1,4 +1,4 @@
-# NODE MICROSERVICIOS GRAPHQL
+# 01 NODE MICROSERVICIOS GRAPHQL - Introducción a Microservicios
 
 - Tengo tres servers
   - Products
@@ -1081,7 +1081,7 @@ export const createSale = async (req: Request, res: Response) => {
 
   const sale = {
     user: user.data.users[0],
-    product: product.data.products[0],
+    product: product.data.products[0], //el objeto que retorna es data.products
     quantity,
     price: {
       unit: product.data.products[0]?.price,

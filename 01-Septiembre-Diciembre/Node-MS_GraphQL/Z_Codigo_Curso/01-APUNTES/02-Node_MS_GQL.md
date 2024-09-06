@@ -1,5 +1,6 @@
-# NODE MICROSERVICIOS GRAPHQL
+# 02 NODE MICROSERVICIOS GRAPHQL - Microservicios en Node con GraphQL
 
+- **NOTA**: reiniciar los servidores en caso de error es en muchos casos necesario durante las pruebas
 - Repasemos el API GATEWAY
 - No es más que una aplicación REST que llama al eventBroker y devuelve la data
 - EL server del api-gateway es asi
@@ -1060,7 +1061,7 @@ export const eventBrokerController = async (req: Request, res: Response) => {
   union response = [Product] //revienta la aplicación
 ~~~
 
-- Creo un nuevo type Products
+- Creo un nuevo type Products y tipo correctamente Product
 
 ~~~js
 export const productsTypes = `#graphql
@@ -1200,3 +1201,376 @@ export const eventBrokerMutation = {
 ------- 
 
 ## Conectando con Sales
+
+
+- Cómo hago llegar este query al api-gateway
+- sales/src/controllers/sales.controller
+
+~~~js
+export const createSale = async (req: Request, res: Response) => {
+  const { data } = req.body;
+
+  const { quantity } = data;
+
+  const { data: user } = await eventBroker.post("/events", {
+    event: "GET_USERS",
+  });
+
+  const { data: product } = await eventBroker.post("/events", {
+    event: "GET_PRODUCTS",
+  });
+
+  const sale = {
+    user: user.data.users[0], //no es la mejor sintaxis del mundo!
+    product: product.data.products[0], //el objeto de retorno es data.products
+    quantity,
+    price: {
+      unit: product.data.products[0]?.price,
+      total: product.data.products[0]?.price * quantity,
+    },
+  };
+
+  sales.push(sale);
+
+  return res.status(200).json({ message: "OK", sales: sale });
+};
+~~~
+
+- El evento sería CREATE_SALE y la quantity 3, por ejemplo
+- Desde POSTMAN a http_localhost:3001/events (si me conecto directamente al broker)
+
+~~~json
+{
+  "event":"CREATE_SALE",
+  "data":{
+    "quantity": 10
+  }
+}
+~~~
+
+- Esto me devuelve un objeto con message: OK, el objeto sale que contiene
+  - user, con id, name, email
+  - product, que contiene id, name, price, description
+  - quantity
+  - price, con unit y total 
+- Esta petición (y respuesta) hay que transformarla a graphQL, una vez comprobado que me conecto correctamente al endpoint
+-----
+
+## Query Global
+
+- Yo debo poder enviarle en VARIABLES del ApolloServer dentro de la queryData la quantity
+
+~~~gql
+mutation($input: EventBrokerInput!){
+  sendEvent(input: $input){
+    ... on Products  #de tipo Products!!
+      products{
+        name
+      }
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "CREATE_SALE",
+    "queryData": {
+      "quantity": 10 #con esto debería ser suficiente
+    },
+    "type": "sale"
+  }
+}
+~~~
+
+- Para poder enviar info y decirle que me devuelva estos tipos, aceptar una información, etc
+- Hay que tener en cuenta que el tipo **Query** y el tipo **Mutation** siempre **deben de existir**
+- Debo crear un input, 
+- en api-gateway/src/typeDefs/base.type.ts
+
+~~~js
+export const baseTypes = `#graphql
+  input QueryData {
+    sales: CreateSalesInput
+  }
+
+  input EventBrokerInput {
+    type: String!
+    event: String!
+    queryData: QueryData
+  }
+
+  type Query {
+    service: String!
+  }
+
+  type Mutation {
+    sendEvent(input: EventBrokerInput!): Response!
+  }
+`;
+~~~
+
+- NOTA: en las peticiones GET no se debe poner el ! para marcar como obligatorio el retorno
+- En el archivo input.type.ts del mismo directorio indico la quantity como un Int y obligatorio
+
+~~~js
+export const inputsTypes = `#graphql
+
+  input CreateSalesInput {
+    quantity: Int!
+  } 
+
+`;
+~~~
+
+- En typeList debe estar el tipo Sale
+- api-gateway/src/typlist/index.ts
+
+~~~js
+export const typeList = ["Product", "Sale"];
+~~~
+
+- La query quedaría asi
+
+~~~gql
+mutation($input: EventBrokerInput!){
+  sendEvent(input: $input){
+    ... on Sales
+      sales{
+          product{
+            name
+            price
+          }
+      }
+      quantity
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "CREATE_SALE",
+    "queryData": {
+      "sale":{
+        "quantity": 10 #con esto debería ser suficiente
+      }
+    },
+    "type": "sale"
+  }
+}
+~~~
+
+- Ojo que la queryData renombro queryData al type que le estoy pasando
+
+~~~js
+import { typeList } from "../typelist";
+
+export const eventBrokerMutation = {
+  sendEvent: async (_, { input }, { dataSources }) => {
+    const { type, event, queryData } = input;
+
+    const typename =
+      typeList
+        .filter((t) => type.toLowerCase().includes(t.toLowerCase()))
+        .toString() + "s";
+
+    const { data } = await dataSources.eventBrokerAPI.emitEvent(
+      event,
+      queryData[typename.toLowerCase()] //aqui! le asigno el type como nombre de lo que vamos a mandar
+    );
+
+    const filteredData = {
+      [typename.toLowerCase()]: data[typename.toLowerCase()],
+    };
+
+    return {
+      __typename: typename,
+      ...filteredData,
+    };
+  },
+};
+~~~
+
+- Con esto la API ya se puede conectar a lo que se quiera
+- Creo el tipo Price en api-gateway/src/typeDefs/price.type.ts que viene en el tipo Sale
+- Primero el sales.types.ts
+
+~~~js
+export const salesTypes = `#graphql
+
+  type Sale {
+    product: Product
+    quantity: Int
+    price: Price
+  }
+
+  type Sales {
+    sales: Sale
+  }
+
+`;
+~~~
+
+- price.type.ts 
+
+~~~js
+export const pricesTypes = `#graphql
+ 
+  type Price {
+    unit: Int
+    total: Int
+  }
+
+`;
+~~~
+
+- Lo lanzo a todos desde el index.ts de typeDefs
+
+~~~js
+import { baseTypes } from "./base.type";
+import { inputsTypes } from "./inputs.type";
+import { pricesTypes } from "./prices.type";
+import { productsTypes } from "./products.type";
+import { responseUnion } from "./response.union";
+import { salesTypes } from "./sales.type";
+
+export const typeDefs = `
+  ${productsTypes}
+
+  ${pricesTypes}
+
+  ${salesTypes}
+
+  ${inputsTypes}
+
+  ${responseUnion}
+
+  ${baseTypes}
+`;
+~~~
+
+- Creo una query más compleja
+
+~~~gql
+mutation($input: EventBrokerInput!){
+  sendEvent(input: $input){
+    ... on Sales
+      sales{
+          product{
+            name
+            price
+            description
+          }
+          quantity
+          price{
+            total
+            unit
+          }
+      }
+      
+  }
+}
+
+##VARIABLES
+
+{
+  "input":{
+    "event": "CREATE_SALE",
+    "queryData": {
+      "sales":{
+        "quantity": 10 #con esto debería ser suficiente
+      }
+    },
+    "type": "sale"
+  }
+}
+~~~
+
+- En lugar de devolver sales, devuelvo sale en el controller del ms sales
+- En el controlador de sales solo extraigo la quantity de la data, no el uid, ni el product_id que me retornan undefined en la consola
+
+- sales/src/controllers/sales.controller.ts
+
+~~~js
+import axios from "axios";
+import { Request, Response } from "express";
+
+const eventBroker = axios.create({
+  baseURL: "http://localhost:3001",
+});
+
+const sales: any[] = [];
+
+export const getAll = (req: Request, res: Response) => {
+  return res.status(200).json({ message: "OK", sales });
+};
+
+export const createSale = async (req: Request, res: Response) => {
+  const { data } = req.body;
+
+  const { quantity } = data;
+
+  const { data: user } = await eventBroker.post("/events", {
+    event: "GET_USERS",
+  });
+
+  const { data: product } = await eventBroker.post("/events", {
+    event: "GET_PRODUCTS",
+  });
+
+  const sale = {
+    user: user.data.users[0],
+    product: product.data.products[0],
+    quantity,
+    price: {
+      unit: product.data.products[0]?.price,
+      total: product.data.products[0]?.price * quantity,
+    },
+  };
+
+  sales.push(sale);
+
+  return res.status(200).json({ message: "OK", sales: sale }); //En lugar de un arreglo devuelvo la venta en singular
+};
+~~~
+
+- Lo de añadir una s podemos hacerlo un standard para que sea versátil con sales y sale
+- Si solo quiero regresar uno no le voy a decir que regrese sales
+- Lo tipo en el union response
+- api-gateway/src/typeDefs/response.union.ts
+
+~~~js
+export const responseUnion = `#graphql
+
+  union Response = Products | Sales
+
+`;
+~~~
+
+- En base.type.ts tengo esto
+- api-gateway/src/types/base.type.ts
+
+~~~js
+export const baseTypes = `#graphql
+  input QueryData {
+    sales: CreateSalesInput
+  }
+
+  input EventBrokerInput {
+    type: String!
+    event: String!
+    queryData: QueryData
+  }
+
+  type Query {
+    service: String!
+  }
+
+  type Mutation {
+    sendEvent(input: EventBrokerInput!): Response!
+  }
+`;
+~~~
+------
+
