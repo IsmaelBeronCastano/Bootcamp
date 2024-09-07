@@ -521,7 +521,7 @@ router.post(
 
 - En el login extraigo el uid
 - Genero un nuevo token, lo devuelvo en la response
-- 
+- Ya he verificado email y el password con los middlewares
 - auth/src/controllers/auth.controller
 
 ~~~js
@@ -556,3 +556,184 @@ export const login = async (req: Request | any, res: Response) => {
 };
 ~~~
 ------
+
+## Google Sign in
+
+- En AuthRoutes
+
+~~~js
+router.post("/google", [verifyGoogleIdTokenMiddleware], googleSSO);
+~~~
+
+- El middleware
+
+~~~js
+export const verifyGoogleIdTokenMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { token } = req.body; //extraigo el token del body (ver el html)
+
+  if (!token) {
+    return res
+      .status(403)
+      .json({ ok: false, message: "User not authenticated" });
+  }
+
+  const googleUser = await googleVerify(token);//uso el helper
+
+  if (!googleUser) {
+    return res
+      .status(403)
+      .json({ ok: false, message: "User not authenticated" });
+  }
+
+  req.body.email = googleUser.email; //le paso el email y username en el body para usar en el controller
+  req.body.username = googleUser.username;
+
+  next();
+};
+~~~
+
+- El helper
+
+~~~js
+import { OAuth2Client } from "google-auth-library";
+
+import { IUserPayload } from "../interfaces/IUserPayload.interface";
+
+export const googleVerify = async (token: string) => {
+  const client = new OAuth2Client();
+
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+
+  return { email: payload.email, username: payload.name };
+};
+~~~
+
+- El controller
+
+~~~js
+export const googleSSO = async (req: Request, res: Response) => {
+  const { email, username } = req.body; //extraigo el email y username que pasé desde el middleware
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({ username, password: ":v", email, google: true });
+      await user.save();
+    }
+
+    const token = jwtSign({
+      id: user.id,
+    });
+
+    return res.status(200).json({
+      ok: true,
+      message: "User signin google",
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+      jwt: token,
+    });
+  } catch (error) {
+    console.log(`Error find: ${error}`);
+
+    return res.status(500).json({
+      error,
+      ok: false,
+    });
+  }
+};
+~~~ 
+
+- Proveedor de botón google sign in: https://developers.google.com/identity/gs/web/guides/overview/
+- Abrir página credenciales de la consola API de google
+- No hay que pagar
+- En el botón top left selecciono el proyecto o genero uno nuevo con el botón PROYECTO NUEVO
+- Seguir el proceso en https://developers.google.com/identity/gs/web/guides/get-google-api-clientid
+- clicar Crear credenciales / clicar ID de cliente OAuth, seleccioinar aplicación Web en tipo de aplicación
+  - Está en la página de consola API Google, con el poyecto de Node seleccionado
+  - Confirmo la pantalla de consentimiento. Selecciono usuario interno (intranet), para que cualquiera se pueda conectar **elijo externo**
+  - Relleno la información (nombre del proyecto, mi correo, si quiero un lgotip, dominios autorizados, etc)
+- Una vez hecho este proceso (ahora si) le doy a CREAR CREDENCIALES en la pantalla de consola API de Google con el proyecto seleccionado
+- Me da las variables ID client y Secret client. Descargo el JSON (trae todas mis credenciales)
+- Coloco en .env GOOGLE_CLIENT_ID y GOOGLE_SECRET_KEY
+- El botón de login y logout en html
+
+~~~html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google SignIn</title>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <h1>Google SSO</h1>
+
+    <div
+      id="g_id_onload"
+      data-client_id="303570499103-sjs3kb3k0313ldgc0ih7khhdi87iq9k7.apps.googleusercontent.com"
+      data-auto_prompt="false"
+      data-callback="handleCredentialResponse"
+    ></div>
+    <div
+      class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="sign_in_with"
+      data-shape="rectangular"
+      data-logo_alignment="left"
+    ></div>
+
+    <button onclick="logout()">Log out</button>
+
+    <script>
+
+      async function handleCredentialResponse(response) {
+        const token = response.credential; <!--//extraigo el token-->
+
+        const res = await fetch("/auth/google", { <!--//apunto a mi endpoint-->
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }), <!--//paso el token al body como un string-->
+        });
+
+        const data = await res.json(); <!--//extraigo la data de la response-->
+
+        localStorage.setItem("email", data.user.email); <!--// paso el email al localstorage-->
+      }
+
+      async function logout() { <!--//creo el logout-->
+        const account = google.accounts.id;
+
+        account.disableAutoSelect();
+
+        const email = localStorage.getItem("email");
+
+        account.revoke(email, (res) => {
+          if (res.successful) {
+            localStorage.clear();
+            location.reload();
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
+~~~
