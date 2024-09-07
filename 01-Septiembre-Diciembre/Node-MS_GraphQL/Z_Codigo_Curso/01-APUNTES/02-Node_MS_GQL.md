@@ -667,7 +667,7 @@ export const eventBrokerMutation = {
 }
 ~~~
 
-- Si trato de obtener el name directamente en la query me da error  de Cannot query field "name", puede que sea un fragment de Product
+- Si trato de obtener el name directamente en la query me da error de Cannot query field "name", puede que sea un fragment de Product
 - Para obtener el name debo usar una sintaxis concreta, como el spread operator, donde le digo toda la respuesta (...) conviertela a tipo Product
 
 ~~~gql
@@ -720,6 +720,8 @@ export const baseTypes = `#graphql
 `;
 ~~~
 
+- Pongo en duro el product a devolver
+
 ~~~js
 export const eventBrokerMutation = {
   sendEvent: (_, {input}, context)=>{
@@ -735,6 +737,7 @@ export const eventBrokerMutation = {
 
 - En las VARIABLES de la query debo añadir el type
 - ApolloServer
+  
 ~~~gql
 mutation($input: EventBrokerInput!){
   sendEvent(input: $input){
