@@ -1740,8 +1740,7 @@ export class AuthGuard implements CanActivate {
 ~~~
 
 - Es en el servicio de auth-ms donde está toda la mandanga, como verificar el token, etc
-
-
+--------
 
 
 
