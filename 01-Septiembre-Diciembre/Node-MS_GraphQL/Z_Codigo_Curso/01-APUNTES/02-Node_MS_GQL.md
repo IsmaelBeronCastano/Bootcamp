@@ -1,4 +1,4 @@
-# 02 NODE MICROSERVICIOS GRAPHQL - Microservicios en Node con GraphQL
+# 02 NODE MICROSERVICIOS GRAPHQL - 02 Microservicios en Node con GraphQL
 
 - **NOTA**: reiniciar los servidores en caso de error es en muchos casos necesario durante las pruebas
 - Repasemos el API GATEWAY

@@ -51,13 +51,13 @@ export class CourseController {
   }
 
   @UseGuards(AuthGuard)
-  @Post()
+  @Post()                                               
   create(@Body() createCourseDto: CreateCourseDto, @Request() request) {
-    createCourseDto.author_id = request.user.id;
+    createCourseDto.author_id = request.user.id; //me pide el author_id
 
     return this.courseService.send(
       { cmd: "create_course" },
-      { ...createCourseDto },
+      { ...createCourseDto }, 
     );
   }
 

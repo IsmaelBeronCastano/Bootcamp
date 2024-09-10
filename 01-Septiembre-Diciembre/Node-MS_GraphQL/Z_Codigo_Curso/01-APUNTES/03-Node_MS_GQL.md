@@ -1,4 +1,4 @@
-# NODE MICROSERVICIOS GRAPHQL - Auth
+# NODE MICROSERVICIOS GRAPHQL - 03 Auth
 
 - Creo el módulo de auth
 - Copio el package.json de users y uso npm i 
