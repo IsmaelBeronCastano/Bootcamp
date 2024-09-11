@@ -1038,7 +1038,7 @@ export const config: Config = new Config();
 - Siempre que una función es async retorna una promesa (de tipo void si no devuelve nada o el tipo que sea)
 - app será de tipo Application ( de Express)
 - httpServer será de http.Server
-- Uso log.info para informar, log.log para los errores
+- Uso log.info para informar, log.log para notificaciones
 
 ~~~js
 import 'express-async-errors';
@@ -1169,6 +1169,7 @@ export function healthRoutes(): Router {
 - Mientras isConnected esté en true uso un try catch
 - Creo un Cluster tipo health mientras isConnected siga en true
 - Será para controlar la conexión con Elasticsearch
+- Uso log.log para la notificación y log.error para el error
 - src/elasticsearch.ts
 
 ~~~js
@@ -1198,3 +1199,8 @@ export async function checkConnection(): Promise<void> {
   }
 }
 ~~~
+-----
+
+## Start Notification Service
+
+- 
