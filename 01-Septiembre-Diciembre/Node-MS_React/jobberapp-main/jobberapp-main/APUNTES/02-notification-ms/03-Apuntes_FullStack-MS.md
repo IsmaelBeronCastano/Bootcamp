@@ -97,8 +97,8 @@
 {
   "compilerOptions": {
     "target": "ES2015",
-    "lib": ["dom", "ES2015"],
-    "module": "commonjs",
+    "lib": ["dom", "ES2015"],//ES2015 util para la extensión .ts
+    "module": "commonjs", //con esto no necesito type:module en el package.json
     "baseUrl": ".",
     "outDir": "./build",
     "rootDir": ".",
@@ -1203,4 +1203,661 @@ export async function checkConnection(): Promise<void> {
 
 ## Start Notification Service
 
-- 
+- Creamos una instancia de elasticsearch Client en notificaction-ms/src/elasticsearch.ts
+- Creamos checkConnection que es llamado en el server con startElasticSearch llamado en el start quedando así
+
+~~~js
+import 'express-async-errors';
+import http from 'http';
+
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import { Application } from 'express';
+import { healthRoutes } from '@notifications/routes';
+import { checkConnection } from '@notifications/elasticsearch';
+import { createConnection } from '@notifications/queues/connection';
+import { Channel } from 'amqplib';
+import { consumeAuthEmailMessages, consumeOrderEmailMessages } from '@notifications/queues/email.consumer';
+
+const SERVER_PORT = 4001;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationServer', 'debug');
+
+export function start(app: Application): void {
+  startServer(app);
+  app.use('', healthRoutes());
+  //startQueues();
+  startElasticSearch();
+}
+
+// async function startQueues(): Promise<void> {
+//   const emailChannel: Channel = await createConnection() as Channel;
+//   await consumeAuthEmailMessages(emailChannel);
+//   await consumeOrderEmailMessages(emailChannel);
+// }
+
+function startElasticSearch(): void {
+  checkConnection();
+}
+
+function startServer(app: Application): void {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Worker with process id of ${process.pid} on notification server has started`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Notification server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService startServer() method:', error);
+  }
+}
+~~~
+
+- A start debo pasarle una instancia de app
+- Importo el método en app.ts, creo el método initialize y lo invoco.
+- Podría usarse una función autoinvocada también
+- Creo un nuevo logger para notificationApp
+- En src/app.ts
+
+~~~js
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import express, { Express } from 'express';
+import { start } from '@notifications/server';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationApp', 'debug');
+
+function initialize(): void {
+  const app: Express = express();
+  start(app);
+  log.info('Notification Service Initialized');
+}
+initialize();
+~~~
+
+- Para el logger importo desde la librería de helpers de jobber-shared/logger.ts
+
+~~~js
+import winston, { Logger } from 'winston';
+import { ElasticsearchTransformer, ElasticsearchTransport, LogData, TransformedData } from 'winston-elasticsearch';
+
+const esTransformer = (logData: LogData): TransformedData => {
+  return ElasticsearchTransformer(logData);
+}
+
+export const winstonLogger = (elasticsearchNode: string, name: string, level: string): Logger => {
+  const options = {
+    console: {
+      level,
+      handleExceptions: true,
+      json: false,
+      colorize: true
+    },
+    elasticsearch: {
+      level,
+      transformer: esTransformer,
+      clientOpts: {
+        node: elasticsearchNode,
+        log: level,
+        maxRetries: 2,
+        requestTimeout: 10000,
+        sniffOnStart: false
+      }
+    }
+  };
+  const esTransport: ElasticsearchTransport = new ElasticsearchTransport(options.elasticsearch);
+  const logger: Logger = winston.createLogger({
+    exitOnError: false,
+    defaultMeta: { service: name },
+    transports: [new winston.transports.Console(options.console), esTransport]
+  });
+  return logger;
+}
+~~~
+
+- Puedo ponder en marcha el microservicio con
+
+> npm run dev
+
+- La imagen de elastic search debe corre en Docker
+- Paso el docker-compose.yaml completo que esta en la raiz de jobber (fuera de los ms)
+- Recuerda que la jerarquía es 
+  - jobber
+    - jobber-client (react)
+    - jobber-k8s (kubernetes)
+    - microservices (ms)
+    - volumes (storage)
+
+~~~yaml
+# docker compose up -d redis mongodb mysql postgres rabbitmq elasticsearch kibana
+version: '3.9'
+services:
+  redis:
+    container_name: redis_container
+    image: redis:alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --loglevel warning
+    volumes:
+      - ./docker-volumes/cache:/data
+  
+  redis-commander:
+    container_name: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    restart: always
+    ports:
+      - '8081:8081'
+    environment:
+    - REDIS_HOSTS=local:redis_container:6379
+  
+  mongodb:
+    container_name: mongodb_container
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - ./docker-volumes/data:/data/db
+  
+  mysql:
+    container_name: mysql_container
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      - MYSQL_USER=jobber
+      - MYSQL_DATABASE=jobber_auth
+      - MYSQL_ROOT_PASSWORD=api
+      - MYSQL_PASSWORD=api
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./docker-volumes/mysql:/var/lib/mysql
+  
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=jobber
+      - POSTGRES_PASSWORD=api
+      - POSTGRES_DB=jobber_reviews
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./docker-volumes/postgres:/var/lib/postgresql
+  
+  rabbitmq:
+    container_name: rabbitmq_container
+    image: rabbitmq:3.13-rc-management-alpine
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=jobber
+      - RABBITMQ_DEFAULT_PASS=jobberpass
+    ports:
+      # AMQP protocol port
+      - '5672:5672'
+      # Management UI
+      - '15672:15672'
+
+  elasticsearch:
+    container_name: elasticsearch_container
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    restart: always
+    environment:
+      ES_JAVA_OPTS: -Xmx1g -Xms1g
+      bootstrap.memory_lock: "true"
+      discovery.type: single-node
+      network.host: 0.0.0.0
+      transport.host: 127.0.0.1
+      http.host: 0.0.0.0
+      xpack.security.enabled: "true"
+      xpack.security.authc.api_key.enabled: "true"
+      xpack.monitoring.collection.enabled: "true"
+      xpack.security.enrollment.enabled: "true"
+      xpack.security.authc.token.enabled: "true"
+      ELASTIC_PASSWORD: admin1234
+    ports:
+      - 9300:9300
+      - 9200:9200
+    volumes:
+      - ./docker-volumes/elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+  
+  kibana:
+    container_name: kibana_container
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    restart: always
+    environment:
+      - ELASTICSEARCH_HOSTS=["http://elasticsearch_container:9200"]
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=kibana
+      - ELASTICSEARCH_SERVICEACCOUNT_TOKEN=AAEAAWVsYXN0aWMva2liYW5hL2pvYmJlci1raWJhbmE6N3BWZ0ItZWxSY21wMEJ0Y3ZKNTlHZw
+      - XPACK_FLEET_AGENTS_ELASTICSEARCH_HOSTS=["http://elasticsearch_container:9200"]
+    ports:
+      - 5601:5601
+    networks:
+      - elastic
+    volumes:
+      - ./kibana.yml/:/usr/share/kibana/config/kibana.yml:ro
+    depends_on: 
+      - elasticsearch
+
+  apmServer:
+    image: docker.elastic.co/apm/apm-server:8.12.2
+    container_name: apm_server_container
+    ports:
+      - 8200:8200
+    volumes:
+      - ./apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    networks:
+      - elastic
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana_container:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana_container:5601
+        -E apm-server.kibana.protocol=http
+        -E strict.perms=false
+        -E apm-server.auth.anonymous.enabled=true
+  
+  metricbeat:
+    container_name: metricbeat_container
+    image: docker.elastic.co/beats/metricbeat:8.12.2
+    user: root
+    ports:
+      - 5066:5066
+    networks:
+      - elastic
+    volumes:
+      - ./metricbeat.yml/:/usr/share/metricbeat/metricbeat.yml:ro
+      # docker module
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # system module
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+    command: ["--strict.perms=false", "-system.hostfs=/hostfs"]
+    depends_on: 
+      - elasticsearch
+
+  heartbeat:
+    container_name: heartbeat_container
+    image: docker.elastic.co/beats/heartbeat:8.12.2
+    user: root
+    hostname: heartbeat
+    cap_add:
+      - NET_RAW
+    networks:
+      - elastic
+    command: ["--strict.perms=false"]
+    volumes:
+      - ./heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
+    depends_on: 
+      - elasticsearch
+  
+  gateway:
+    container_name: gateway_container
+    build:
+      context: ../server/1-gateway-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4000:4000
+    env_file: ../server/1-gateway-service/.env
+    environment:
+        - ENABLE_APM=1
+        - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+        - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+        - NODE_ENV=development
+        - SECRET_KEY_ONE=032c5c3cfc37938ae6dd43d3a3ec7834
+        - SECRET_KEY_TWO=d66e377018c0bc0b5772bbc9b131e6d9
+        - CLIENT_URL=http://localhost:3000
+        - AUTH_BASE_URL=http://auth_container:4002
+        - USERS_BASE_URL=http://localhost:4003
+        - GIG_BASE_URL=http://localhost:4004
+        - MESSAGE_BASE_URL=http://localhost:4005
+        - ORDER_BASE_URL=http://localhost:4006
+        - REVIEW_BASE_URL=http://localhost:4007
+        - REDIS_HOST=redis://redis_container:6379
+        - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+        - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+        - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+  
+  notifications:
+    container_name: notification_container
+    build:
+      context: ../server/2-notification-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4001:4001
+    env_file: ../server/2-notification-service/.env
+    environment:
+      - ENABLE_APM=1
+      - NODE_ENV=development
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - SENDER_EMAIL=lysanne.rutherford88@ethereal.email
+      - SENDER_EMAIL_PASSWORD=ad8y45AkfebKmW8rCV
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+  
+  auth:
+    container_name: auth_container
+    build:
+      context: ../server/3-auth-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4002:4002
+    env_file: ../server/3-auth-service/.env
+    environment:
+      - ENABLE_APM=1
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - MYSQL_DB=mysql://jobber:api@mysql_container:3306/jobber_auth
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mysql
+  
+  users:
+    container_name: users_container
+    build:
+      context: ../server/4-users-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4003:4003
+    env_file: ../server/4-users-service/.env
+    environment:
+      - ENABLE_APM=1
+      - DATABASE_URL=mongodb://mongodb_container:27017/jobber-users
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - REDIS_HOST=redis://redis_container:6379
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mongodb
+  
+  gig:
+    container_name: gig_container
+    build:
+      context: ../server/5-gig-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4004:4004
+    env_file: ../server/5-gig-service/.env
+    environment:
+      - ENABLE_APM=1
+      - DATABASE_URL=mongodb://mongodb_container:27017/jobber-gig
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - REDIS_HOST=redis://redis_container:6379
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mongodb
+  
+  chat:
+    container_name: chat_container
+    build:
+      context: ../server/6-chat-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4005:4005
+    env_file: ../server/6-chat-service/.env
+    environment:
+      - ENABLE_APM=1
+      - DATABASE_URL=mongodb://mongodb_container:27017/jobber-chat
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mongodb
+  
+  order:
+    container_name: order_container
+    build:
+      context: ../server/7-order-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4006:4006
+    env_file: ../server/7-order-service/.env
+    environment:
+      - ENABLE_APM=1
+      - DATABASE_URL=mongodb://mongodb_container:27017/jobber-chat
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - STRIPE_API_KEY=sk_test_51OAXs6DTglvMeJPrlX1Lp9Mw7aXwlBbFJOLQdlkFv5mRKPkQdFrxvYN68xZ54wBr6VbP44khSM5UpPtfaixlMgcW00CIZEpmn5
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mongodb
+  
+  review:
+    container_name: order_container
+    build:
+      context: ../server/8-review-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4007:4007
+    env_file: ../server/8-review-service/.env
+    environment:
+      - ENABLE_APM=1
+      - DATABASE_HOST=192.168.0.42
+      - DATABASE_USER=jobber
+      - DATABASE_PASSWORD=api
+      - DATABASE_NAME=jobber_reviews
+      - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+      - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+      - NODE_ENV=development
+      - AP_GATEWAY_URL=http://gateway_container:4000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - CLOUD_NAME=dyamr9ym3
+      - CLOUD_API_KEY=385269193982147
+      - CLOUD_API_SECRET=-h9hU43QMy68AcIaMyP0ULKbibI
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - postgres
+
+  jenkins:
+    container_name: jenkins_container
+    image: jenkins/jenkins:lts
+    privileged: true
+    user: root
+    ports:
+      - 8080:8080
+      - 50000:50000
+    volumes:
+      - ./docker-volumes/jenkins_compose/jenkins_configuration:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  jenkins-agent:
+    container_name: jenkins_agent_container
+    image: jenkins/ssh-agent:jdk11
+    privileged: true
+    user: root
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=
+
+networks:
+  elastic:
+    name: elastic
+~~~
+
+- Creo en la carpeta de notification-ms/src/queues/**connection.ts**
+- También creo **email.consumer.ts** y **mail.transport.ts**
+- Para la conexión necesitaré amqplib 0.9 (la instalé con npm)
+- Debo crear **una conexión con el cliente y con esta crear un canal**
+- Para ello usaré client, Channel y Connection
+- La función de la conexión es async por lo que devuelve una promesa de tipo Channel o undefined
+- Con un **try catch**, si todo sale bien devuelvo el **channel** 
+- En caso de error retorno un **undefined**
+- Utilizaremos promesas con async await
+- connection.ts
+
+~~~js
+import { config } from '@notifications/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import client, { Channel, Connection } from 'amqplib';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationQueueConnection', 'debug');
+
+async function createConnection(): Promise<Channel | undefined> {
+
+  try {                                           //amqp://jobber:jobberpass@localhost:5672
+    const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
+    const channel: Channel = await connection.createChannel();
+    log.info('Notification server connected to queue successfully...');
+    closeConnection(channel, connection); //cerramos la conexión
+    return channel;
+  } catch (error) {
+    log.log('error', 'NotificationService error createConnection() method:', error);
+    return undefined;
+  }
+}
+
+//usamos process.once, es como un addListener
+//primero cerramos el canal, luego la conexión
+function closeConnection(channel: Channel, connection: Connection): void {
+  process.once('SIGINT', async () => {
+    await channel.close();
+    await connection.close();
+  });
+}
+
+export { createConnection } ;
+~~~
+
+- Cuando hagamos el consumer haremos uso de este channel
+- Llamamos a la conexión en el server.ts
+
+~~~js
+import 'express-async-errors';
+import http from 'http';
+
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import { Application } from 'express';
+import { healthRoutes } from '@notifications/routes';
+import { checkConnection } from '@notifications/elasticsearch';
+import { createConnection } from '@notifications/queues/connection';
+import { Channel } from 'amqplib';
+import { consumeAuthEmailMessages, consumeOrderEmailMessages } from '@notifications/queues/email.consumer';
+
+const SERVER_PORT = 4001;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationServer', 'debug');
+
+export function start(app: Application): void {
+  startServer(app);
+  app.use('', healthRoutes());
+  startQueues();
+  startElasticSearch();
+}
+
+async function startQueues(): Promise<void> {
+  const emailChannel: Channel = await createConnection() as Channel;
+  //await consumeAuthEmailMessages(emailChannel);
+  //await consumeOrderEmailMessages(emailChannel);
+}
+
+function startElasticSearch(): void {
+  checkConnection();
+}
+
+function startServer(app: Application): void {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Worker with process id of ${process.pid} on notification server has started`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Notification server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService startServer() method:', error);
+  }
+}
+~~~
+
+-------
+
+## RabbitMQ intro
+
+- Se puede usar como un message broker o como un administrador de colas (queues)
+- Envia mensajes al consumidor apropiado
+- En este proyecto solo consumiremos mensajes, no los produciremos
+- Los mensajes pueden ser strings, objetos.
+- Si no son strings, hay que stringuizarlos
+- Puede ser OneToOne o OneToMany
+- Usaremos una aproximación **event driven async**
+
+----
+
+## RabbitMQ channel methods
+
