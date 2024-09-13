@@ -1896,4 +1896,199 @@ function startServer(app: Application): void {
 
 ## Auth email consumer method
 
+- Ya hemos creado la conexión y el channel, ahora usaremos el **.consume** que contiene un callback que se le pasa la queue y el message
+- En la misma carpeta queues donde tengo connection.ts con la conexión y el channel
+- Necesito un exchange, una routingKey y una queue para que cuando publiquemos con **channel.publish** un mensaje podérselo pasar
+- Si el channel no existe lo creo
+- Afirmo/**creo el exchange** con assertExchange y le paso el nombre y el tipo direct
+- Afirmo/**creo la queue**, le paso el nombre y la hago persistente con durable y autodelete. Por defecto durable está en false y autoDelete en true
+  - La guardo en jobberQueue
+- Con **.bindQueue** aúno la queue, el exchangeName, y la routingKey (hago un bind para trabajar en el mismo contexto)
+- Cada vez que envie un mensaje **con el exchangeName usando la routingKey, el mesaje irá a la queueName**
+  - Todo consumer asignado a esta queue consumirá el mensaje enviado
+- **Desestructuro** del mensaje de tipo ConsumeMessage de amqplib usando **JSON.parse** del **.toString del messsage**
+- Seteo las locales con los valores de la desestructuración, pasándole la url del cliente (localhost:3000)
+- notification-ms/src/queues/email.consumer.ts
+
+~~~js
+import { config } from '@notifications/config';
+import { IEmailLocals, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@notifications/queues/connection';
+import { sendEmail } from '@notifications/queues/mail.transport';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'emailConsumer', 'debug');
+
+async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+
+    const exchangeName = 'jobber-email-notification';
+    const routingKey = 'auth-email';
+    const queueName = 'auth-email-queue';//puedo poner el nombre que quiera
+
+    //afirmo/creo el exchange con assertExchange y le paso el nombre y el tipo direct
+    await channel.assertExchange(exchangeName, 'direct');
+
+    //afirmo/creo la queue, le paso el nombre y la hago persistente con durable y autodelete
+    //lo guardo en jobberQueue
+    const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    
+    //aúno queue, exchange y routingKey 
+    //creo el path entre la queue y el exchange usando la routingKey
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+
+                                                  //ConsumeMessage de amqplib
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+
+        //uedo hacer previamente un console.log para ver primero
+      const { receiverEmail, username, verifyLink, resetLink, template, otp } = JSON.parse(msg!.content.toString()); 
+                                                                          //lo paso a JSON parea desestructurarlo
+
+      //seteo las locals con los valores
+      const locals: IEmailLocals = {
+        appLink: `${config.CLIENT_URL}`, // http://localhost:3000
+        appIcon: 'https://i.ibb.co/Kyp2m0t/cover.png',
+        username,
+        verifyLink,
+        resetLink,
+        otp
+      };
+      await sendEmail(template, receiverEmail, locals);
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService EmailConsumer consumeAuthEmailMessages() method error:', error);
+  }
+}
+
+export { consumeAuthEmailMessages};
+~~~
+
+- La interfaz de IEmailLocals
+
+~~~js
+export interface IEmailLocals {
+  sender?: string;
+  appLink: string;
+  appIcon: string;
+  offerLink?: string;
+  amount?: string;
+  buyerUsername?: string;
+  sellerUsername?: string;
+  title?: string;
+  description?: string;
+  deliveryDays?: string;
+  orderId?: string;
+  orderDue?: string;
+  requirements?: string;
+  orderUrl?: string;
+  originalDate?: string;
+  newDate?: string;
+  reason?: string;
+  subject?: string;
+  header?: string;
+  type?: string;
+  message?: string;
+  serviceFee?: string;
+  total?: string;
+  username?: string;
+  verifyLink?: string;
+  resetLink?: string;
+  otp?: string;
+}
+~~~
+
+- El winstonLogger viene desde la carpeta joober-shared/src/logger
+- logger.ts
+
+~~~js
+import winston, { Logger } from 'winston';
+import { ElasticsearchTransformer, ElasticsearchTransport, LogData, TransformedData } from 'winston-elasticsearch';
+
+const esTransformer = (logData: LogData): TransformedData => {
+  return ElasticsearchTransformer(logData);
+}
+
+export const winstonLogger = (elasticsearchNode: string, name: string, level: string): Logger => {
+  const options = {
+    console: {
+      level,
+      handleExceptions: true,
+      json: false,
+      colorize: true
+    },
+    elasticsearch: {
+      level,
+      transformer: esTransformer,
+      clientOpts: {
+        node: elasticsearchNode,
+        log: level,
+        maxRetries: 2,
+        requestTimeout: 10000,
+        sniffOnStart: false
+      }
+    }
+  };
+  const esTransport: ElasticsearchTransport = new ElasticsearchTransport(options.elasticsearch);
+  const logger: Logger = winston.createLogger({
+    exitOnError: false,
+    defaultMeta: { service: name },
+    transports: [new winston.transports.Console(options.console), esTransport]
+  });
+  return logger;
+}
+~~~
+
+- Tambien uso el config para las variables de entorno
+- notification-ms/src/config.ts
+
+~~~js
+import dotenv from 'dotenv';
+
+dotenv.config({});
+
+if (process.env.ENABLE_APM === '1') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('elastic-apm-node').start({
+    serviceName: 'jobber-notification',
+    serverUrl: process.env.ELASTIC_APM_SERVER_URL,
+    secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
+    environment: process.env.NODE_ENV,
+    active: true,
+    captureBody: 'all',
+    errorOnAbortedRequests: true,
+    captureErrorLogStackTraces: 'always'
+  });
+}
+
+class Config {
+  public NODE_ENV: string | undefined;
+  public CLIENT_URL: string | undefined;
+  public SENDER_EMAIL: string | undefined;
+  public SENDER_EMAIL_PASSWORD: string | undefined;
+  public RABBITMQ_ENDPOINT: string | undefined;
+  public ELASTIC_SEARCH_URL: string | undefined;
+
+  constructor() {
+    this.NODE_ENV = process.env.NODE_ENV || '';
+    this.CLIENT_URL = process.env.CLIENT_URL || '';
+    this.SENDER_EMAIL = process.env.SENDER_EMAIL || '';
+    this.SENDER_EMAIL_PASSWORD = process.env.SENDER_EMAIL_PASSWORD || '';
+    this.RABBITMQ_ENDPOINT = process.env.RABBITMQ_ENDPOINT || '';
+    this.ELASTIC_SEARCH_URL = process.env.ELASTIC_SEARCH_URL || '';
+  }
+}
+
+export const config: Config = new Config();
+~~~
+
+- **NOTA:** Ambos archivos (logger y config) **no se volverán a mostrar**
+------
+
+## Use auth email consumer method
+
 - 
