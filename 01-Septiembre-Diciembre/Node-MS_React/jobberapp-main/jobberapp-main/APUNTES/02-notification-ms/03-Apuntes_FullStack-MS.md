@@ -1856,8 +1856,44 @@ function startServer(app: Application): void {
 - Si no son strings, hay que stringuizarlos
 - Puede ser OneToOne o OneToMany
 - Usaremos una aproximación **event driven async**
+- Usaremos un mensaje y esperaremos la respuesta
+- Dentro del CloudAMQP tengo el Exchange (broker), el Routes, y las Queue
+  - De la app va al Producer (produce mensajes), este envía el mensaje al broker y el routes lo direcciona a la queue (la que guarda el mensaje) correcta
+  - El producer no sabe a que queue va o consumer. Solo envia mensajes al exchange
+  - El exchange esta dentro del message broker
+  - El consumer escucha la queue especifica
+  - El mensaje es lo que enviamos en forma de string (si no se usa stringify)
+  - Un channel es una conexión virtual dentro de la conexión
 
+![diagrama RabbitMQ](RabbitMQ.png)
+
+  - El exchange tiene varias maneras de funcionar
+    - Direct: directa a a la queue que escucha
+    - Topic: se suscribe, por ejemplo a Seller
+    - Fanout: a todas las queues
+    - Headers
+  - Haremos uso de Direct y Fanout
+- Docs: cloudamqp.com
 ----
 
 ## RabbitMQ channel methods
 
+![foto channels](Intel-process.png)
+
+- Hay varios métodos
+- Usaremos los siguientes
+- **channel.publish**: publica un mensaje al exchange, que usará el router para enviarlo al queue respectivo
+  - Pasamos el nombre del exchange, el router_key y el mensaje (la data)
+- **channel.assertExchange**: afirma la existencia de un intercambio. Chequea que el exchange existe, si existe buscará la router_key y enviará la data a la queue apropiada
+  - Le paso el nombre del exchange, el tipo (direct exchange, fanout, etc)
+- **channel.assertQueue**: chequea que la queue existe. Si no existe crea una nueva queue
+- **channel.bindQueue**: chequea el routing path de un exchange a una queue
+- **channel.consume**: configura un consumer con un callback que será invocado con cada mensaje. Método comunmente usado en el consumer
+- **channel.ack**: reconoce el mensaje dado. Si consumimos el mensaje por el consumer y no usamos este ack, el mensaje permanecera en la queue
+  - Siq uieres borrar vtodos los mensajes de las queues puedes usar **ackAll**
+- Hay más métodos, pero estos son los que usaremos (mirar documentación)
+----
+
+## Auth email consumer method
+
+- 
