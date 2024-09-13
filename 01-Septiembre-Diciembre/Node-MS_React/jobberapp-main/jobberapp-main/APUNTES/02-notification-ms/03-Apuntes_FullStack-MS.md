@@ -1906,8 +1906,9 @@ function startServer(app: Application): void {
 - Con **.bindQueue** aúno la queue, el exchangeName, y la routingKey (hago un bind para trabajar en el mismo contexto)
 - Cada vez que envie un mensaje **con el exchangeName usando la routingKey, el mesaje irá a la queueName**
   - Todo consumer asignado a esta queue consumirá el mensaje enviado
-- **Desestructuro** del mensaje de tipo ConsumeMessage de amqplib usando **JSON.parse** del **.toString del messsage**
-- Seteo las locales con los valores de la desestructuración, pasándole la url del cliente (localhost:3000)
+- Hago un console.log del msg
+- Para consumir el queue y borrarlo de las queues uso channel.ack(msg!)
+- Primero habría que enviar el mail usando un transport y luego hacer el ack
 - notification-ms/src/queues/email.consumer.ts
 
 ~~~js
@@ -1944,21 +1945,11 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
                                                   //ConsumeMessage de amqplib
     channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
 
-        //uedo hacer previamente un console.log para ver primero
-      const { receiverEmail, username, verifyLink, resetLink, template, otp } = JSON.parse(msg!.content.toString()); 
-                                                                          //lo paso a JSON parea desestructurarlo
+      console.log(JSON.parse(msg!.content.toString()))//console.log!!!!
 
-      //seteo las locals con los valores
-      const locals: IEmailLocals = {
-        appLink: `${config.CLIENT_URL}`, // http://localhost:3000
-        appIcon: 'https://i.ibb.co/Kyp2m0t/cover.png',
-        username,
-        verifyLink,
-        resetLink,
-        otp
-      };
-      await sendEmail(template, receiverEmail, locals);
-      channel.ack(msg!);
+      //channel.ack(msg!)  //con esto consumo la queue y se queda en 0 en el dashboard
+
+    
     });
   } catch (error) {
     log.log('error', 'NotificationService EmailConsumer consumeAuthEmailMessages() method error:', error);
@@ -2090,5 +2081,209 @@ export const config: Config = new Config();
 ------
 
 ## Use auth email consumer method
+
+- consumeAuthEmailMessages requiere un channel como parámetro y al ser async y no retornar nada, de valort de retorno tiene una Promesa de tipo void
+- Lo tipo como Channel de amqplib
+- Vamos al notification-ms/src/server.ts
+
+~~~js
+import 'express-async-errors';
+import http from 'http';
+
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import { Application } from 'express';
+import { healthRoutes } from '@notifications/routes';
+import { checkConnection } from '@notifications/elasticsearch';
+import { createConnection } from '@notifications/queues/connection';
+import { Channel } from 'amqplib';
+import { consumeAuthEmailMessages, consumeOrderEmailMessages } from '@notifications/queues/email.consumer';
+
+const SERVER_PORT = 4001;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationServer', 'debug');
+
+export function start(app: Application): void {
+  startServer(app);
+  app.use('', healthRoutes());
+  startQueues();
+  startElasticSearch();
+}
+
+async function startQueues(): Promise<void> {
+
+  //creo el channel
+  const emailChannel: Channel = await createConnection() as Channel;
+  await consumeAuthEmailMessages(emailChannel);
+}
+
+function startElasticSearch(): void {
+  checkConnection();
+}
+
+function startServer(app: Application): void {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Worker with process id of ${process.pid} on notification server has started`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Notification server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService startServer() method:', error);
+  }
+}
+~~~
+
+- El createConnection lo tengo en notification-ms/src/queues/connection (donde también esta email.consumer)
+- Devuelve un channel
+
+~~~js
+import { config } from '@notifications/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import client, { Channel, Connection } from 'amqplib';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationQueueConnection', 'debug');
+
+async function createConnection(): Promise<Channel | undefined> {
+  try {
+    const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
+    const channel: Channel = await connection.createChannel();
+    log.info('Notification server connected to queue successfully...');
+    closeConnection(channel, connection);
+    return channel;
+  } catch (error) {
+    log.log('error', 'NotificationService error createConnection() method:', error);
+    return undefined;
+  }
+}
+
+function closeConnection(channel: Channel, connection: Connection): void {
+  process.once('SIGINT', async () => {
+    await channel.close();
+    await connection.close();
+  });
+}
+
+export { createConnection } ;
+~~~
+
+- En el archivo volumes/docker-compose.yaml compruebo las variables y el puerto de RabbitMQ
+
+~~~yaml
+rabbitmq:
+  container_name: rabbitmq_container
+  image: rabbitmq:3.13-rc-management-alpine
+  restart: always
+  environment:
+    - RABBITMQ_DEFAULT_USER=jobber
+    - RABBITMQ_DEFAULT_PASS=jobberpass
+  ports:
+    # AMQP protocol port
+    - '5672:5672'
+    # Management UI dashboard
+    - '15672:15672'
+~~~
+
+- En las variables de entorno de notification-ms tengo el user y el password de RabbitMQ que he creado
+
+~~~
+ENABLE_APM=0
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@localhost:5672
+SENDER_EMAIL=
+SENDER_EMAIL_PASSWORD=
+ELASTIC_SEARCH_URL=http://elastic:admin1234@localhost:9200
+ELASTIC_APM_SERVER_URL=http://localhost:8200
+ELASTIC_APM_SECRET_TOKEN=
+~~~
+
+- En la UI, la primera pantalla (con Docker corriendo) puedo ver lo que ocupa la imagen de RabbitMQ
+- Si voy a conexiones puedo ver la conexión
+- En channels tengo mi ip asociada al puerto xxxxx, en el archivo conection.ts llamé a **.createChannel**
+- En exchanges veo los diferentes tipos (direct, fanout...)
+  - Puedo ver al final el que yo he creado como jobber-email-notification
+  - Si clico encima puedo ver la routing_key
+- En la pestaña de Queues and streams tengo solo una, la que creé (auth-email-queue)
+- Para probar que todo funciona, lo hago en el notification-ms/src/server.ts
+- Uso assertExchange. Puesto que ya existe lo asignará, le paso el tipo (direct)
+- publish **necesita el exchangeName y la routing_key**,  no hace falta pasarle la queue porque **está asignada con el metodo bind** en email.consumer
+  - Y le paso el mensaje. Si situo el cursor encima me dirá que el content es de tipo Buffer
+- notification-ms/src/server.ts
+~~~js
+async function startQueues(): Promise<void> {
+
+  //creo el channel
+  const emailChannel: Channel = await createConnection() as Channel;
+  await consumeAuthEmailMessages(emailChannel);
+
+  await emailChannel.assertExchange('jobber-email-notification', direct)
+
+  const message = JSON.stringify({name: 'Guanajuato', service: 'VIVA!'})
+  emailChannel.publish('jobber-email-notification', 'auth-email', Buffer.from(message) )
+}
+~~~
+
+- Como coloqué un console.log del msg en consumeAuthEmailMessages de notification-ms/src/email.consumer.ts puedo ver en consola el objeto con name y service
+- Si voy al dashboard de RabbitMQ en localhost:15672 puedo ver en queues que en auth-email-queue tengo una queue en Unacked y Total
+- Para consumir el mensaje uso el puerto que especifiqué en el docker-compose de AMQP que es el 5672
+----
+
+## Order email consumer method
+
+- notification-ms no produce ningún mensaje, solo consume
+- En el caso anterior será desde auth-ms
+- Ahora haremos el de consumo de order-ms
+- Es practicamente el mismo código, solo cambio el exchangeName, routingKey y queueName
+- Desde notification-ms/src/email.consumer
+
+~~~js
+async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    const exchangeName = 'jobber-order-notification';
+    const routingKey = 'order-email';
+    const queueName = 'order-email-queue';
+
+    await channel.assertExchange(exchangeName, 'direct');
+
+    const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+     console.log(JSON.parse(msg!.toString()))
+
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService EmailConsumer consumeOrderEmailMessages() method error:', error);
+  }
+}
+
+export { consumeAuthEmailMessages, consumeOrderEmailMessages };
+~~~
+
+- Lo uso en el server.ts de notification-ms
+
+~~~js
+async function startQueues(): Promise<void> {
+  const emailChannel: Channel = await createConnection() as Channel;
+
+  await consumeAuthEmailMessages(emailChannel);
+  await consumeOrderEmailMessages(emailChannel);
+
+   const emailMessage = JSON.stringify({name: 'Guanajuato', service: 'VIVA!'})
+  emailChannel.publish('jobber-email-notification', 'auth-email', Buffer.from(emailMessage) )
+
+    const orderMessage = JSON.stringify({name: 'Guanajuato', service: 'VIVA!'})
+  emailChannel.publish('jobber-order-notification', 'order-email', Buffer.from(orderMessage) )
+}
+~~~
+---- 
+
+## Mail transport method
 
 - 
