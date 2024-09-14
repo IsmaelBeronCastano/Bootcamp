@@ -7,6 +7,15 @@ import { sendEmail } from '@notifications/queues/mail.transport';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'emailConsumer', 'debug');
 
+export interface IEmailMessageDetails {
+  receiverEmail?: string;
+  template?: string;
+  verifyLink?: string;
+  resetLink?: string;
+  username?: string;
+  otp?: string;
+}
+
 async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
   try {
     if (!channel) {
@@ -15,9 +24,13 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
     const exchangeName = 'jobber-email-notification';
     const routingKey = 'auth-email';
     const queueName = 'auth-email-queue';
+
     await channel.assertExchange(exchangeName, 'direct');
+
     const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+
     await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+
     channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
       const { receiverEmail, username, verifyLink, resetLink, template, otp } = JSON.parse(msg!.content.toString());
       const locals: IEmailLocals = {
@@ -112,5 +125,31 @@ async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
     log.log('error', 'NotificationService EmailConsumer consumeOrderEmailMessages() method error:', error);
   }
 }
+
+//  async function verifyEmail(channel: Channel): Promise<void>{
+//    try {
+//      if(!channel){
+//        const channel = await createConnection() as Channel
+//      }
+//     const verificationLink= `${config.SENDER_EMAIL}/confirm_email?v_token=123ABC`
+//      const messageDetails: IEmailMessageDetails ={
+//        receiverEmail: `${config.SENDER_EMAIL}`,
+//        verifyLink: verificationLink,
+//        template: 'verifyEmail'
+//      }
+//      const exchangeName = 'jobber-email-notification';
+//      const routingKey = 'auth-email';
+//      const queueName = 'auth-email-queue'
+//      await channel.assertExchange(exchangeName, 'direct')
+
+//      const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+//      await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+//      channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {})}
+
+//      catch(error){
+//       log.log('error', 'NotificationService EmailConsumer verifyEmail() method error:', error);
+//      }}
+
+
 
 export { consumeAuthEmailMessages, consumeOrderEmailMessages };

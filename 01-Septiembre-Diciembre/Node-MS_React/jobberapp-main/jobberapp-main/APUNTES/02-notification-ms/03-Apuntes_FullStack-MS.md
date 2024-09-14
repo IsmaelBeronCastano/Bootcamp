@@ -2282,8 +2282,1247 @@ async function startQueues(): Promise<void> {
   emailChannel.publish('jobber-order-notification', 'order-email', Buffer.from(orderMessage) )
 }
 ~~~
+
+- Ahora tengo dos queues creadas que puedo ver desde la UI de RabbitMQ
+- También los dos exchanges
 ---- 
 
 ## Mail transport method
 
-- 
+- Para ello instalamos en notification-ms email-templates , nodemailer y le generador de templates ejs
+- LLamo a emailTemplates
+- En notification-ms/src/queue/email.tranport.ts
+
+~~~js
+import { config } from '@notifications/config';
+import { emailTemplates } from '@notifications/helpers';
+import { IEmailLocals, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'mailTransport', 'debug');
+
+async function sendEmail(template: string, receiverEmail: string, locals: IEmailLocals): Promise<void> {
+  try {
+    emailTemplates(template, receiverEmail, locals);
+    log.info('Email sent successfully.');
+  } catch (error) {
+    log.log('error', 'NotificationService MailTransport sendEmail() method error:', error);
+  }
+}
+
+export { sendEmail };
+~~~
+
+- En helpers de notification-ms/src tengo el emailTemplates
+- La función recibe el template, el receiver (destinatario), y las locals de tipo IEmailLocals (más abajo está)
+- Creo una instancia de Email de email-templates
+- emailTemplates requiere el template, el receiverEmail y las locals de tipo IEmailLocals
+- Para trabajar en un entorno de producción nodemailer no es válido, solo para testing
+- notification-ms/src/helpers.ts
+
+~~~js
+import path from 'path';
+
+import { IEmailLocals, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import nodemailer, { Transporter } from 'nodemailer';
+import Email from 'email-templates';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'mailTransportHelper', 'debug');
+
+async function emailTemplates(template: string, receiver: string, locals: IEmailLocals): Promise<void> {
+  try {
+                                                //creo el transport de nodeMailer
+    const smtpTransport: Transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email', //usaremos ethereal, hay que crear una cuenta
+      port: 587, //puerto smtp
+      auth: {
+        user: config.SENDER_EMAIL, //cerdenciales en env. (copiar el username de ethereal)
+        pass: config.SENDER_EMAIL_PASSWORD
+      }
+    });
+
+              //importo Email de email-templates
+    const email: Email = new Email({
+      message: {
+        from: `Jobber App <${config.SENDER_EMAIL}>` //mi correo de ethereal
+      },
+      send: true, //en true podemos testearlo
+      preview: false,
+      transport: smtpTransport, //le paso el transport
+      views: {
+        options: {
+          extension: 'ejs' //debo especificar el tipo de engine del template
+        }
+      },
+      juice: true, //habilita el css en el template
+      juiceResources: {
+        preserveImportant: true, //prevalece el flag de html
+        webResources: {
+          relativeTo: path.join(__dirname, '../build')//el path donde haremos el build
+        }
+      }
+    });
+
+  //uso .send y le doy el path de los templates con el template en cuestión
+    await email.send({
+      template: path.join(__dirname, '..', 'src/emails', template),
+      message: { to: receiver }, //destinatario
+      locals
+    });
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export { emailTemplates };
+~~~
+
+- Hay otras maneras de componer emails con template strings 
+- La interfaz de email en jobber-shared/src
+
+~~~js
+export interface IEmailLocals {
+  sender?: string;
+  appLink: string;
+  appIcon: string;
+  offerLink?: string;
+  amount?: string;
+  buyerUsername?: string;
+  sellerUsername?: string;
+  title?: string;
+  description?: string;
+  deliveryDays?: string;
+  orderId?: string;
+  orderDue?: string;
+  requirements?: string;
+  orderUrl?: string;
+  originalDate?: string;
+  newDate?: string;
+  reason?: string;
+  subject?: string;
+  header?: string;
+  type?: string;
+  message?: string;
+  serviceFee?: string;
+  total?: string;
+  username?: string;
+  verifyLink?: string;
+  resetLink?: string;
+  otp?: string;
+}
+~~~
+
+- En notification-ms/src/queues/email.consumer.ts desestructuro las variables, uso toString para usar el JSON.parse y pasarlo a JSON
+- Genero el objeto locals
+- Le paso a sendEmail el template, el destinatario y las locals
+- Una vez enviado el mail uso .ack para eliminar la queue
+
+~~~js
+import { config } from '@notifications/config';
+import { IEmailLocals, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@notifications/queues/connection';
+import { sendEmail } from '@notifications/queues/mail.transport';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'emailConsumer', 'debug');
+
+async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
+  //lo coloco todo en un try catch
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    const exchangeName = 'jobber-email-notification';
+    const routingKey = 'auth-email';
+    const queueName = 'auth-email-queue';
+
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+                                                  
+                                                  //tipo de amqplib
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+
+      //desestructuro las variables                                           Uso toString para pasarlo a JSON
+      const { receiverEmail, username, verifyLink, resetLink, template, otp } = JSON.parse(msg!.content.toString());
+
+      //creo las locals
+      const locals: IEmailLocals = {
+        appLink: `${config.CLIENT_URL}`, //url frontend
+        appIcon: 'https://i.ibb.co/Kyp2m0t/cover.png',
+        username,
+        verifyLink,
+        resetLink,
+        otp
+      };
+
+      await sendEmail(template, receiverEmail, locals);
+      //Una vez enviado el email uso .ack para finalizar y quitar la queue
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService EmailConsumer consumeAuthEmailMessages() method error:', error);
+  }
+}
+
+
+export { consumeAuthEmailMessages};
+~~~
+
+- En notidication-ms/src/emails tengo las diferentes carpetas
+  - forgotPassword
+  - offer
+  - orderDelivered
+  - orderExtension
+  - orderExtensionApproval
+  - orderPlaced
+  - orderReceipt
+  - otpEmail
+  - resetPasswordSuccess
+  - verifyEmail
+- Veamos verifyEmail
+  - Tengo el **html.ejs** y el **subject.ejs**
+- Docs en npm /email-templates
+- html.ejs
+
+~~~html
+<div>
+  <div></div>
+  <div tabindex="-1"></div>
+  <div
+  >
+   <div id=":ut" class="a3s aiL msg8498267932913214134">
+    <u></u>
+    <u></u>
+
+    <div style="height: 100%; margin: 0; padding: 0; width: 100%; background-color: #f5f4f2;">
+     <center>
+      <table
+       align="center"
+       border="0"
+       cellpadding="0"
+       cellspacing="0"
+       height="100%"
+       width="100%"
+       style="border-collapse: collapse; height: 100%; margin: 0; padding: 0; width: 100%; background-color: #f5f4f2;"
+      >
+       <tbody>
+        <tr>
+         <td align="center" valign="top" id="m_8498267932913214134bodyCell" style="height: 100%; margin: 0; padding: 8px; width: 100%; border-top: 0;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" class="m_8498267932913214134templateContainer" style="border-collapse: collapse; border: 0; border-radius: 16px; max-width: 600px;">
+           <tbody>
+            <tr>
+             <td
+              valign="top"
+              id="m_8498267932913214134templateHeader"
+              style="
+               background-color: #ffffff;
+               background-image: none;
+               background-repeat: no-repeat;
+               background-position: center;
+               background-size: cover;
+               border-top: 0;
+               border-bottom: 0;
+               padding-top: 0px;
+               padding-bottom: 0px;
+               border-radius: 16px 16px 0 0;
+              "
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top" style="padding: 16px;">
+                  <table align="left" width="100%" border="0" cellpadding="0" cellspacing="0" style="min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td valign="top" style="padding: 16px; text-align: center;">
+                      <a
+                       href="<%= appLink %>"
+                       style="line-height: inherit; color: #4aa1f3; font-weight: normal; text-decoration: underline;"
+                       target="_blank"
+                      >
+                       <img
+                        align="center"
+                        alt="Proton"
+                        src="<%= appIcon %>"
+                        width="190"
+                        style="
+                         width: 35.4477%;
+                         max-width: 380px;
+                         padding-bottom: 0;
+                         vertical-align: bottom;
+                         border: 0;
+                         height: auto;
+                         outline: none;
+                         text-decoration: none;
+                         font-family: Arial, Helvetica, sans-serif;
+                         font-size: 16px;
+                         line-height: 1.5em;
+                         color: #4aa1f3;
+                         display: inline;
+                        "
+                        data-image-whitelisted=""
+                        class="CToWUd"
+                        data-bit="iit"
+                       />
+                      </a>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+             </td>
+            </tr>
+            <tr>
+             <td
+              valign="top"
+              style="background-color: #ffffff; background-image: none; background-repeat: no-repeat; background-position: center; background-size: cover; border-top: 0; border-bottom: 0; padding-top: 8px; padding-bottom: 8px;"
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse; table-layout: fixed;">
+               <tbody>
+                <tr>
+                 <td style="min-width: 100%; padding: 0 32px 0px 32px;">
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-top: 1px solid #f5f4f2; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td>
+                      <span></span>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top">
+                  <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 100%; min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td
+                      valign="top"
+                      style="
+                       word-break: break-word;
+                       color: #0c0c14;
+                       font-family: Arial, Helvetica, sans-serif;
+                       font-size: 16px;
+                       line-height: 1.5em;
+                       text-align: left;
+                       padding-top: 8px;
+                       padding-bottom: 12px;
+                       padding-right: 32px;
+                       padding-left: 32px;
+                      "
+                     >
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                        Welcome to Jobber!
+                      </p>
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                        In order to get
+                        started, you need to
+                        verify your email
+                        address.
+                      </p>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top" align="left" style="text-align: center; padding-left: 32px; padding-right: 32px; padding-top: 0px; padding-bottom: 32px;">
+                  <table
+                   border="0"
+                   cellpadding="0"
+                   cellspacing="0"
+                   style="border-radius: 8px; background-color: #4aa1f3; margin-left: auto; margin-right: auto; border-collapse: separate;"
+                  >
+                   <tbody>
+                    <tr>
+                     <td
+                      align="center"
+                      valign="middle"
+                      style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; padding-left: 32px; padding-right: 32px; padding-top: 12px; padding-bottom: 12px;"
+                     >
+                      <a
+                       href="<%= verifyLink %>"
+                       style="font-weight: normal; letter-spacing: 1px; line-height: 1.5em; text-align: center; text-decoration: none; color: #ffffff; display: block;"
+                       target="_blank"
+                      >
+                       Verify email address
+                      </a>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top">
+                  <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 100%; min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td
+                      valign="top"
+                      class="m_8498267932913214134mcnTextContent"
+                      style="
+                       word-break: break-word;
+                       color: #0c0c14;
+                       font-family: Arial, Helvetica, sans-serif;
+                       font-size: 16px;
+                       line-height: 1.5em;
+                       text-align: left;
+                       padding-top: 8px;
+                       padding-bottom: 12px;
+                       padding-right: 32px;
+                       padding-left: 32px;
+                      "
+                     >
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                       Best,<br />
+                       The Jobber Team
+                      </p>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+             </td>
+            </tr>
+            <!-- <tr>
+             <td
+              valign="top"
+              id="m_8498267932913214134templateFooter"
+              style="
+               background-color: #ffffff;
+               background-image: none;
+               background-repeat: no-repeat;
+               background-position: center;
+               background-size: cover;
+               border-top: 0;
+               border-bottom: 0;
+               padding-top: 16px;
+               padding-bottom: 16px;
+               border-radius: 0 0 16px 16px;
+              "
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse; table-layout: fixed;">
+               <tbody>
+                <tr>
+                 <td style="min-width: 100%; padding: 0 32px 16px 32px;">
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-top: 1px solid #f5f4f2; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td>
+                      <span></span>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+
+             </td>
+            </tr> -->
+           </tbody>
+          </table>
+         </td>
+        </tr>
+       </tbody>
+      </table>
+     </center>
+    </div>
+   </div>
+  </div>
+ </div>
+~~~
+
+- En subject.ejs (el subject del email)
+
+~~~
+Reset your Jobber Password
+~~~
+
+- Se ve el uso de las variables en el template en el html.ejs de orderPlaced
+- notification-ms/src/emails/orderPlaced/html.ejs
+
+~~~html
+<div>
+  <div></div>
+  <div tabindex="-1"></div>
+  <div>
+    <div>
+      <u></u>
+
+      <div style="margin: 0 !important; padding: 0 !important;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tbody>
+            <tr>
+              <td width="100%" align="center" valign="top" bgcolor="#eeeeee" height="20"></td>
+            </tr>
+            <tr>
+              <td bgcolor="#eeeeee" align="center" style="padding: 0px 15px 0px 15px;">
+                <table bgcolor="#ffffff" border="0" cellpadding="0" cellspacing="0" width="100%"
+                  style="max-width: 600px;">
+                  <tbody>
+                    <tr>
+                      <td>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                          <tbody>
+                            <tr>
+                              <td align="center" style="padding: 40px 40px 0px 40px;">
+                                <a href="<%= appLink %>" target="_blank">
+                                  <img src="<%= appIcon %>" width="70" border="0" style="vertical-align: middle;"
+                                    class="CToWUd" data-bit="iit" />
+                                </a>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center"
+                                style="font-size: 18px; color: #0e0e0f; font-weight: 700; font-family: Helvetica Neue; line-height: 28px; vertical-align: top; text-align: center; padding: 35px 40px 0px 40px;">
+                                <strong>
+                                  You just received an order from <%= buyerUsername %><br />
+                                    Please review the requirements below:
+                                </strong>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td align="center" bgcolor="#ffffff" height="1" style="padding: 40px 40px 5px;"
+                                valign="top" width="100%">
+                                <table cellpadding="0" cellspacing="0" width="100%">
+                                  <tbody>
+                                    <tr>
+                                      <td style="border-top: 1px solid #e4e4e4;"></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td
+                                style="font: 16px/22px 'Helvetica Neue', Arial, 'sans-serif'; text-align: left; color: #555555; padding: 40px 40px 0 40px;">
+                                <p>
+                                  Hi <%= sellerUsername %>,
+                                </p>
+                                <p>
+                                  You've just received an order from <%= buyerUsername %>! Feels good, right?<br />
+                                  Order
+                                  <a href="<%= orderUrl %>"
+                                    style="color: #4aa1f3; text-decoration: none;" target="_blank"
+                                    >
+                                    #<%= orderId %>
+                                  </a>
+                                  is due <strong>
+                                    <%= orderDue %>
+                                  </strong>.
+                                </p>
+
+                                <table align="center" style="color: #555555; margin: 0; width: 100%;">
+                                  <tbody>
+                                    <tr>
+                                      <td style="color: #555555; border: 1px solid #aeaeae; border-radius: 3px;">
+                                        <table cellspacing="0" cellpadding="8"
+                                          style="border: none; border-bottom: 1px solid #aeaeae; width: 100%; font-family: arial;">
+                                          <tbody>
+                                            <tr>
+                                              <td
+                                                style="color: #000000; border-bottom: 1px solid #aeaeae; font-weight: bold; text-align: left;">
+                                                Item
+                                              </td>
+                                              <td
+                                                style="color: #000000; border-bottom: 1px solid #aeaeae; font-weight: bold; width: 20%;">
+                                                Qty
+                                              </td>
+                                              <td
+                                                style="color: #000000; border-bottom: 1px solid #aeaeae; font-weight: bold; width: 40px; text-align: right;">
+                                                Price
+                                              </td>
+                                            </tr>
+                                            <tr>
+                                              <td
+                                                style="color: #555555; font-weight: bold; text-align: left; border-right: 1px solid #aeaeae; border-bottom: 1px solid #aeaeae;">
+                                                <%= title %> -
+                                                  <span style="font-weight: normal;">
+                                                    <%= description %>
+                                                  </span>
+                                              </td>
+
+                                              <td
+                                                style="color: #555555; border-right: 1px solid #aeaeae; border-bottom: 1px solid #aeaeae;">
+                                                × 1</td>
+                                              <td
+                                                style="text-align: right; color: #555555; border-bottom: 1px solid #aeaeae;">
+                                                $<%= amount %>
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                        <div
+                                          style="text-align: right; padding: 10px 8px 10px 0px; color: #000000; font-size: 16px; font-family: arial; font-weight: 700;">
+                                          Total: $<%= amount %>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                                <p style="font-weight: 500; padding-top: 20px;">
+                                  The buyer has provided the following order requirements:
+                                </p>
+
+                                <ol style="margin: 0; padding: 0 20px;">
+                                  <li>
+                                    <p style="margin-bottom: 0;">Requirements</p>
+
+                                    <p style="margin: 0;">
+                                      <%= requirements %>
+                                    </p>
+                                  </li>
+                                </ol>
+
+                                <table cellpadding="0" cellspacing="0" width="100%" style="margin-top: 50px;">
+                                  <tbody>
+                                    <tr>
+                                      <td style="border-top: 1px solid #e4e4e4;"></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0"
+                                  style="margin: 30px 0px;">
+                                  <tbody>
+                                    <tr>
+                                      <td align="center" style="text-align: center;">
+                                        <p
+                                          style="font: 16px/22px 'Helvetica Neue', Arial, 'sans-serif'; text-align: center; color: #555555; padding: 0 0 20px 0; margin: 0;">
+                                          Got everything you need?
+                                        </p>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td align="center" style="text-align: center;">
+                                        <a name="m_-4412857948817324922_CTA" bgcolor="#1dbf73" style="
+                                            color: #ffffff;
+                                            background-color: #4aa1f3;
+                                            display: inline-block;
+                                            font-family: Helvetica Neue;
+                                            font-size: 16px;
+                                            line-height: 30px;
+                                            text-align: center;
+                                            font-weight: bold;
+                                            text-decoration: none;
+                                            padding: 5px 20px;
+                                            border-radius: 3px;
+                                            text-transform: none;"
+                                          href="<%= orderUrl %>" target="_blank">
+                                          View Order
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td width="100%" align="center" valign="top" bgcolor="#ffffff" height="45"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+~~~
+
+- Hago uso en el notification-ms/src/server.ts usando el emailChannel
+
+~~~js
+import 'express-async-errors';
+import http from 'http';
+
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@notifications/config';
+import { Application } from 'express';
+import { healthRoutes } from '@notifications/routes';
+import { checkConnection } from '@notifications/elasticsearch';
+import { createConnection } from '@notifications/queues/connection';
+import { Channel } from 'amqplib';
+import { consumeAuthEmailMessages, consumeOrderEmailMessages } from '@notifications/queues/email.consumer';
+
+const SERVER_PORT = 4001;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationServer', 'debug');
+
+export function start(app: Application): void {
+  startServer(app);
+  app.use('', healthRoutes());
+  startQueues();
+  startElasticSearch();
+}
+
+async function startQueues(): Promise<void> {
+  const emailChannel: Channel = await createConnection() as Channel;
+  await consumeAuthEmailMessages(emailChannel);
+  //await consumeOrderEmailMessages(emailChannel);
+
+}
+
+function startElasticSearch(): void {
+  checkConnection();
+}
+
+function startServer(app: Application): void {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Worker with process id of ${process.pid} on notification server has started`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Notification server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService startServer() method:', error);
+  }
+}
+~~~
+------
+
+- La interfaz en jobber-shared/src/auth.interface
+
+~~~js
+export interface IEmailMessageDetails {
+  receiverEmail?: string;
+  template?: string;
+  verifyLink?: string;
+  resetLink?: string;
+  username?: string;
+  otp?: string;
+}
+~~~
+
+
+- Faltaría ejecutarlo en el server pasándole el channel
+- El html.ejs de verifyEmail
+
+~~~html
+<div>
+  <div></div>
+  <div tabindex="-1"></div>
+  <div
+  >
+   <div id=":ut" class="a3s aiL msg8498267932913214134">
+    <u></u>
+    <u></u>
+
+    <div style="height: 100%; margin: 0; padding: 0; width: 100%; background-color: #f5f4f2;">
+     <center>
+      <table
+       align="center"
+       border="0"
+       cellpadding="0"
+       cellspacing="0"
+       height="100%"
+       width="100%"
+       style="border-collapse: collapse; height: 100%; margin: 0; padding: 0; width: 100%; background-color: #f5f4f2;"
+      >
+       <tbody>
+        <tr>
+         <td align="center" valign="top" id="m_8498267932913214134bodyCell" style="height: 100%; margin: 0; padding: 8px; width: 100%; border-top: 0;">
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" class="m_8498267932913214134templateContainer" style="border-collapse: collapse; border: 0; border-radius: 16px; max-width: 600px;">
+           <tbody>
+            <tr>
+             <td
+              valign="top"
+              id="m_8498267932913214134templateHeader"
+              style="
+               background-color: #ffffff;
+               background-image: none;
+               background-repeat: no-repeat;
+               background-position: center;
+               background-size: cover;
+               border-top: 0;
+               border-bottom: 0;
+               padding-top: 0px;
+               padding-bottom: 0px;
+               border-radius: 16px 16px 0 0;
+              "
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top" style="padding: 16px;">
+                  <table align="left" width="100%" border="0" cellpadding="0" cellspacing="0" style="min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td valign="top" style="padding: 16px; text-align: center;">
+                      <a
+                       href="<%= appLink %>"
+                       style="line-height: inherit; color: #4aa1f3; font-weight: normal; text-decoration: underline;"
+                       target="_blank"
+                      >
+                       <img
+                        align="center"
+                        alt="Proton"
+                        src="<%= appIcon %>"
+                        width="190"
+                        style="
+                         width: 35.4477%;
+                         max-width: 380px;
+                         padding-bottom: 0;
+                         vertical-align: bottom;
+                         border: 0;
+                         height: auto;
+                         outline: none;
+                         text-decoration: none;
+                         font-family: Arial, Helvetica, sans-serif;
+                         font-size: 16px;
+                         line-height: 1.5em;
+                         color: #4aa1f3;
+                         display: inline;
+                        "
+                        data-image-whitelisted=""
+                        class="CToWUd"
+                        data-bit="iit"
+                       />
+                      </a>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+             </td>
+            </tr>
+            <tr>
+             <td
+              valign="top"
+              style="background-color: #ffffff; background-image: none; background-repeat: no-repeat; background-position: center; background-size: cover; border-top: 0; border-bottom: 0; padding-top: 8px; padding-bottom: 8px;"
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse; table-layout: fixed;">
+               <tbody>
+                <tr>
+                 <td style="min-width: 100%; padding: 0 32px 0px 32px;">
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-top: 1px solid #f5f4f2; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td>
+                      <span></span>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top">
+                  <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 100%; min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td
+                      valign="top"
+                      style="
+                       word-break: break-word;
+                       color: #0c0c14;
+                       font-family: Arial, Helvetica, sans-serif;
+                       font-size: 16px;
+                       line-height: 1.5em;
+                       text-align: left;
+                       padding-top: 8px;
+                       padding-bottom: 12px;
+                       padding-right: 32px;
+                       padding-left: 32px;
+                      "
+                     >
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                        Welcome to Jobber!
+                      </p>
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                        In order to get
+                        started, you need to
+                        verify your email
+                        address.
+                      </p>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top" align="left" style="text-align: center; padding-left: 32px; padding-right: 32px; padding-top: 0px; padding-bottom: 32px;">
+                  <table
+                   border="0"
+                   cellpadding="0"
+                   cellspacing="0"
+                   style="border-radius: 8px; background-color: #4aa1f3; margin-left: auto; margin-right: auto; border-collapse: separate;"
+                  >
+                   <tbody>
+                    <tr>
+                     <td
+                      align="center"
+                      valign="middle"
+                      style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; padding-left: 32px; padding-right: 32px; padding-top: 12px; padding-bottom: 12px;"
+                     >
+                      <a
+                       href="<%= verifyLink %>"
+                       style="font-weight: normal; letter-spacing: 1px; line-height: 1.5em; text-align: center; text-decoration: none; color: #ffffff; display: block;"
+                       target="_blank"
+                      >
+                       Verify email address
+                      </a>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse;">
+               <tbody>
+                <tr>
+                 <td valign="top">
+                  <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 100%; min-width: 100%; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td
+                      valign="top"
+                      class="m_8498267932913214134mcnTextContent"
+                      style="
+                       word-break: break-word;
+                       color: #0c0c14;
+                       font-family: Arial, Helvetica, sans-serif;
+                       font-size: 16px;
+                       line-height: 1.5em;
+                       text-align: left;
+                       padding-top: 8px;
+                       padding-bottom: 12px;
+                       padding-right: 32px;
+                       padding-left: 32px;
+                      "
+                     >
+                      <p style="padding: 0px; color: #0c0c14; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5em; text-align: left; margin: 12px 0px;">
+                       Best,<br />
+                       The Jobber Team
+                      </p>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+             </td>
+            </tr>
+            <!-- <tr>
+             <td
+              valign="top"
+              id="m_8498267932913214134templateFooter"
+              style="
+               background-color: #ffffff;
+               background-image: none;
+               background-repeat: no-repeat;
+               background-position: center;
+               background-size: cover;
+               border-top: 0;
+               border-bottom: 0;
+               padding-top: 16px;
+               padding-bottom: 16px;
+               border-radius: 0 0 16px 16px;
+              "
+             >
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-collapse: collapse; table-layout: fixed;">
+               <tbody>
+                <tr>
+                 <td style="min-width: 100%; padding: 0 32px 16px 32px;">
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="min-width: 100%; border-top: 1px solid #f5f4f2; border-collapse: collapse;">
+                   <tbody>
+                    <tr>
+                     <td>
+                      <span></span>
+                     </td>
+                    </tr>
+                   </tbody>
+                  </table>
+                 </td>
+                </tr>
+               </tbody>
+              </table>
+
+             </td>
+            </tr> -->
+           </tbody>
+          </table>
+         </td>
+        </tr>
+       </tbody>
+      </table>
+     </center>
+    </div>
+   </div>
+  </div>
+ </div>
+~~~
+
+- Puedo mirar en el template las variables que necesito y pasárselas en el Buffer dentro de un objeto message
+- Para forgotPassword usaría un objeto como este
+
+~~~js
+const messageDetails: IEmailMessageDetails={
+  receiverEmail: `${config.SENDER_EMAIL}`,
+  resetLink: verificationLink,
+  username: 'Manuel'.
+  template: 'fotgotPassword'
+}
+
+channel.publish('jobber-email-notification', 'auth-email', Buffer.from(message))
+~~~
+
+- Puedo ver en elasticSearch/Observability/Logs Email Sent Succesfully
+- Es lo que puse en el transport
+- El link del template me dará un url en el frontend desde donde extraer el token y hacer la verificación
+-----
+
+## Add send email to order consume
+
+- Para las diferentes variantes copio el código **hasta channel.consume** cambiando las variable de queueName y la routuingKey
+- La data para extraer con la desestructuración está en la interfaz **IEmailLocals**
+- El mail para enviar cuando la orden es este
+
+~~~js
+async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    const exchangeName = 'jobber-order-notification';
+    const routingKey = 'order-email';
+    const queueName = 'order-email-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const {
+        receiverEmail,
+        username,
+        template,
+        sender,
+        offerLink,
+        amount,
+        buyerUsername,
+        sellerUsername,
+        title,
+        description,
+        deliveryDays,
+        orderId,
+        orderDue,
+        requirements,
+        orderUrl,
+        originalDate,
+        newDate,
+        reason,
+        subject,
+        header,
+        type,
+        message,
+        serviceFee,
+        total     //desestructuro el msg de toString a JSON.parse 
+      } = JSON.parse(msg!.content.toString());
+
+      //son las variables a desplegar en el email-template
+      const locals: IEmailLocals = {
+        appLink: `${config.CLIENT_URL}`,
+        appIcon: 'https://i.ibb.co/Kyp2m0t/cover.png',
+        username,
+        sender,
+        offerLink,
+        amount,
+        buyerUsername,
+        sellerUsername,
+        title,
+        description,
+        deliveryDays,
+        orderId,
+        orderDue,
+        requirements,
+        orderUrl,
+        originalDate,
+        newDate,
+        reason,
+        subject,
+        header,
+        type,
+        message,
+        serviceFee,
+        total
+      };
+      if (template === 'orderPlaced') { //enviamos la orden y el recibo
+        await sendEmail('orderPlaced', receiverEmail, locals);
+        await sendEmail('orderReceipt', receiverEmail, locals);
+      } else {
+        await sendEmail(template, receiverEmail, locals);
+      }
+      channel.ack(msg!); //borro la queue
+    });
+  } catch (error) {
+    log.log('error', 'NotificationService EmailConsumer consumeOrderEmailMessages() method error:', error);
+  }
+}
+~~~
+------
+
+## Setup Jest
+
+----
+- El Dockerfile.dev
+- Declaro la imagen de Node
+- Declaro el directorio donde voy a trabajar
+- Copio el package.json en la raiz
+- Copio diferentes directorios
+- Con RUN ejecuto npm i e instalo nodemon globalmente
+- Uso los comandos npm run dev
+
+~~~Dockerfile
+FROM node:21-alpine3.18
+
+WORKDIR /app  
+COPY package.json ./
+COPY tsconfig.json ./
+COPY .npmrc ./
+COPY src ./src
+COPY tools ./tools
+RUN ls -a
+RUN npm install && npm install -g nodemon
+
+EXPOSE 4001
+
+CMD [ "npm", "run", "dev" ]
+~~~
+
+- Docker.ignore
+
+~~~
+node_modules
+.git/
+Dockerfile
+.dockerignore
+coverage/
+~~~
+
+- Añado  notification service en docker-compose
+
+~~~yaml
+  notifications:
+    container_name: notification_container
+    build:
+      context: ../server/2-notification-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4001:4001
+    env_file: ../server/2-notification-service/.env
+    environment:
+      - ENABLE_APM=1
+      - NODE_ENV=development
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://jobber:jobberpass@rabbitmq_container:5672
+      - SENDER_EMAIL=lysanne.rutherford88@ethereal.email
+      - SENDER_EMAIL_PASSWORD=ad8y45AkfebKmW8rCV
+      - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+~~~
+
+- Production Dockerfile
+
+~~~Dockerfile
+FROM node:21-alpine3.18 as builder
+
+WORKDIR /app
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY .npmrc ./
+COPY src ./src
+COPY tools ./tools
+RUN npm install -g npm@latest
+RUN npm ci && npm run build
+
+FROM node:21-alpine3.18
+
+WORKDIR /app
+RUN apk add --no-cache curl
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY .npmrc ./
+RUN npm install -g pm2 npm@latest
+RUN npm ci --production
+COPY --from=builder /app/build ./build
+
+EXPOSE 4001
+
+CMD [ "npm", "run", "start" ]
+~~~
+
+- Los scripts en el package.json
+
+~~~json
+  "scripts": {
+    "start": "pm2 start ./build/src/app.js -i 5 --attach --watch | pino-pretty -c",
+    "stop": "pm2 stop all",
+    "delete": "pm2 delete all",
+    "dev": "nodemon -r tsconfig-paths/register src/app.ts | pino-pretty -c",
+    "lint:check": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "prettier:check": "prettier --check 'src/**/*.{ts,json}'",
+    "prettier:fix": "prettier --write 'src/**/*.{ts,json}'",
+    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json && ts-node tools/copyAssets.ts",
+    "test": "jest --coverage=true -w=1 --forceExit --detectOpenHandles --watchAll=false"
+  },
+~~~
