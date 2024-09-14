@@ -1903,4 +1903,180 @@ networks:
     name: elastic
 ~~~
 
+- En jobber-shared instalo
 
+> npm i -D @babel/cli @babel/preset-env @babel/preset-typescript @types/express @types/jsonwebtoken
+
+- En jobber-shared/scripts
+- babel.preset.js
+
+~~~js
+const BABEL_ENV = process.env.BABEL_ENV;
+const isCommonJS = BABEL_ENV !== undefined && BABEL_ENV === 'cjs';
+const isESM = BABEL_ENV !== undefined && BABEL_ENV === 'esm';
+
+module.exports = () => ({
+  presets: [
+    ['@babel/preset-typescript'],
+    [
+      '@babel/env',
+      {
+        bugfixes: true,
+        loose: true,
+        modules: isCommonJS ? 'commonjs' : false,
+        targets: {
+          esmodules: isESM ? true : undefined,
+          chrome: 70,
+        },
+      },
+    ],
+  ],
+});
+~~~
+
+- En /build-package.js
+
+~~~js
+const BABEL_ENV = process.env.BABEL_ENV;
+const isCommonJS = BABEL_ENV !== undefined && BABEL_ENV === 'cjs';
+const isESM = BABEL_ENV !== undefined && BABEL_ENV === 'esm';
+
+module.exports = () => ({
+  presets: [
+    ['@babel/preset-typescript'],
+    [
+      '@babel/env',
+      {
+        bugfixes: true,
+        loose: true,
+        modules: isCommonJS ? 'commonjs' : false,
+        targets: {
+          esmodules: isESM ? true : undefined,
+          chrome: 70,
+        },
+      },
+    ],
+  ],
+});
+~~~
+
+- En keyowrds/name pongo mi usuario de github, lo que usaré para compartir los archivos helpers
+
+~~~json
+{
+  "version": "0.0.1",
+  "license": "MIT",
+  "types": "./src/index.d.ts",
+  "description": "Helpers library for Jobber app",
+  "scripts": {
+    "build": "npm run build:cjs && npm run build:esm && tsc --outDir build/src && node scripts/build-package.js",
+    "build:cjs": "NODE_ENV=production BABEL_ENV=cjs babel src --presets=./scripts/babel-preset.js --extensions .ts,.tsx --ignore src/**/*.specs.tsx --out-dir build/cjs --source-maps",
+    "build:esm": "NODE_ENV=production BABEL_ENV=esm babel src --presets=./scripts/babel-preset.js --extensions .ts,.tsx --ignore src/**/*.specs.tsx --out-dir build/esm --source-maps"
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "keywords": [],
+  "name": "@mi_usuario_github/jobber-shared", //para compartir e importar los archivos
+  "author": "Yo",
+  "repository": {
+    "type": "git",
+    "url": "la dirección de mi proyecto en github"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "files": [
+    "build",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "require": "./src/index.js"
+    }
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^8.13.0",
+    "cloudinary": "^2.1.0",
+    "express": "^4.19.2",
+    "http-status-codes": "^2.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.2.4",
+    "typescript": "^5.4.3",
+    "winston": "^3.13.0",
+    "winston-elasticsearch": "^0.18.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.1",
+    "@babel/preset-env": "^7.24.3",
+    "@babel/preset-typescript": "^7.24.1",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6"
+  }
+}
+~~~
+
+- El ts.config de jobber-shared
+
+~~~js
+{
+  "compilerOptions": {
+    "declaration": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "importHelpers": true,
+    "lib": ["DOM", "esnext"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "outDir": "build",
+    "rootDir": "./src",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es5",
+    "emitDecoratorMetadata": true,
+    "forceConsistentCasingInFileNames": true,
+    "pretty": true,
+    "resolveJsonModule": true,
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
+~~~
+
+- El .editorconfig (ayuda al trabajo en equipo)
+
+~~~
+# EditorConfig is awesome: https://EditorConfig.org
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{ts,js}]
+quote_type = single
+
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false
+~~~
+
+- Creo un proyecto solo para joober-shared en github
+- Creo un token en github (Personal access tokens/Tokens (classis))
+- Creo un archivo .npmrc en la raiz de jobber-shared
+
+~~~
+@uzochukwueddie:registry=https://npm.pkg.github.com/uzochukwueddie
+//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+~~~

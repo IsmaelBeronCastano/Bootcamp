@@ -6,7 +6,8 @@
 
 > npm i **cloudinary**
 
-- En microservices/jobber-shared/src/cloudinary-upload.ts
+- En jobber-shared/src/cloudinary-upload.ts
+- **NOTA**: jobber-shared es un repo en gitu¡hub, una biblioteca hecha por mi con archivos helpers. En el primer pdf se explica cómo usarla
 
 ~~~js
 import cloudinary, { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
@@ -17,7 +18,8 @@ export function uploads(
   overwrite?: boolean,
   invalidate?: boolean
 ): Promise<UploadApiResponse | UploadApiErrorResponse | undefined> {
-  return new Promise((resolve) => {
+ 
+ return new Promise((resolve) => {
     cloudinary.v2.uploader.upload(
       file,
       {
@@ -167,6 +169,8 @@ export interface ErrnoException extends Error {
   - El payload.id debe de estar en el arreglo, si no rechazará la conexión
   - Pasaremos el token en los headers
   -  Uso el método .verify de jwt para verificar el token  
+- jobber-shared/src/gateway-middleware.ts
+
 ~~~js
 import JWT from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
@@ -203,6 +207,8 @@ export function verifyGatewayRequest(req: Request, _res: Response, next: NextFun
 > npm i winston winston-elasticsearch
 
 - Los logs serán enviados a elasticsearch y desplegados por kibana
+- jobber-shared/src/logger.ts
+
 ~~~js
 import winston, { Logger } from 'winston';
 import { ElasticsearchTransformer, ElasticsearchTransport, LogData, TransformedData } from 'winston-elasticsearch';
@@ -244,6 +250,8 @@ export const winstonLogger = (elasticsearchNode: string, name: string, level: st
 -----
 
 ## Helpers
+
+- jobber-shared/src/helpers.ts
 
 ~~~js
 export function firstLetterUppercase(str: string): string {
