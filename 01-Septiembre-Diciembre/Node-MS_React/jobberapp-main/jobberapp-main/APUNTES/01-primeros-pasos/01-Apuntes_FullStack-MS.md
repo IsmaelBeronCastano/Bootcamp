@@ -1984,7 +1984,7 @@ module.exports = () => ({
   "author": "Yo",
   "repository": {
     "type": "git",
-    "url": "la dirección de mi proyecto en github"
+    "url": "git+https://mi_user/mi_repo.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
@@ -2074,7 +2074,7 @@ trim_trailing_whitespace = false
 
 - Creo un proyecto solo para joober-shared en github
 - Creo un token en github (Personal access tokens/Tokens (classis))
-- Creo un archivo .npmrc en la raiz de jobber-shared
+- Creo un archivo **.npmrc** en la raiz de jobber-shared
 
 ~~~
 @uzochukwueddie:registry=https://npm.pkg.github.com/uzochukwueddie
