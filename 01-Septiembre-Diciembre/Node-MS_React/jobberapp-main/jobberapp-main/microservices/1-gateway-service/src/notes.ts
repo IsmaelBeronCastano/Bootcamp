@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import { CustomError, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
 import { Server } from 'socket.io';
 import { StatusCodes } from 'http-status-codes';
+import { elasticSearch } from './elasticsearch';
 
 
 const SERVER_PORT = 4000;
@@ -70,7 +71,7 @@ export class GatewayServer {
   }
 
   private startElasticSearch(): void{
-
+    elasticSearch.checkConnection()
   }
 
   private errorHandler(app: Application){

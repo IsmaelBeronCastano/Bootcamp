@@ -683,5 +683,391 @@ class Application {
 
 const application: Application = new Application();
 application.initialize();
-
 ~~~
+
+- El api-gateway/src/config.ts
+
+~~~js
+import dotenv from 'dotenv';
+
+dotenv.config({});
+
+if (process.env.ENABLE_APM === '1') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('elastic-apm-node').start({
+    serviceName: 'jobber-gateway',
+    serverUrl: process.env.ELASTIC_APM_SERVER_URL,
+    secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
+    environment: process.env.NODE_ENV,
+    active: true,
+    captureBody: 'all',
+    errorOnAbortedRequests: true,
+    captureErrorLogStackTraces: 'always'
+  });
+}
+
+class Config {
+  public JWT_TOKEN: string | undefined;
+  public GATEWAY_JWT_TOKEN: string | undefined;
+  public NODE_ENV: string | undefined;
+  public SECRET_KEY_ONE: string | undefined;
+  public SECRET_KEY_TWO: string | undefined;
+  public CLIENT_URL: string | undefined;
+  public AUTH_BASE_URL: string | undefined;
+  public USERS_BASE_URL: string | undefined;
+  public GIG_BASE_URL: string | undefined;
+  public MESSAGE_BASE_URL: string | undefined;
+  public ORDER_BASE_URL: string | undefined;
+  public REVIEW_BASE_URL: string | undefined;
+  public REDIS_HOST: string | undefined;
+  public ELASTIC_SEARCH_URL: string | undefined;
+
+  constructor() {
+    this.JWT_TOKEN = process.env.JWT_TOKEN || '1234';
+    this.GATEWAY_JWT_TOKEN = process.env.GATEWAY_JWT_TOKEN || '1234';
+    this.NODE_ENV = process.env.NODE_ENV || '';
+    this.SECRET_KEY_ONE = process.env.SECRET_KEY_ONE || '';
+    this.SECRET_KEY_TWO = process.env.SECRET_KEY_TWO || '';
+    this.CLIENT_URL = process.env.CLIENT_URL || '';
+    this.AUTH_BASE_URL = process.env.AUTH_BASE_URL || '';
+    this.USERS_BASE_URL = process.env.USERS_BASE_URL || '';
+    this.GIG_BASE_URL = process.env.GIG_BASE_URL || '';
+    this.MESSAGE_BASE_URL = process.env.MESSAGE_BASE_URL || '';
+    this.ORDER_BASE_URL = process.env.ORDER_BASE_URL || '';
+    this.REVIEW_BASE_URL = process.env.REVIEW_BASE_URL || '';
+    this.REDIS_HOST = process.env.REDIS_HOST || '';
+    this.ELASTIC_SEARCH_URL = process.env.ELASTIC_SEARCH_URL || '';
+  }
+}
+
+export const config: Config = new Config();
+~~~
+
+- Por lo tanto, el .env será algo así
+
+~~~js
+ENABLE_APM=0
+GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+NODE_ENV=development
+SECRET_KEY_ONE=032c5c3cfc37938ae6dd43d3a3ec7834
+SECRET_KEY_TWO=d66e377018c0bc0b5772bbc9b131e6d9
+CLIENT_URL=http://localhost:3000
+AUTH_BASE_URL=http://localhost:4002
+USERS_BASE_URL=http://localhost:4003
+GIG_BASE_URL=http://localhost:4004
+MESSAGE_BASE_URL=http://localhost:4005
+ORDER_BASE_URL=http://localhost:4006
+REVIEW_BASE_URL=http://localhost:4007
+REDIS_HOST=redis://localhost:6379
+ELASTIC_SEARCH_URL=http://elastic:admin1234@localhost:9200
+ELASTIC_APM_SERVER_URL=http://localhost:8200
+ELASTIC_APM_SECRET_TOKEN=
+~~~
+----
+
+## Setup elasticSearch connection
+
+- Como estamos usando POO crearemos una clase
+- Creo el logger de tipo Logger de winston
+- Creo el health del tipo ClusterHealthResponse de @elastic
+  - Creo un cluster de tipo health
+  - Paso el status en un log
+- Si hay un error lo capturo con el catch
+
+~~~js
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@gateway/config';
+import { Client } from '@elastic/elasticsearch';
+import { ClusterHealthResponse } from '@elastic/elasticsearch/lib/api/types';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayElasticConnection', 'debug');
+
+class ElasticSearch {
+  private elasticSearchClient: Client;
+
+  constructor() {
+    this.elasticSearchClient = new Client({
+      node: `${config.ELASTIC_SEARCH_URL}`
+    });
+  }
+
+  public async checkConnection(): Promise<void> {
+    let isConnected = false;
+    while(!isConnected) {
+      log.info('GatewayService Connecting to ElasticSearch');
+      try {
+        const health: ClusterHealthResponse = await this.elasticSearchClient.cluster.health({});
+        log.info(`GatewayService ElasticSearch health status - ${health.status}`);
+        isConnected = true;
+      } catch (error) {
+        log.error('Connection to ElasticSearch failed, Retrying...');
+        log.log('error', 'GatewayService checkConnection() method error:', error);
+      }
+    }
+  }
+}
+
+export const elasticSearch: ElasticSearch = new ElasticSearch(); //exporto la clase inicializada
+~~~
+
+- Para usarlo voy al server, en startElasticSearch e importo la clase elasticSearch
+
+~~~js
+private startElasticSearch(): void{
+    elasticSearch.checkConnection()
+  }
+~~~
+-----
+
+## Gateway health route
+
+- En api-gateway/src/routes/health.ts creo un router para health
+
+~~~js
+import { Health } from '@gateway/controllers/health';
+import express, { Router } from 'express';
+
+class HealthRoutes {
+  private router: Router;
+
+  constructor() {
+    this.router = express.Router();
+  }
+
+  public routes(): Router {
+    this.router.get('/gateway-health', Health.prototype.health);
+    return this.router;
+  }
+}
+
+export const healthRoutes: HealthRoutes = new HealthRoutes();
+~~~
+
+- En api-gateway/src/controllers
+
+~~~js
+
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class Health {
+  public health(_req: Request, res: Response): void {
+    res.status(StatusCodes.OK).send('API Gateway service is healthy and OK.');
+  }
+}
+~~~
+
+- En api-gateway/src/routes
+
+~~~js
+import { Application } from 'express';
+import { healthRoutes } from '@gateway/routes/health';
+import { authRoutes } from '@gateway/routes/auth';
+import { currentUserRoutes } from '@gateway/routes/current-user';
+import { authMiddleware } from '@gateway/services/auth-middleware';
+import { searchRoutes } from '@gateway/routes/search';
+import { buyerRoutes } from '@gateway/routes/buyer';
+import { sellerRoutes } from '@gateway/routes/seller';
+import { gigRoutes } from '@gateway/routes/gig';
+import { messageRoutes } from '@gateway/routes/message';
+import { orderRoutes } from '@gateway/routes/order';
+import { reviewRoutes } from '@gateway/routes/review';
+
+const BASE_PATH = '/api/gateway/v1';
+
+export const appRoutes = (app: Application) => {
+  app.use('', healthRoutes.routes());
+  // app.use(BASE_PATH, authRoutes.routes());
+  // app.use(BASE_PATH, searchRoutes.routes());
+
+  // app.use(BASE_PATH, authMiddleware.verifyUser, currentUserRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, buyerRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, sellerRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, gigRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, messageRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, orderRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, reviewRoutes.routes());
+};
+~~~
+
+- En el server de api-gateway hago uso de appRoutes, despues de cors, urlencode, json, compression, antes de elasticSearch y startServer
+
+~~~js
+private routesMiddleware(app: Application): void {
+  appRoutes(app);
+}
+~~~
+
+- Hago un copy paste del server acabado
+
+~~~js
+import http from 'http';
+import 'express-async-errors';
+import { CustomError, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Application, Request, Response, json, urlencoded, NextFunction } from 'express';
+import { Logger } from 'winston';
+import cookieSession from 'cookie-session';
+import cors from 'cors';
+import hpp from 'hpp';
+import helmet from 'helmet';
+import compression from 'compression';
+import { StatusCodes } from 'http-status-codes';
+import { config } from '@gateway/config';
+import { elasticSearch } from '@gateway/elasticsearch';
+import { appRoutes } from '@gateway/routes';
+import { axiosAuthInstance } from '@gateway/services/api/auth.service';
+import { axiosBuyerInstance } from '@gateway/services/api/buyer.service';
+import { axiosSellerInstance } from '@gateway/services/api/seller.service';
+import { axiosGigInstance } from '@gateway/services/api/gig.service';
+import { Server } from 'socket.io';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { SocketIOAppHandler } from '@gateway/sockets/socket';
+import { axiosMessageInstance } from '@gateway/services/api/message.service';
+import { axiosOrderInstance } from '@gateway/services/api/order.service';
+import { axiosReviewInstance } from '@gateway/services/api/review.service';
+import { isAxiosError } from 'axios';
+
+const SERVER_PORT = 4000;
+const DEFAULT_ERROR_CODE = 500;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
+export let socketIO: Server;
+
+export class GatewayServer {
+  private app: Application;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+  public start(): void {
+    this.securityMiddleware(this.app);
+    this.standardMiddleware(this.app);
+    this.routesMiddleware(this.app);
+    this.startElasticSearch();
+    this.errorHandler(this.app);
+    this.startServer(this.app);
+  }
+
+  private securityMiddleware(app: Application): void {
+    app.set('trust proxy', 1);
+    app.use(
+      cookieSession({
+        name: 'session',
+        keys: [`${config.SECRET_KEY_ONE}`, `${config.SECRET_KEY_TWO}`],
+        maxAge: 24 * 7 * 3600000,
+        secure: config.NODE_ENV !== 'development',
+        ...(config.NODE_ENV !== 'development' && {
+          sameSite: 'none'
+        })
+      })
+    );
+    app.use(hpp());
+    app.use(helmet());
+    app.use(cors({
+      origin: config.CLIENT_URL,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    }));
+
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      if (req.session?.jwt) {
+        axiosAuthInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosBuyerInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosSellerInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosGigInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosMessageInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosOrderInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosReviewInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+      }
+      next();
+    });
+  }
+
+  private standardMiddleware(app: Application): void {
+    app.use(compression());
+    app.use(json({ limit: '200mb' }));
+    app.use(urlencoded({ extended: true, limit: '200mb' }));
+  }
+
+  private routesMiddleware(app: Application): void {
+    appRoutes(app);
+  }
+
+  private startElasticSearch(): void {
+    elasticSearch.checkConnection();
+  }
+
+  private errorHandler(app: Application): void {
+    app.use('*', (req: Request, res: Response, next: NextFunction) => {
+      const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+      log.log('error', `${fullUrl} endpoint does not exist.`, '');
+      res.status(StatusCodes.NOT_FOUND).json({ message: 'The endpoint called does not exist.'});
+      next();
+    });
+
+    app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction) => {
+      if (error instanceof CustomError) {
+        log.log('error', `GatewayService ${error.comingFrom}:`, error);
+        res.status(error.statusCode).json(error.serializeErrors());
+      }
+
+      if (isAxiosError(error)) {
+        log.log('error', `GatewayService Axios Error - ${error?.response?.data?.comingFrom}:`, error);
+        res.status(error?.response?.data?.statusCode ?? DEFAULT_ERROR_CODE).json({ message: error?.response?.data?.message ?? 'Error occurred.' });
+      }
+
+      next();
+    });
+  }
+
+  private async startServer(app: Application): Promise<void> {
+    try {
+      const httpServer: http.Server = new http.Server(app);
+      const socketIO: Server = await this.createSocketIO(httpServer);
+      this.startHttpServer(httpServer);
+      this.socketIOConnections(socketIO);
+    } catch (error) {
+      log.log('error', 'GatewayService startServer() error method:', error);
+    }
+  }
+
+  private async createSocketIO(httpServer: http.Server): Promise<Server> {
+    const io: Server = new Server(httpServer, {
+      cors: {
+        origin: `${config.CLIENT_URL}`,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+      }
+    });
+    const pubClient = createClient({ url: config.REDIS_HOST });
+    const subClient = pubClient.duplicate();
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+    socketIO = io;
+    return io;
+  }
+
+  private async startHttpServer(httpServer: http.Server): Promise<void> {
+    try {
+      log.info(`Gateway server has started with process id ${process.pid}`);
+      httpServer.listen(SERVER_PORT, () => {
+        log.info(`Gateway server running on port ${SERVER_PORT}`);
+      });
+    } catch (error) {
+      log.log('error', 'GatewayService startServer() error method:', error);
+    }
+  }
+
+  private socketIOConnections(io: Server): void {
+    const socketIoApp = new SocketIOAppHandler(io);
+    socketIoApp.listen();
+  }
+}
+~~~
+-----
+
+## Authentication middleware
+
+- 
