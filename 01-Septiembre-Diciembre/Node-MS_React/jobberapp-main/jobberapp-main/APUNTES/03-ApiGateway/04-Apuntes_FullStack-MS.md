@@ -265,7 +265,423 @@ export default config;
 }
 ~~~
 
-- **NOTA:** Falta el jenkins, el .editorconfig y los archivos de eslint y prettier
+- **NOTA:** Falta el archivo de jenkins, el .editorconfig y los archivos de eslint y prettier
 - En notification-ms codificamos bajo el paradigma de la programación funcional
 - En la api-Gateway usaremos POO
-- 
+- Como todavía no he hecho el setup de elasticsearch ni el dotenv lo voy haciendo así
+- Voy a tener que pasarle una app de tipo Application de express a la clase GatewayServer
+- Para el deploy de producción tengo que setear con .set como trust proxy
+- Guardaremos el jwtoken en las cookies (nunca en el localstorage!)
+- En api-gateway/src/server.ts
+
+~~~js
+import 'express-async-errors';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Application } from 'express';
+import { Logger } from 'winston';
+import cookieSession from 'cookie-session';
+import cors from 'cors';
+import hpp from 'hpp';
+import helmet from 'helmet';
+
+import { Server } from 'socket.io';
+
+
+const SERVER_PORT = 4000;
+const DEFAULT_ERROR_CODE = 500;
+const log: Logger = winstonLogger(``, 'apiGatewayServer', 'debug');
+export let socketIO: Server;
+
+export class GatewayServer {
+  private app: Application;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+
+
+  public start(): void{
+
+  }
+
+  //para que el gateway funcione el deploy
+  private securityMiddleware(app: Application): void {
+    app.set('trust proxy, 1')
+    app.use(
+        cookieSession({
+            name: 'session',
+            keys:[],
+            maxAge: 24 * 7 * 3600000, //token valido por 7 dias
+            secure: false //update con true del config (para el https)
+            //sameSite: none //firefoxz tiene otra implementación
+        })
+    )
+
+    app.use(hpp())
+    app.use(helmet())
+    app.use(cors({
+        origin: '', //el cliente
+        credentials: true, //podemos asignar el token en cualquier request
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+
+    }))
+  }
+}
+~~~
+------
+
+## Server part 2
+
+
+~~~js
+import 'express-async-errors';
+import { Application, Request, Response, json, urlencoded, NextFunction } from 'express';
+import { Logger } from 'winston';
+import compression from 'compression';
+import cookieSession from 'cookie-session';
+import cors from 'cors';
+import hpp from 'hpp';
+import helmet from 'helmet';
+import { CustomError, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Server } from 'socket.io';
+import { StatusCodes } from 'http-status-codes';
+
+
+const SERVER_PORT = 4000;
+const DEFAULT_ERROR_CODE = 500;
+const log: Logger = winstonLogger(``, 'apiGatewayServer', 'debug');
+export let socketIO: Server;
+
+export class GatewayServer {
+  private app: Application;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+
+
+  public start(): void{
+    this.securityMiddleware(this.app)
+    this.standardMiddleware(this.app)
+    this.routesMiddleware(this.app)
+    this.startElasticSearch()
+    this.errorHandler(this.app)
+  }
+
+  //para que el gateway funcione el deploy
+  private securityMiddleware(app: Application): void {
+    app.set('trust proxy, 1')
+    app.use(
+        cookieSession({
+            name: 'session',
+            keys:[],
+            maxAge: 24 * 7 * 3600000, //token valido por 7 dias
+            secure: false //update con true del config (para el https)
+            //sameSite: none //firefoxz tiene otra implementación
+        })
+    )
+
+    app.use(hpp())
+    app.use(helmet())
+    app.use(cors({
+        origin: '', //el cliente
+        credentials: true, //podemos asignar el token en cualquier request
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+
+    }))
+  }
+  
+
+  private standardMiddleware(app: Application): void{
+    app.use(compression())
+    app.use(json({limit: '200mb'}))
+    app.use(urlencoded({extended: true, limit: '200mb'})) //pq pasaremos data mediante la req.body
+
+  }
+
+  private routesMiddleware(app: Application): void{
+
+  }
+
+  private startElasticSearch(): void{
+
+  }
+
+  private errorHandler(app: Application){
+    //si el usuario trata de acceder a un endpoint que no existe
+    //para reconstruir una url desde la request
+
+    app.use('*',(req: Request, res: Response, next: NextFunction)=>{
+        const fullUrl= `${req.protocol}://${req.get('host')}${req.originalUrl}`
+
+        log.log('error', `${fullUrl} endpoint does not exists`)
+        res.status(StatusCodes.NOT_FOUND).json({message:"The endpoint callled does not exists"})
+        next()
+    })
+
+    app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction)=>{
+
+      log.log('error', `GatewayService ${error.comingFrom}:`, error)
+      if(error instanceof CustomError){
+        res.status(error.statusCode).json(error.serializeErrors())
+    }
+    
+  })
+    
+
+  }
+
+}
+~~~
+
+- La clase abstracta CustomError extiende de Error
+- jobber-shared/src/ewrror-handler
+
+~~~js
+import { StatusCodes } from 'http-status-codes';
+
+export interface IErrorResponse {
+  message: string;
+  statusCode: number;
+  status: string;
+  comingFrom: string;
+  serializeErrors(): IError;
+}
+
+export interface IError {
+  message: string;
+  statusCode: number;
+  status: string;
+  comingFrom: string;
+}
+
+export abstract class CustomError extends Error {
+  abstract statusCode: number;
+  abstract status: string;
+  comingFrom: string;
+
+  constructor(message: string, comingFrom: string) {
+    super(message);
+    this.comingFrom = comingFrom;
+  }
+
+  serializeErrors(): IError {
+    return {
+      message: this.message,
+      statusCode: this.statusCode,
+      status: this.status,
+      comingFrom: this.comingFrom,
+    }
+  }
+}
+
+export class BadRequestError extends CustomError {
+  statusCode = StatusCodes.BAD_REQUEST;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+
+export class NotFoundError extends CustomError {
+  statusCode = StatusCodes.NOT_FOUND;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+
+export class NotAuthorizedError extends CustomError {
+  statusCode = StatusCodes.UNAUTHORIZED;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+
+export class FileTooLargeError extends CustomError {
+  statusCode = StatusCodes.REQUEST_TOO_LONG;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+
+export class ServerError extends CustomError {
+  statusCode = StatusCodes.SERVICE_UNAVAILABLE;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+
+export interface ErrnoException extends Error {
+  errno?: number;
+  code?: string;
+  path?: string;
+  syscall?: string;
+  stack?: string;
+}
+~~~
+-----
+
+## Server PART 3
+
+- Si no coloco http.Server como tipo daría conflictyo con socket.io
+
+~~~js
+import 'express-async-errors';
+import http from 'http'
+import { Application, Request, Response, json, urlencoded, NextFunction } from 'express';
+import { Logger } from 'winston';
+import compression from 'compression';
+import cookieSession from 'cookie-session';
+import cors from 'cors';
+import hpp from 'hpp';
+import helmet from 'helmet';
+import { CustomError, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Server } from 'socket.io';
+import { StatusCodes } from 'http-status-codes';
+
+
+const SERVER_PORT = 4000;
+const DEFAULT_ERROR_CODE = 500;
+const log: Logger = winstonLogger(``, 'apiGatewayServer', 'debug');
+export let socketIO: Server;
+
+export class GatewayServer {
+  private app: Application;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
+
+
+
+  public start(): void{
+    this.securityMiddleware(this.app)
+    this.standardMiddleware(this.app)
+    this.routesMiddleware(this.app)
+    this.startElasticSearch()
+    this.errorHandler(this.app)
+  }
+
+  //para que el gateway funcione el deploy
+  private securityMiddleware(app: Application): void {
+    app.set('trust proxy, 1')
+    app.use(
+        cookieSession({
+            name: 'session',
+            keys:[],
+            maxAge: 24 * 7 * 3600000, //token valido por 7 dias
+            secure: false //update con true del config (para el https)
+            //sameSite: none //firefoxz tiene otra implementación
+        })
+    )
+
+    app.use(hpp())
+    app.use(helmet())
+    app.use(cors({
+        origin: '', //el cliente
+        credentials: true, //podemos asignar el token en cualquier request
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+
+    }))
+  }
+  
+
+  private standardMiddleware(app: Application): void{
+    app.use(compression())
+    app.use(json({limit: '200mb'}))
+    app.use(urlencoded({extended: true, limit: '200mb'})) //pq pasaremos data mediante la req.body
+
+  }
+
+  private routesMiddleware(app: Application): void{
+
+  }
+
+  private startElasticSearch(): void{
+
+  }
+
+  private errorHandler(app: Application){
+    //si el usuario trata de acceder a un endpoint que no existe
+    //para reconstruir una url desde la request
+
+    app.use('*',(req: Request, res: Response, next: NextFunction)=>{
+        const fullUrl= `${req.protocol}://${req.get('host')}${req.originalUrl}`
+
+        log.log('error', `${fullUrl} endpoint does not exists`)
+        res.status(StatusCodes.NOT_FOUND).json({message:"The endpoint callled does not exists"})
+        next()
+    })
+
+    app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction)=>{
+
+      log.log('error', `GatewayService ${error.comingFrom}:`, error)
+      if(error instanceof CustomError){
+        res.status(error.statusCode).json(error.serializeErrors())
+    }
+    
+  })
+  
+  }
+
+  private async startServer(app: Application): Promise<void>{
+    try {
+      const httpServer: http.Server = new http.Server(app)
+      this.startHttpServer(httpServer) //inicio el http.Server
+
+    } catch (error) {
+      log.log('error', 'GatewayService startServer method', error)
+    }
+  }
+
+  //creo el método al que le pasaré el http.Server para inciarlo
+  private async startHttpServer(httpServer: http.Server): Promise<void>{
+
+    try {
+      log.info(`Gateway Server has started with process id ${process.pid}`)
+      httpServer.listen(SERVER_PORT, ()=>{
+        log.info(`GatewayService running on port ${SERVER_PORT} `)
+      })
+    } catch (error) {
+      log.log('error', 'GatewayService startHttpServer method', error)
+
+    }
+  }
+
+
+
+}
+~~~
+
+- En app.ts es donde creo app y se la paso al GatewayServer y llamo a server.start
+- api-gateway/src/app.js
+
+~~~js
+import express, { Express } from 'express';
+import { GatewayServer } from '@gateway/server';
+import { redisConnection } from '@gateway/redis/redis.connection';
+
+class Application {
+  public initialize(): void {
+    const app: Express = express();
+    const server: GatewayServer = new GatewayServer(app);
+    server.start();
+    //redisConnection.redisConnect();
+  }
+}
+
+const application: Application = new Application();
+application.initialize();
+
+~~~

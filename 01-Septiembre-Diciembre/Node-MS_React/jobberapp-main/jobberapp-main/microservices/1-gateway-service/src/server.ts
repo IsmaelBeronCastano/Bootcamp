@@ -1,5 +1,4 @@
 import http from 'http';
-
 import 'express-async-errors';
 import { CustomError, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
 import { Application, Request, Response, json, urlencoded, NextFunction } from 'express';
