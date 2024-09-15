@@ -1070,4 +1070,183 @@ export class GatewayServer {
 
 ## Authentication middleware
 
-- 
+- Necesitamos verificar el token que viene del cliente en la cookie.session
+- Uso verify de jsonwebtoken, le paso el token y el token con el que debe coincidir
+- Guardo la info en payload
+- Paso el payload a req-.currentUser
+- Debo verificar que la request viene con el currentUser en otro método
+- gateway/src/services/auth-middleware.ts
+
+~~~js
+import { config } from '@gateway/config';
+import { BadRequestError, IAuthPayload, NotAuthorizedError } from '@uzochukwueddie/jobber-shared';
+import { Request, Response, NextFunction } from 'express';
+import { verify } from 'jsonwebtoken';
+
+class AuthMiddleware {
+  public verifyUser(req: Request, _res: Response, next: NextFunction): void {
+    if (!req.session?.jwt) {
+      throw new NotAuthorizedError('Token is not available. Please login again.', 'GatewayService verifyUser() method error');
+    }
+
+    try {
+      const payload: IAuthPayload = verify(req.session?.jwt, `${config.JWT_TOKEN}`) as IAuthPayload;
+      req.currentUser = payload;//le paso el payload a req.current.user
+    } catch (error) {
+      throw new NotAuthorizedError('Token is not available. Please login again.', 'GatewayService verifyUser() method invalid session error');
+    }
+    next();
+  }
+  
+  //debo verificar que la request viene con currentUser
+  public checkAuthentication(req: Request, _res: Response, next: NextFunction): void {
+    if (!req.currentUser) {
+      throw new BadRequestError('Authentication is required to access this route.', 'GatewayService checkAuthentication() method error');
+    }
+    next();
+  }
+}
+
+export const authMiddleware: AuthMiddleware = new AuthMiddleware();
+~~~
+
+- En jobber-shared/src/auth.ts encontramos varias interfaces, una es IAuthPayload
+
+~~~js
+export interface IAuthPayload {
+  id: number;
+  username: string;
+  email: string;
+  iat?: number;
+}
+~~~
+
+- NotAuthorizedError está en la misma carpeta de jobber-shared en error-handler.ts
+
+~~~js
+export class NotAuthorizedError extends CustomError {
+  statusCode = StatusCodes.UNAUTHORIZED;
+  status = 'error';
+
+  constructor(message: string, comingFrom: string) {
+    super(message, comingFrom);
+  }
+}
+~~~
+
+- Cuando hagamos rutas tipo user service o gig service usaremos estos métodos
+-----
+
+## Axios Service
+
+- En gateway/src/services/axios.ts
+- Desde aquí crearemos y añadiremos el token
+- Para hacerlo reutilizable por que usaremos varias instancias le añadimos this.axios en el constructor con el método pasándole la url y el servicio
+
+
+~~~js
+import axios from 'axios';
+import { sign } from 'jsonwebtoken';
+import { config } from '@gateway/config';
+
+export class AxiosService {
+  
+  public axios: ReturnType<typeof axios.create>; //asi es cuando quiero añadir una propiedad de un tipo a otro tipo
+
+  constructor(baseUrl: string, serviceName: string) {
+    this.axios = this.axiosCreateInstance(baseUrl, serviceName); //la instancia de axios a la que le paso la url y el serviceName
+  }
+
+  public axiosCreateInstance(baseUrl: string, serviceName?: string): ReturnType<typeof axios.create> {
+    let requestGatewayToken = ''; //creo el token vacío
+
+    if (serviceName) {      //genero el token con el token del Gateway
+      requestGatewayToken = sign({ id: serviceName }, `${config.GATEWAY_JWT_TOKEN}`);
+    }
+    //creo la instancia, le paso la url y en los headers como un json el token
+    const instance: ReturnType<typeof axios.create> = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        gatewayToken: requestGatewayToken //este gatewayToken es el que chequeamos en el gateway-middleware 
+      },
+      withCredentials: true //importante!! para añadir el token en la cokkie session
+    });
+    return instance;
+  }
+}
+~~~
+
+- ServiceName son los que se encuentran en el gateway-middleware de jobber-shared
+- Aqui chequearemos que haya un jwtoken y que contenga un id
+- jobber-shared/src/gateway-middleware
+
+~~~js
+import JWT from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import { NotAuthorizedError } from './error-handler';
+
+                          //alguno de estos debe de ser el serviceName del gatewaytoken
+const tokens: string[] = ['auth', 'seller', 'gig', 'search', 'buyer', 'message', 'order', 'review'];
+
+export function verifyGatewayRequest(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.headers?.gatewaytoken) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  const token: string = req.headers?.gatewaytoken as string;
+  if (!token) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+
+  try {
+    const payload: { id: string; iat: number } = JWT.verify(token, '1282722b942e08c8a6cb033aa6ce850e') as { id: string; iat: number };
+    if (!tokens.includes(payload.id)) {
+      throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request payload is invalid');
+    }
+  } catch (error) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  next();
+}
+~~~
+
+- Si el serviceName no se encuentra en el listado del gateway-middleware la petición será rechazada
+------
+
+## Add GatewayService to Docker compose
+
+- docker-compose.yaml
+
+~~~yaml
+  gateway:
+    container_name: gateway_container
+    build:
+      context: ../server/1-gateway-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4000:4000
+    env_file: ../server/1-gateway-service/.env
+    environment:
+        - ENABLE_APM=1
+        - GATEWAY_JWT_TOKEN=1282722b942e08c8a6cb033aa6ce850e
+        - JWT_TOKEN=8db8f85991bb28f45ac0107f2a1b349c
+        - NODE_ENV=development
+        - SECRET_KEY_ONE=032c5c3cfc37938ae6dd43d3a3ec7834
+        - SECRET_KEY_TWO=d66e377018c0bc0b5772bbc9b131e6d9
+        - CLIENT_URL=http://localhost:3000
+        - AUTH_BASE_URL=http://auth_container:4002
+        - USERS_BASE_URL=http://localhost:4003
+        - GIG_BASE_URL=http://localhost:4004
+        - MESSAGE_BASE_URL=http://localhost:4005
+        - ORDER_BASE_URL=http://localhost:4006
+        - REVIEW_BASE_URL=http://localhost:4007
+        - REDIS_HOST=redis://redis_container:6379
+        - ELASTIC_SEARCH_URL=http://elastic:admin1234@elasticsearch_container:9200
+        - ELASTIC_APM_SERVER_URL=http://apm_server_container:8200
+        - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+~~~
+
