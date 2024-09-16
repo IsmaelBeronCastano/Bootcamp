@@ -592,6 +592,298 @@ initialize();
 ~~~
 ------
 
-## Signup Schema
+## Schemes
 
 
+- Para validar usaremos joi
+
+> npm i joi
+
+- auth-ms/src/schemes/signup
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const signupSchema: ObjectSchema = Joi.object().keys({
+  username: Joi.string().min(4).max(12).required().messages({
+    'string.base': 'Username must be of type string',
+    'string.min': 'Invalid username',
+    'string.max': 'Invalid username',
+    'string.empty': 'Username is a required field'
+  }),
+  password: Joi.string().min(4).max(12).required().messages({
+    'string.base': 'Password must be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  country: Joi.string().required().messages({
+    'string.base': 'Country must be of type string',
+    'string.empty': 'Country is a required field'
+  }),
+  email: Joi.string().email().required().messages({
+    'string.base': 'Email must be of type string',
+    'string.email': 'Invalid email',
+    'string.empty': 'Email is a required field'
+  }),
+  profilePicture: Joi.string().required().messages({
+    'string.base': 'Please add a profile picture',
+    'string.email': 'Profile picture is required',
+    'string.empty': 'Profile picture is required'
+  }),
+  browserName: Joi.string().optional(),
+  deviceType: Joi.string().optional()
+});
+
+export { signupSchema };
+~~~
+
+- El Signin
+- Usaremos otherwise para si en lugar del mail usa el username
+auth-ms/src/schemes/signin.ts
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const loginSchema: ObjectSchema = Joi.object().keys({
+  username: Joi.alternatives().conditional(Joi.string().email(), {
+    then: Joi.string().email().required().messages({
+      'string.base': 'Email must be of type string',
+      'string.email': 'Invalid email',
+      'string.empty': 'Email is a required field'
+    }),
+    otherwise: Joi.string().min(4).max(12).required().messages({
+      'string.base': 'Username must be of type string',
+      'string.min': 'Invalid username',
+      'string.max': 'Invalid username',
+      'string.empty': 'Username is a required field'
+    })
+  }),
+  password: Joi.string().min(4).max(12).required().messages({
+    'string.base': 'Password must be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  browserName: Joi.string().optional(),
+  deviceType: Joi.string().optional()
+});
+
+export { loginSchema };
+~~~
+
+- En schemes tendremos también un schema para el password, email...
+- Los usaremos para validar cada campo en específico
+- auth-ms/src/schemes/password.ts
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const emailSchema: ObjectSchema = Joi.object().keys({
+  email: Joi.string().email().required().messages({
+    'string.base': 'Field must be valid',
+    'string.required': 'Field must be valid',
+    'string.email': 'Field must be valid'
+  })
+});
+
+const passwordSchema: ObjectSchema = Joi.object().keys({
+  password: Joi.string().required().min(4).max(12).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  confirmPassword: Joi.string().required().valid(Joi.ref('password')).messages({
+    'any.only': 'Passwords should match',
+    'any.required': 'Confirm password is a required field'
+  })
+});
+
+const changePasswordSchema: ObjectSchema = Joi.object().keys({
+  currentPassword: Joi.string().required().min(4).max(8).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  newPassword: Joi.string().required().min(4).max(12).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+});
+
+export { emailSchema, passwordSchema, changePasswordSchema };
+~~~
+----
+
+## Sequelize model
+
+- Para crear el modelo necesitamos
+  - id
+  - username
+  - profilePublicId
+  - email
+  - password
+  - country
+  - profilePicture
+  - emailVerificationToken
+  - emailVerified
+  - createdAt
+  - passwordResetToken
+  - passwordResetExpires
+- profilePubliId lo generaremos porque la imagen la subiremos a CLoudinary
+- Cuando el user crea una cuenta, generamos este emailVerificationToken
+  - Será el añadido al email template, lo usaremos para verificar el user
+
+- auth-ms/src/models/auth.ts
+- Creo una interfaz que extiende de Model
+- En su prototype añado dos métodos, comparePassword y hashPassword
+- Usaremos la instancia de sequelize de auth/src/database.ts
+- Tengo instalado bcrypt y bcryptjs
+- Uso Optional para que incluya lo primero y lo segundo (separado por |) que no lo envíe en la creación de user
+- auth-ms/src/models/auth.ts
+
+~~~js
+import { sequelize } from '@auth/database';
+import { IAuthDocument } from '@uzochukwueddie/jobber-shared';
+import { compare, hash } from 'bcryptjs';
+import { DataTypes, Model, ModelDefined, Optional } from 'sequelize';
+
+const SALT_ROUND = 10;
+
+interface AuthModelInstanceMethods extends Model {
+  //AuthModel deberá tener estos dos métodos 
+  prototype: {
+    comparePassword: (password: string, hashedPassword: string) => Promise<boolean>;
+    hashPassword: (password: string) => Promise<string>;
+  }
+}
+                            //Optional para que incluya IAuthDocument pero no lo siguiente al crear el usuario
+type AuthUserCreationAttributes = Optional<IAuthDocument, 'id' | 'createdAt' | 'passwordResetToken' | 'passwordResetExpires'>;
+                                                                         
+                  //Modeldefined para decir que podemos crear users tipo IAuth y que no lleven el id, createdAt en la creación
+                  //Debe contener los métodos comparePassword y hashPassword 
+const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods = sequelize.define('auths', {
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  profilePublicId: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  profilePicture: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  emailVerificationToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  emailVerified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: 0
+  },
+  browserName: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  deviceType: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  otp: {
+    type: DataTypes.STRING
+  },
+  otpExpiration: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: new Date()
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: Date.now
+  },
+  passwordResetToken: { type: DataTypes.STRING, allowNull: true },
+  passwordResetExpires: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: new Date()
+  }
+}, {
+  indexes: [
+    {
+      unique: true,
+      fields: ['email']
+    },
+    {
+      unique: true,
+      fields: ['username']
+    },
+    {
+      unique: true,
+      fields: ['emailVerificationToken']
+    },
+  ]
+}) as ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods;
+
+AuthModel.addHook('beforeCreate', async (auth: Model) => {
+  const hashedPassword: string = await hash(auth.dataValues.password as string, SALT_ROUND);
+  auth.dataValues.password = hashedPassword;
+});
+
+AuthModel.prototype.comparePassword = async function (password: string, hashedPassword: string): Promise<boolean> {
+  return compare(password, hashedPassword);
+};
+
+AuthModel.prototype.hashPassword = async function (password: string): Promise<string> {
+  return hash(password, SALT_ROUND);
+};
+
+// force: true always deletes the table when there is a server restart
+AuthModel.sync({});
+export { AuthModel };
+
+~~~
+
+- IAuthDocument está en jobber-shared
+
+~~~js
+export interface IAuthDocument {
+  id?: number;
+  profilePublicId?: string;
+  username?: string;
+  email?: string;
+  password?: string;
+  country?: string;
+  profilePicture?: string;
+  emailVerified?: number;
+  emailVerificationToken?: string;
+  browserName?: string;
+  deviceType?: string;
+  otp?: string;
+  otpExpiration?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
+  comparePassword(password: string, hashedPassword: string): Promise<boolean>;
+  hashPassword(password: string): Promise<string>;
+}
+~~~
