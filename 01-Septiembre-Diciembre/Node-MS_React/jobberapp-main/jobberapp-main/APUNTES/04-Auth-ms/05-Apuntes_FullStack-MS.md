@@ -744,6 +744,7 @@ export { emailSchema, passwordSchema, changePasswordSchema };
 - Usaremos la instancia de sequelize de auth/src/database.ts
 - Tengo instalado bcrypt y bcryptjs
 - Uso Optional para que incluya lo primero y lo segundo (separado por |) que no lo envíe en la creación de user
+- Uso Modeldefined para decir que será de tipo IAuthDocument, le paso el tipo que lleva el Optional, y añado el tipo con los métodos en el prototype
 - auth-ms/src/models/auth.ts
 
 ~~~js
@@ -765,7 +766,7 @@ interface AuthModelInstanceMethods extends Model {
 type AuthUserCreationAttributes = Optional<IAuthDocument, 'id' | 'createdAt' | 'passwordResetToken' | 'passwordResetExpires'>;
                                                                          
                   //Modeldefined para decir que podemos crear users tipo IAuth y que no lleven el id, createdAt en la creación
-                  //Debe contener los métodos comparePassword y hashPassword 
+                                                //Debe contener los métodos comparePassword y hashPassword 
 const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods = sequelize.define('auths', {
   username: {
     type: DataTypes.STRING,

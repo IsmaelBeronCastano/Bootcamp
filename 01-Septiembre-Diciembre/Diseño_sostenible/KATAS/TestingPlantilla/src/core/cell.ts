@@ -6,9 +6,20 @@ export enum CellStatus{
 export class Cell {
 
     
-    constructor(readonly status: CellStatus){
+   private constructor(private readonly status: CellStatus){
+        if(status == null){
+            throw new Error('Invalid status')
+        }
     }
 
+    static create(status: CellStatus){
+        if(status == null){
+            throw new Error('Invalid status')
+        }
+
+        return new Cell(status)
+
+    }
      regenerate (numberOfNeighbours: number): CellStatus{
         return this.status === CellStatus.Alive
         ? this.statusForAliveCell(numberOfNeighbours)

@@ -443,6 +443,201 @@ describe('El juego de la vida', ()=>{
     })
 })
 ~~~
+-----
+
+## Gestionando el estado no válido
 
 
+- Añadimos el caso en que no podemos instancia una celula en estado nulo o sin definir
+- Se podría configurar desde el tsconfig con StrictNullChecks, pero tipicamente está en false
 
+~~~js
+it("cells with undefined initial state are not allowed", ()=>{
+    expect(()=> new Cell(undefined)).toThrow()
+    expect(()=> new Cell(null)).toThrow()
+    
+})
+~~~
+
+- En la Cell cambiamos el constructor y añadimos el método estático create
+
+~~~js
+export enum CellStatus{
+    Dead= 0,
+    Alive =1
+}
+
+export class Cell {
+
+    
+    constructor(private readonly statusCell: CellStatus){
+        if(statusCell == null){
+            throw new Error('Invalid status')
+        }
+    }
+
+    static create(status: CellStatus){
+        if(status == null){
+            throw new Error('Invalid status')
+        }
+
+        return new Cell(status)
+
+    }
+     regenerate (numberOfNeighbours: number): CellStatus{
+        return this.statusCell === CellStatus.Alive
+        ? this.statusForAliveCell(numberOfNeighbours)
+        : this.statusForDeadCell(numberOfNeighbours)
+
+    }
+
+    regenerateNew(numberOfNeighbours: number): Cell{
+        const nextStatus = this.statusCell === CellStatus.Alive
+        ? this.statusForAliveCell(numberOfNeighbours)
+        : this.statusForDeadCell(numberOfNeighbours)
+
+        return new Cell(nextStatus)
+    }
+
+    isAlive(){
+        return this.statusCell === CellStatus.Alive
+    }
+
+    private statusForAliveCell(numberOfNeighbors: number){
+       let isStablePopulation= numberOfNeighbors ==2 || numberOfNeighbors === 3
+            return isStablePopulation
+            ? CellStatus.Alive
+            : CellStatus.Dead
+
+    }
+
+    private statusForDeadCell(numberOfNeighbors: number){
+       let isFertilePopulation = numberOfNeighbors === 3 
+       
+       return isFertilePopulation 
+       ? CellStatus.Alive
+        : CellStatus.Dead
+
+    }
+
+}
+~~~
+
+- Ahora debo convertir los tests y añadirles el .create
+
+~~~js
+// - Las reglas son
+//   - Cualquier célula *viva* **con menos de dos vecinos** **muere**, por poca población
+//   - Cualquier célula *viva* **con más de tres vecinos vivos muere**, por superpoblación
+//   - Cualquier célula *viva* con dos o tres vecinos vivos sigue viva en la siguiente generación
+//   - Cualquier célula *muerta* **con exactamente tres vecinos resucita**
+import {Cell} from "../core/cell"
+import { CellStatus } from "../core/cell"
+
+
+describe('El juego de la vida', ()=>{
+    let numberOfNeighbors: number= 0
+
+    it("cualquier celula viva muere con menos de dos vecinas", ()=>{
+    
+     expect(Cell.create(CellStatus.Alive).regenerateNew(numberOfNeighbors= 1).isAlive()).toBe(false)
+     expect(Cell.create(CellStatus.Dead).regenerateNew(numberOfNeighbors= 1).isAlive()).toBe(false)
+
+    })
+
+    it("cualquier celula vive con dos vecinas vivas sigue viva", ()=>{
+
+     
+     expect(Cell.create(CellStatus.Alive).regenerateNew(numberOfNeighbors= 2).isAlive()).toBe(true)
+     expect(Cell.create(CellStatus.Alive).regenerateNew(numberOfNeighbors= 3).isAlive()).toBe(true)
+     expect(Cell.create(CellStatus.Dead).regenerateNew(numberOfNeighbors= 2).isAlive()).toBe(false)
+
+    })
+
+    it("cualquier celula viva con más de 3 vecinas muere por superpoblación", ()=>{
+   
+     
+     expect(Cell.create(CellStatus.Dead).regenerateNew(numberOfNeighbors= 4).isAlive()).toBe(false) 
+     expect(Cell.create(CellStatus.Alive).regenerateNew(numberOfNeighbors= 4).isAlive()).toBe(false)
+   
+    })
+    it("Una celula muerta con tres celulas vecinas vivas revive", ()=>{
+ 
+     expect(Cell.create(CellStatus.Dead).regenerateNew(numberOfNeighbors= 3).isAlive()).toBe(true)
+        
+    })
+
+    it("cells with undefined initial state are not allowed", ()=>{
+        expect(()=> Cell.create(undefined)).toThrow() //  "strictNullChecks": false,  
+        expect(()=> Cell.create(null)).toThrow()//  "strictNullChecks": false,  
+       
+    })
+})
+~~~
+
+- Hago el constructor privado
+
+~~~js
+export enum CellStatus{
+    Dead= 0,
+    Alive =1
+}
+
+export class Cell {
+
+    
+   private constructor(private readonly status: CellStatus){
+    }
+
+    static create(status: CellStatus){
+        if(status == null){
+            throw new Error('Invalid status')
+        }
+
+        return new Cell(status)
+
+    }
+     regenerate (numberOfNeighbours: number): CellStatus{
+        return this.status === CellStatus.Alive
+        ? this.statusForAliveCell(numberOfNeighbours)
+        : this.statusForDeadCell(numberOfNeighbours)
+
+    }
+
+    regenerateNew(numberOfNeighbours: number): Cell{
+        const nextStatus = this.status === CellStatus.Alive
+        ? this.statusForAliveCell(numberOfNeighbours)
+        : this.statusForDeadCell(numberOfNeighbours)
+
+        return new Cell(nextStatus)
+    }
+
+    isAlive(){
+        return this.status === CellStatus.Alive
+    }
+
+    private statusForAliveCell(numberOfNeighbors: number){
+       let isStablePopulation= numberOfNeighbors ==2 || numberOfNeighbors === 3
+            return isStablePopulation
+            ? CellStatus.Alive
+            : CellStatus.Dead
+
+    }
+
+    private statusForDeadCell(numberOfNeighbors: number){
+       let isFertilePopulation = numberOfNeighbors === 3 
+       
+       return isFertilePopulation 
+       ? CellStatus.Alive
+        : CellStatus.Dead
+
+    }
+
+}
+~~~
+---------
+
+## Primeros pasos en el mundo
+
+- Vamos a crear la clase World que va a representar el tablero del juego
+- 
