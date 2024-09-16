@@ -745,6 +745,8 @@ export { emailSchema, passwordSchema, changePasswordSchema };
 - Tengo instalado bcrypt y bcryptjs
 - Uso Optional para que incluya lo primero y lo segundo (separado por |) que no lo envíe en la creación de user
 - Uso Modeldefined para decir que será de tipo IAuthDocument, le paso el tipo que lleva el Optional, y añado el tipo con los métodos en el prototype
+- Uso la instancia de sequelize.define
+- Indexo aquellos que voy a usar para las búsquedas
 - auth-ms/src/models/auth.ts
 
 ~~~js
@@ -753,7 +755,8 @@ import { IAuthDocument } from '@uzochukwueddie/jobber-shared';
 import { compare, hash } from 'bcryptjs';
 import { DataTypes, Model, ModelDefined, Optional } from 'sequelize';
 
-const SALT_ROUND = 10;
+const SALT_ROUND = 10; //es 10 por defecto, 
+                       //numero de veces que el algoritmo de encriptación se ejecutarà
 
 interface AuthModelInstanceMethods extends Model {
   //AuthModel deberá tener estos dos métodos 
@@ -819,16 +822,19 @@ const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthM
   },
   createdAt: {
     type: DataTypes.DATE,
-    defaultValue: Date.now
+    defaultValue: Date.now //crea una fecha al momento de la creación
   },
-  passwordResetToken: { type: DataTypes.STRING, allowNull: true },
+  passwordResetToken: { 
+    type: DataTypes.STRING, 
+    allowNull: true },
+
   passwordResetExpires: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: new Date()
+    defaultValue: new Date() //puedo usar Date.now o new Date()
   }
 }, {
-  indexes: [
+  indexes: [  //uso los indices para marcar que deben ser únicos e indexarlos
     {
       unique: true,
       fields: ['email']
@@ -844,7 +850,9 @@ const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthM
   ]
 }) as ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods;
 
+//añado el hook beforeCreate para hashear el password, le paso el modelo
 AuthModel.addHook('beforeCreate', async (auth: Model) => {
+  //guardo el password hasheado             el password esta aqui
   const hashedPassword: string = await hash(auth.dataValues.password as string, SALT_ROUND);
   auth.dataValues.password = hashedPassword;
 });
@@ -856,9 +864,8 @@ AuthModel.prototype.comparePassword = async function (password: string, hashedPa
 AuthModel.prototype.hashPassword = async function (password: string): Promise<string> {
   return hash(password, SALT_ROUND);
 };
-
-// force: true always deletes the table when there is a server restart
-AuthModel.sync({});
+//si uso force: true borrará la db con cada reset del server
+AuthModel.sync({}); //ejecuto, si la tabla no existe la creará, si existe no hará nada
 export { AuthModel };
 
 ~~~
@@ -888,3 +895,6 @@ export interface IAuthDocument {
   hashPassword(password: string): Promise<string>;
 }
 ~~~
+
+- Puedo usar TablePlus para visualizar la data
+- 
