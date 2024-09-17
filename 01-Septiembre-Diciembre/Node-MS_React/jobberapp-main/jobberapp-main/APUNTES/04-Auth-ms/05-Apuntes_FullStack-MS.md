@@ -948,7 +948,7 @@ export { createConnection } ;
 - Creo el authChannel fuera del método y lo exporto
 
 ~~~js
-export let authChannel: Channel;
+export let authChannel: Channel; //lo usaré en el auth.service.ts
 
 async function startQueues(): Promise<void> {
   authChannel = await createConnection() as Channel;
@@ -1000,3 +1000,204 @@ export async function publishDirectMessage(
   }
 }
 ~~~
+
+- En RabbitMQ publish no envía directamente a la queue, si no que al exchange
+-----
+
+## Create user service method
+
+- Creo la carpeta auth-ms/src/services/auth.service.ts
+- Lo copio con algunos métodos de más (no todos, por ahora)
+- Cuando un usuario crea una cuenta, automáticamente se convierte en un comprador
+- Tendremos diferentes servicios para manejar compradores y vendedores
+- createAuthUser recibirá la data de tipo IAuthDocument, devolverá una Promesa con algo de tipo IAuthDocument o undefined
+- Importo AuthModel para interactuar con la DB. Buscar en la documentacion de Sequelize Model Querying
+- Lo guardo en result que es de tipo Model (de Sequelize)
+- Uso async await
+- El result.dataValues, este dataValues viene de Model de Sequelize, que devuelve el modelo con esta propiedad
+- Le coloco ! al final de cada dataValues.propiedad. Si hubiera un error va al catch
+- El método publishDirectMessage viene de queues/auth.producer
+- Le paso lo que me pide, el channel, exchangeName, routingKey, etc
+  - El authChannel lo estoy exportando desde el server, desde done llamo a startQueues con el método createConnection
+  - En el message que le paso uso stringify
+  - Para omitir el password en el retorno usaré omit de lodash (hay otras maneras)
+
+~~~js
+import { config } from '@auth/config';
+import { AuthModel } from '@auth/models/auth.schema';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { IAuthBuyerMessageDetails, IAuthDocument, firstLetterUppercase, lowerCase, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { sign } from 'jsonwebtoken';
+import { omit } from 'lodash';
+import { Model, Op } from 'sequelize';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService', 'debug');
+
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+
+    const result: Model = await AuthModel.create(data);
+
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!, //le coloco ! al final
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth'
+    };
+
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update', //exchange
+      'user-buyer',//routingKey
+      JSON.stringify(messageDetails),//message
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument; //omito el password
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserById(authId: number): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { id: authId },
+      attributes: {
+        exclude: ['password'] //no quiero que retorne el password
+      }
+    }) as Model; //as Model!!
+
+    return user?.dataValues;//si tengo el user retorno la dataValues
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        //Uso Op de sequelize con or para decir que usará uno u otro
+        [Op.or]: [{ username: firstLetterUppercase(username)}, { email: lowerCase(email)}]
+      },
+    }) as Model;
+    return user?.dataValues; //lo retorno si lo tengo
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsername(username: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { username: firstLetterUppercase(username) },
+    }) as Model; //as Model!
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { email: lowerCase(email) },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+~~~
+
+- Falta esta interfaz, IAuthDocument se puede consultar en páginas anteriores (esta también)
+
+~~~js
+export interface IAuthBuyerMessageDetails {
+  username?: string;
+  profilePicture?: string;
+  email?: string;
+  country?: string;
+  createdAt?: Date;
+  type?: string;
+}
+~~~
+
+- Los métodos update
+- updateVerifyEmailField
+- La propiedad emailVerified de AuthSchema se setea en 0 por defecto (false)
+- Le paso el authId, emailVeriffied y emailverificationToken
+- Uso un ternario. Si no tengo el emailVerificationToken le paso a emailVerified el emailVerified que tengo como argumento
+- Si tengo el token le paso el emailVerified, y el emailVerificationToken
+- Uso where para filtrar por id
+
+~~~js
+export async function updateVerifyEmailField(authId: number, emailVerified: number, emailVerificationToken?: string): Promise<void> {
+  try {
+    await AuthModel.update(
+    !emailVerificationToken ?  {
+        emailVerified
+      } : {
+        emailVerified,
+        emailVerificationToken
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+//Cuando el user quiere cambiar el password una vez ya está loggeado 
+export async function updatePasswordToken(authId: number, token: string, tokenExpiration: Date): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        passwordResetToken: token,
+        passwordResetExpires: tokenExpiration
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+//Para actualizar el password
+export async function updatePassword(authId: number, password: string): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        password,
+        passwordResetToken: '',
+        passwordResetExpires: new Date()
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export function signToken(id: number, email: string, username: string): string {
+  // uso el metodo sign de jwtoken para crear el token 
+  // le paso los campos y la clave secreta
+  return sign(
+    {
+      id,
+      email,
+      username
+    },
+    config.JWT_TOKEN! 
+  );
+}
+~~~
+----
+
+## Auth service endpoints
+
