@@ -897,4 +897,106 @@ export interface IAuthDocument {
 ~~~
 
 - Puedo usar TablePlus para visualizar la data
-- 
+
+-----
+
+## RabbitMQ connection
+
+- auth-ms/src/queues/connection
+- createConnection devuelve una promesa de tipo Channel o undefined
+- En un try cacth creo la conexión con el cliente
+- Con la conexión creo el canal
+- Cierro el canal y la conexión si recibo SIGINT con el metodo closeConnection, devuelvo el channel
+- Si todo sale bien devuelvo el Channel
+- En el catch recojo el error si lo hay y devuelvo undefined
+
+~~~js
+import { config } from '@auth/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import client, { Channel, Connection } from 'amqplib';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authQueueConnection', 'debug');
+
+async function createConnection(): Promise<Channel | undefined> {
+  try {                                                    //amqp://jobber:jobberpass@localhost:5672
+    const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
+
+    const channel: Channel = await connection.createChannel();
+
+    log.info('Auth server connected to queue successfully...');
+    closeConnection(channel, connection);
+    return channel;
+
+  } catch (error) {
+    log.log('error', 'AuthService createConnection() method error:', error);
+    return undefined; //si hay error devuelvo undefined
+  }
+}
+
+function closeConnection(channel: Channel, connection: Connection): void {
+  process.once('SIGINT', async () => {
+    await channel.close();
+    await connection.close();
+  });
+}
+
+export { createConnection } ;
+~~~
+
+- Lo ejecuto en el server de auth-ms
+- Creo el authChannel fuera del método y lo exporto
+
+~~~js
+export let authChannel: Channel;
+
+async function startQueues(): Promise<void> {
+  authChannel = await createConnection() as Channel;
+}
+~~~
+
+- Auth-ms solo enviará (producirá) mensajes, no consumirá ningún mensaje. Solo produce
+- Aquí va un gráfico
+
+![notification](notification.png)
+
+- Creo en auth-ms/src/queues/auth.producer.ts
+- Creo la función publishDirectMessage
+- Debo pasarle el channel, el exchangeName, la routingKey, el message (con stringify), y el logMessage
+- Uso try catch
+- Si no viene el channel lo creo
+- Necesitamos usar assertExchange para usar el canal que hemos creado y pasarle el noombre del exchange y el tipo de conexión
+- Uso el método publish de channel, le paso el exchangeName, el routingKey y tabajo el message como un Buffer
+
+
+~~~js
+import { config } from '@auth/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@auth/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authServiceProducer', 'debug');
+
+export async function publishDirectMessage(
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> {
+  
+  try {
+    if (!channel) {           //creayeConnection from auth-ms/src/queues/connection
+      channel = await createConnection() as Channel;
+    }
+    await channel.assertExchange(exchangeName, 'direct');
+
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'AuthService Provider publishDirectMessage() method error:', error);
+  }
+}
+~~~
