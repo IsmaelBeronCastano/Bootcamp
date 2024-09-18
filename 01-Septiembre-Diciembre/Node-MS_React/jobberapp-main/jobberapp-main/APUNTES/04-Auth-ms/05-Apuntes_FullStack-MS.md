@@ -2298,7 +2298,321 @@ export class AxiosService {
 ~~~
 - Cuando la request viene del cliente se intercepta por el api-gateway
 - La api-gateway asignará el token requerido si existe y enviará la request al auth-ms
+- Hay que añadir cloudinary.v2.config
 --------
 
 ## Get cloudinary keys
 
+Los encuentro en el Dashboard de mi página de Cloudinary
+- CloudName
+- Api Key 
+- Api Secret
+- Las agrego a .env
+- Lo configuro en el archivo config de auth-ms/src/config.ts
+
+~~~js
+import dotenv from 'dotenv';
+import cloudinary from 'cloudinary';
+
+dotenv.config({});
+
+if (process.env.ENABLE_APM === '1') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('elastic-apm-node').start({
+    serviceName: 'jobber-auth',
+    serverUrl: process.env.ELASTIC_APM_SERVER_URL,
+    secretToken: process.env.ELASTIC_APM_SECRET_TOKEN,
+    environment: process.env.NODE_ENV,
+    active: true,
+    captureBody: 'all',
+    errorOnAbortedRequests: true,
+    captureErrorLogStackTraces: 'always'
+  });
+}
+
+class Config {
+  public NODE_ENV: string | undefined;
+  public RABBITMQ_ENDPOINT: string | undefined;
+  public MYSQL_DB: string | undefined;
+  public JWT_TOKEN: string | undefined;
+  public CLOUD_NAME: string | undefined;
+  public CLOUD_API_KEY: string | undefined;
+  public CLOUD_API_SECRET: string | undefined;
+  public GATEWAY_JWT_TOKEN: string | undefined;
+  public API_GATEWAY_URL: string | undefined;
+  public CLIENT_URL: string | undefined;
+  public ELASTIC_SEARCH_URL: string | undefined;
+
+  constructor() {
+    this.NODE_ENV = process.env.NODE_ENV || '';
+    this.JWT_TOKEN = process.env.JWT_TOKEN || '';
+    this.GATEWAY_JWT_TOKEN = process.env.GATEWAY_JWT_TOKEN || '';
+    this.RABBITMQ_ENDPOINT = process.env.RABBITMQ_ENDPOINT || '';
+    this.MYSQL_DB = process.env.MYSQL_DB || '';
+    //aqui están las variables de cloudinary
+    this.CLOUD_NAME = process.env.CLOUD_NAME || '';
+    this.CLOUD_API_KEY = process.env.CLOUD_API_KEY || '';
+    this.CLOUD_API_SECRET = process.env.CLOUD_API_SECRET || '';
+    this.API_GATEWAY_URL = process.env.API_GATEWAY_URL || '';
+    this.CLIENT_URL = process.env.CLIENT_URL || '';
+    this.ELASTIC_SEARCH_URL = process.env.ELASTIC_SEARCH_URL || '';
+  }
+
+  public cloudinaryConfig(): void {
+    //hay que añadir .v2.config
+    cloudinary.v2.config({
+      cloud_name: this.CLOUD_NAME,
+      api_key: this.CLOUD_API_KEY,
+      api_secret: this.CLOUD_API_SECRET
+    });
+  }
+}
+
+export const config: Config = new Config();
+~~~
+
+- Hay que invocar el método en auth-ms/src/app.ts
+
+~~~js
+import express, { Express } from 'express';
+import { start } from '@auth/server';
+import { databaseConnection } from '@auth/database';
+import { config } from '@auth/config';
+
+const initialize = (): void => {
+  config.cloudinaryConfig();//con esto accedo a la cloudinary API
+  const app: Express = express();
+  databaseConnection();
+  start(app);
+};
+
+initialize();
+~~~
+
+- Podemos usar POSTMAN, ThunderClient, RestClient
+----
+
+## verifyGatewayToken
+
+- El verifyGatewayToken de jobber-shared (la librería de helpers) es lo que va en el auth-ms/src/routes  
+
+~~~js
+import JWT from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import { NotAuthorizedError } from './error-handler';
+
+const tokens: string[] = ['auth', 'seller', 'gig', 'search', 'buyer', 'message', 'order', 'review'];
+
+export function verifyGatewayRequest(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.headers?.gatewaytoken) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  const token: string = req.headers?.gatewaytoken as string;
+  if (!token) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+
+  try {                                                             //gateway token en .env
+    const payload: { id: string; iat: number } = JWT.verify(token, '1282722b942e08c8a6cb033aa6ce850e') as { id: string; iat: number };
+    if (!tokens.includes(payload.id)) {
+      throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request payload is invalid');
+    }
+  } catch (error) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  next(); //fuera del try catch!
+}
+~~~
+
+- auth-ms/src/routes.ts
+
+~~~js
+import { Application } from 'express';
+import { verifyGatewayRequest } from '@uzochukwueddie/jobber-shared';
+import { authRoutes } from '@auth/routes/auth';
+import { currentUserRoutes } from '@auth/routes/current-user';
+import { healthRoutes } from '@auth/routes/health';
+import { searchRoutes } from '@auth/routes/search';
+import { seedRoutes } from '@auth/routes/seed';
+
+const BASE_PATH = '/api/v1/auth';
+
+export function appRoutes(app: Application): void {
+  app.use('', healthRoutes());
+  //app.use(BASE_PATH, searchRoutes());
+  //app.use(BASE_PATH, seedRoutes());
+
+  app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
+  //app.use(BASE_PATH, verifyGatewayRequest, currentUserRoutes());
+};
+~~~
+-----
+
+## AuthSignin controller
+
+- auth-ms/src/controllers/signin.ts
+- Sigo un poco la misma estrategia
+- Uso Promise.resolve para extraer el error (de haberlo)
+- Desestructuro del req.body
+- 
+
+
+~~~js
+import { randomInt } from 'crypto';
+
+import { AuthModel } from '@auth/models/auth.schema';
+import { loginSchema } from '@auth/schemes/signin';
+import { getUserByEmail, getUserByUsername, signToken, updateUserOTP } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails, isEmail } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { omit } from 'lodash';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+
+export async function read(req: Request, res: Response): Promise<void> {
+  
+  //extraigo el error, de haberlo
+  const { error } = await Promise.resolve(loginSchema.validate(req.body));
+
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'SignIn read() method error');
+  }
+
+  //desestructuro
+  const { username, password, browserName, deviceType } = req.body;
+
+  //verifico que sea un mail
+  const isValidEmail: boolean = isEmail(username);
+
+                                    //si el email no es válido uso el método solo por usuario o solo por email del auth.Service
+  const existingUser: IAuthDocument | undefined = !isValidEmail ? await getUserByUsername(username) : await getUserByEmail(username);
+  //si sigo por no encontrarlo, lanzo un error
+  if (!existingUser) {
+    throw new BadRequestError('Invalid credentials', 'SignIn read() method error');
+  }
+
+  //uso el método comparPassword que me encargué con una interfaz que lo tuviera AuthModel
+  const passwordsMatch: boolean = await AuthModel.prototype.comparePassword(password, `${existingUser.password}`);
+  //si no da match lanzo un error
+  if (!passwordsMatch) {
+    throw new BadRequestError('Invalid credentials', 'SignIn read() method error');
+  }
+
+  //Seteo unas variables
+  let userJWT = '';
+  let userData: IAuthDocument | null = null;
+  let message = 'User login successfully';
+
+  //estas dos están validadas en el loginSchema
+  let userBrowserName = '';
+  let userDeviceType = '';
+
+  // if (browserName !== existingUser.browserName || deviceType !== existingUser.deviceType) {
+  //   // min 6 digits and max 6 digits
+  //   // 100000 - 999999
+  //   const otpCode = randomInt(10**5, 10**6-1);
+  //   // send email with otp
+  //   const messageDetails: IEmailMessageDetails = {
+  //     receiverEmail: existingUser.email,
+  //     username: existingUser.username,
+  //     otp: `${otpCode}`,
+  //     template: 'otpEmail'
+  //   };
+  //   await publishDirectMessage(
+  //     authChannel,
+  //     'jobber-email-notification',
+  //     'auth-email',
+  //     JSON.stringify(messageDetails),
+  //     'OTP email message sent to notification service.'
+  //   );
+  //   message = 'OTP code sent';
+  //   userBrowserName = `${existingUser.browserName}`;
+  //   userDeviceType = `${existingUser.deviceType}`;
+  //   const date: Date = new Date();
+  //   date.setMinutes(date.getMinutes() + 10);
+  //   await updateUserOTP(existingUser.id!, `${otpCode}`, date, '', '');
+  // } else {
+    
+    userJWT = signToken(existingUser.id!, existingUser.email!, existingUser.username!);
+    //omito el password en el valor de retorno importando omit de lodash
+    userData = omit(existingUser, ['password']);
+  
+  //En la respuesta retorno el userJWT, el message, etc
+  res.status(StatusCodes.OK).json({ message, user: userData, token: userJWT });
+
+~~~
+
+- La interfaz isEmail de jobber-shared/helpers.ts
+
+~~~js
+export function isEmail(email: string): boolean {
+  const regexExp =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/gi;
+  return regexExp.test(email);
+}
+~~~
+
+- El loginSchema en auth-ms/src/schemes/signin.ts
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const loginSchema: ObjectSchema = Joi.object().keys({
+  username: Joi.alternatives().conditional(Joi.string().email(), {
+    then: Joi.string().email().required().messages({
+      'string.base': 'Email must be of type string',
+      'string.email': 'Invalid email',
+      'string.empty': 'Email is a required field'
+    }),
+    otherwise: Joi.string().min(4).max(12).required().messages({
+      'string.base': 'Username must be of type string',
+      'string.min': 'Invalid username',
+      'string.max': 'Invalid username',
+      'string.empty': 'Username is a required field'
+    })
+  }),
+  password: Joi.string().min(4).max(12).required().messages({
+    'string.base': 'Password must be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  browserName: Joi.string().optional(),
+  deviceType: Joi.string().optional()
+});
+
+export { loginSchema };
+~~~
+
+- El authModel (extracto)
+
+~~~js
+import { sequelize } from '@auth/database';
+import { IAuthDocument } from '@uzochukwueddie/jobber-shared';
+import { compare, hash } from 'bcryptjs';
+import { DataTypes, Model, ModelDefined, Optional } from 'sequelize';
+
+const SALT_ROUND = 10;
+
+interface AuthModelInstanceMethods extends Model {
+  prototype: {
+    comparePassword: (password: string, hashedPassword: string) => Promise<boolean>;
+    hashPassword: (password: string) => Promise<string>;
+  }
+}
+
+type AuthUserCreationAttributes = Optional<IAuthDocument, 'id' | 'createdAt' | 'passwordResetToken' | 'passwordResetExpires'>;
+
+const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods = sequelize.define('auths', {
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+(...)})
+~~~
+----
+
+## VerifyEmail Controller
+
+- 

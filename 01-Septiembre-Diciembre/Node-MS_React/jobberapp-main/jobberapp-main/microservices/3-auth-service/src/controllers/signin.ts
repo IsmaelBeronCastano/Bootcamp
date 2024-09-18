@@ -11,6 +11,7 @@ import { publishDirectMessage } from '@auth/queues/auth.producer';
 import { authChannel } from '@auth/server';
 
 export async function read(req: Request, res: Response): Promise<void> {
+  
   const { error } = await Promise.resolve(loginSchema.validate(req.body));
   if (error?.details) {
     throw new BadRequestError(error.details[0].message, 'SignIn read() method error');
