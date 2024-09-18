@@ -1201,3 +1201,227 @@ export function signToken(id: number, email: string, username: string): string {
 
 ## Auth service endpoints
 
+- El endpoint de Frontend a la API Gateway será http(s)://host:port/api/v1/gateway/auth
+- Aqui están todos los endpoints de auth
+
+![method_auth](methods.png)
+
+
+## Signup Controller
+
+- Seremos capaces de subir una imagen, cerar un ususario y publicar un mensaje
+- Lo que queremos hacer es validar el schema del req.body, usaremos joi
+- Si es exitoso necesitamos chequear si ya existe el user o el email
+- Si esto sale bien, subiremos la imagen. 
+- Si todo sale bien enviaremos una notificación
+- **Explicación**
+  - Si quiero resolver la respuesta de la promesa directamente uso Promise.resolve y lo guardo en una variable
+  - Uso el método validate (o validateAsync) del Schema
+  - Si hubiera un error?.details envío en un BadRequest la primera linea del error.details.message
+  - Creo el uuid (del profilePublicId) (npm i uuid)
+  - La interfaz UploadApiResponse es de Cloudinary(npm i cloudinary), uso uploads de jobber-shared
+  - Desde el frontend usaré base64 como encode para el profilePicture
+    - El overwrite ne true para que en caso de que exista la sobreescriba
+    - invalidate en true para que en caso de que la imagen esté en caché, invalidarla
+  - Si no hay publicId lanzo error
+  - Uso crypto para codificar a Buffer con Promise.resolve (npm i crypto)
+  - 
+- El signupController en auth-ms/src/controllers/signup.ts
+
+~~~js
+import crypto from 'crypto';
+
+import { signupSchema } from '@auth/schemes/signup';
+import { createAuthUser, getUserByUsernameOrEmail, signToken } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails, firstLetterUppercase, lowerCase, uploads } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { v4 as uuidV4 } from 'uuid';
+import { UploadApiResponse } from 'cloudinary';
+import { config } from '@auth/config';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { StatusCodes } from 'http-status-codes';
+
+export async function create(req: Request, res: Response): Promise<void> {
+
+  //compruebo si hay un error en el schema con el método validate
+  const { error } = await Promise.resolve(signupSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'SignUp create() method error');
+  }
+  //Si llego aqui es que la validación del schema ha pasado, desestructuro
+  const { username, email, password, country, profilePicture, browserName, deviceType } = req.body;
+
+  //compruebo que el usuario existe                         //método del auth.service
+  const checkIfUserExist: IAuthDocument | undefined = await getUserByUsernameOrEmail(username, email);
+  if (checkIfUserExist) {
+    throw new BadRequestError('Invalid credentials. Email or Username', 'SignUp create() method error');
+  }
+
+  //creo el uuid
+  const profilePublicId = uuidV4();
+
+                      //interfaz de Cloudinary                                            //overwrite en true,invalidate en true
+  const uploadResult: UploadApiResponse = await uploads(profilePicture, `${profilePublicId}`, true, true) as UploadApiResponse;
+  
+  //Si no hay public_id lanzo error
+  if (!uploadResult.public_id) {
+    throw new BadRequestError('File upload error. Try again', 'SignUp create() method error');
+  }
+          //genero el buffer, import crypto, 20 es el tamaño
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+
+  //lo convierto a hexadecimal
+  const randomCharacters: string = randomBytes.toString('hex');
+  
+  //Creo el objeto para pasarle a createAuthUser
+  const authData: IAuthDocument = {
+    username: firstLetterUppercase(username),
+    email: lowerCase(email),
+    profilePublicId,
+    password,
+    country,
+    profilePicture: uploadResult?.secure_url,
+    emailVerificationToken: randomCharacters,
+    browserName,
+    deviceType
+  } as IAuthDocument;
+                                      //método del  auth.service
+  const result: IAuthDocument = await createAuthUser(authData) as IAuthDocument;
+
+  //creo el link de verificación
+  const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=${authData.emailVerificationToken}`;
+
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: result.email,
+    verifyLink: verificationLink, //le paso el link de verificacion al objeto
+    template: 'verifyEmail'
+  };
+  //lo mando a la queue de auth-email
+  await publishDirectMessage(
+    authChannel,
+    'jobber-email-notification',//nombre del exchange en email.consumer
+    'auth-email',
+    JSON.stringify(messageDetails), //paso a string el messageDetails
+    'Verify email message has been sent to notification service.'
+  );
+                          //signToken método de auth.service
+  const userJWT: string = signToken(result.id!, result.email!, result.username!);
+
+  res.status(StatusCodes.CREATED).json({ message: 'User created successfully', user: result, token: userJWT });
+}
+~~~
+- El token se guarda en el API Gateway, en las cookies
+- Lo paso en la response
+- El método uploads de jobber-shared/cloudinary-uploads
+
+~~~js
+import cloudinary, { UploadApiErrorResponse, UploadApiResponse } from 'cloudinary';
+
+export function uploads(
+  file: string,
+  public_id?: string,
+  overwrite?: boolean,
+  invalidate?: boolean
+): Promise<UploadApiResponse | UploadApiErrorResponse | undefined> {
+  return new Promise((resolve) => {
+    cloudinary.v2.uploader.upload(
+      file,
+      {
+        public_id,
+        overwrite,
+        invalidate,
+        resource_type: 'auto' // zip, images
+      },
+      (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
+        if (error) resolve(error);
+        resolve(result);
+      }
+    );
+  });
+}
+~~~
+
+- El createAuthUser de auth-ms/src/services/auth.service.ts
+
+~~~js
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth'
+    };
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update',
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+~~~
+
+- El publishDirectMessage de auth/src/queues/auth.producer
+
+~~~js
+import { config } from '@auth/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@auth/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authServiceProducer', 'debug');
+
+export async function publishDirectMessage(
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> {
+  try {
+    //si no hay channel lo creo
+    if (!channel) {
+      //creo la conexión
+      channel = await createConnection() as Channel;
+    }
+    //asigno el exchange
+    await channel.assertExchange(exchangeName, 'direct');
+    //publico el message
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'AuthService Provider publishDirectMessage() method error:', error);
+  }
+}
+~~~
+
+- El signToken de auth.service
+
+~~~js
+export function signToken(id: number, email: string, username: string): string {
+  return sign(
+    {
+      id,
+      email,
+      username
+    },
+    config.JWT_TOKEN!
+  );
+}
+~~~
+-----
+
+## AuthService Signup Routes
+
+- 
