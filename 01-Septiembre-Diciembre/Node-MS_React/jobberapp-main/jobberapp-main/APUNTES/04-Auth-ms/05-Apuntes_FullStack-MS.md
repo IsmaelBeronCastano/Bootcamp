@@ -1424,4 +1424,301 @@ export function signToken(id: number, email: string, username: string): string {
 
 ## AuthService Signup Routes
 
-- 
+- auth-ms/src/routes/auth.ts
+
+~~~js
+import { changePassword, forgotPassword, resetPassword } from '@auth/controllers/password';
+import { read } from '@auth/controllers/signin';
+import { create } from '@auth/controllers/signup';
+import { update } from '@auth/controllers/verify-email';
+import { updateOTP } from '@auth/controllers/verify-otp';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+export function authRoutes(): Router {
+  router.post('/signup', create);
+  router.post('/signin', read);
+  router.put('/verify-email', update);
+  router.put('/verify-otp/:otp', updateOTP);
+  router.put('/forgot-password', forgotPassword);
+  router.put('/reset-password/:token', resetPassword);
+  router.put('/change-password', changePassword);
+
+  return router;
+}
+~~~
+
+En auth-ms/src/routes.ts
+
+
+~~~js
+import { Application } from 'express';
+import { verifyGatewayRequest } from '@uzochukwueddie/jobber-shared';
+import { authRoutes } from '@auth/routes/auth';
+import { currentUserRoutes } from '@auth/routes/current-user';
+import { healthRoutes } from '@auth/routes/health';
+import { searchRoutes } from '@auth/routes/search';
+import { seedRoutes } from '@auth/routes/seed';
+
+const BASE_PATH = '/api/v1/auth';
+
+export function appRoutes(app: Application): void {
+  app.use('', healthRoutes());
+  //app.use(BASE_PATH, searchRoutes());
+  //app.use(BASE_PATH, seedRoutes());
+
+  app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
+  //app.use(BASE_PATH, verifyGatewayRequest, currentUserRoutes());
+};
+~~~
+
+- El middleware VerifyGatewayRequest de jobber-shared
+
+~~~js
+import JWT from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import { NotAuthorizedError } from './error-handler';
+
+const tokens: string[] = ['auth', 'seller', 'gig', 'search', 'buyer', 'message', 'order', 'review'];
+
+export function verifyGatewayRequest(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.headers?.gatewaytoken) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  const token: string = req.headers?.gatewaytoken as string;
+  if (!token) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+
+  try {
+    const payload: { id: string; iat: number } = JWT.verify(token, '1282722b942e08c8a6cb033aa6ce850e') as { id: string; iat: number };
+    if (!tokens.includes(payload.id)) {
+      throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request payload is invalid');
+    }
+  } catch (error) {
+    throw new NotAuthorizedError('Invalid request', 'verifyGatewayRequest() method: Request not coming from api gateway');
+  }
+  next();
+}
+
+~~~
+
+- En el server llamo a appRoutes con una función que meto en start()
+
+~~~js
+
+export function start(app: Application): void {
+  securityMiddleware(app);
+  standardMiddleware(app);
+  routesMiddleware(app);
+  startQueues();
+  startElasticSearch();
+  authErrorHandler(app);
+  startServer(app);
+}
+
+function routesMiddleware(app: Application): void {
+  appRoutes(app);
+}
+~~~
+
+- En app.ts llamo al start
+
+~~~js
+import express, { Express } from 'express';
+import { start } from '@auth/server';
+import { databaseConnection } from '@auth/database';
+import { config } from '@auth/config';
+
+const initialize = (): void => {
+  config.cloudinaryConfig();
+  const app: Express = express();
+  databaseConnection();
+  start(app);
+};
+
+initialize();
+~~~
+
+- Tengo que darlo de alta en el api- gateway
+- Necesito crear una instancia de axios y pasarle una baseUrl
+- api-gateway/src/services//api/auth-service.ts
+
+~~~js
+import axios, { AxiosResponse } from 'axios';
+import { AxiosService } from '@gateway/services/axios';
+import { config } from '@gateway/config';
+import { IAuth } from '@uzochukwueddie/jobber-shared';
+
+//la instancia de axiosAuth la tengo aqui, la puedo exportar
+export let axiosAuthInstance: ReturnType<typeof axios.create>;
+
+class AuthService {
+  axiosService: AxiosService;
+
+  //Creo la instancia de axiosAuthService en el constructor
+  constructor() {                         //le paso la baseUrl y el service
+    this.axiosService = new AxiosService(`${config.AUTH_BASE_URL}/api/v1/auth`, 'auth');
+
+    axiosAuthInstance = this.axiosService.axios;//creo la axiosAuthInstance
+  }
+
+  async getCurrentUser(): Promise<AxiosResponse> {
+                        //Como es axiosService.axios y viene de axios.create tengo los métodos get, post, etc
+    const response: AxiosResponse = await axiosAuthInstance.get('/currentuser');
+    return response;
+  }
+
+  async getRefreshToken(username: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get(`/refresh-token/${username}`);
+    return response;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/change-password', { currentPassword, newPassword });
+    return response;
+  }
+
+  async verifyEmail(token: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/verify-email', { token });
+    return response;
+  }
+
+  async verifyOTP(otp: string, body: { browserName: string, deviceType: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put(`/verify-otp/${otp}`, body);
+    return response;
+  }
+
+  async resendEmail(data: { userId: number, email: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.post('/resend-email', data);
+    return response;
+  }
+
+  async signUp(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signup', body);
+    return response;
+  }
+
+  async signIn(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signin', body);
+    return response;
+  }
+
+  async forgotPassword(email: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put('/forgot-password', { email });
+    return response;
+  }
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/reset-password/${token}`, { password, confirmPassword });
+    return response;
+  }
+
+  async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
+    return response;
+  }
+
+  async getGig(gigId: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${gigId}`);
+    return response;
+  }
+
+  async seed(count: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/seed/${count}`);
+    return response;
+  }
+}
+
+export const authService: AuthService = new AuthService();
+~~~
+
+- El axiosService en api-gateway/src/services/axios
+- Cada servicio tendrá su instancia de axios
+
+~~~js
+import axios from 'axios';
+import { sign } from 'jsonwebtoken';
+import { config } from '@gateway/config';
+
+export class AxiosService {
+  public axios: ReturnType<typeof axios.create>;
+
+              //le paso la baseUrl y el service en le constructor
+  constructor(baseUrl: string, serviceName: string) {
+    this.axios = this.axiosCreateInstance(baseUrl, serviceName);
+  }
+
+  public axiosCreateInstance(baseUrl: string, serviceName?: string): ReturnType<typeof axios.create> {
+
+    let requestGatewayToken = '';
+    
+    //creo el token
+    if (serviceName) {
+      requestGatewayToken = sign({ id: serviceName }, `${config.GATEWAY_JWT_TOKEN}`);
+    }
+
+    //paso el token en los headers
+    const instance: ReturnType<typeof axios.create> = axios.create({
+      baseURL: baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        gatewayToken: requestGatewayToken
+      },
+      withCredentials: true //importante!!
+    });
+    
+    return instance;//devuelvo la instancia
+  }
+}
+~~~
+
+- En el server de api-gateway
+- Así es como se usa axios para añadir propiedades dinámicamente
+- Antes de que axios haga la request al authService, chequeará que en la request el JWT exista
+
+~~~js
+  private securityMiddleware(app: Application): void {
+    app.set('trust proxy', 1);
+    app.use(
+      cookieSession({
+        name: 'session',
+        keys: [`${config.SECRET_KEY_ONE}`, `${config.SECRET_KEY_TWO}`],
+        maxAge: 24 * 7 * 3600000,
+        secure: config.NODE_ENV !== 'development',
+        ...(config.NODE_ENV !== 'development' && {
+          sameSite: 'none'
+        })
+      })
+    );
+    app.use(hpp());
+    app.use(helmet());
+    app.use(cors({
+      origin: config.CLIENT_URL,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    }));
+
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      if (req.session?.jwt) {
+        //añado el Bearer Token de las cookies a Authorization de los headers
+        axiosAuthInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+
+        // axiosBuyerInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // axiosSellerInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // axiosGigInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // axiosMessageInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // axiosOrderInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // axiosReviewInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+      }
+      next();
+    });
+  }
+~~~
+---
+
+## Gateway Signup Route
+
+  

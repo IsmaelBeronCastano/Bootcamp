@@ -10,10 +10,15 @@ export class AxiosService {
   }
 
   public axiosCreateInstance(baseUrl: string, serviceName?: string): ReturnType<typeof axios.create> {
+
     let requestGatewayToken = '';
+    
+    //creo el token
     if (serviceName) {
       requestGatewayToken = sign({ id: serviceName }, `${config.GATEWAY_JWT_TOKEN}`);
     }
+
+    //paso el token en los headers
     const instance: ReturnType<typeof axios.create> = axios.create({
       baseURL: baseUrl,
       headers: {
@@ -21,8 +26,9 @@ export class AxiosService {
         Accept: 'application/json',
         gatewayToken: requestGatewayToken
       },
-      withCredentials: true
+      withCredentials: true //importante!!
     });
+    
     return instance;
   }
 }
