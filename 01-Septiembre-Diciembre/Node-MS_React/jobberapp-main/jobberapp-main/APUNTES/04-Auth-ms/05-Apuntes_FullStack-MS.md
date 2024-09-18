@@ -1721,4 +1721,253 @@ export class AxiosService {
 
 ## Gateway Signup Route
 
-  
+- En api-gateway/src/controllers/auth/signup.ts
+- Tipo la respuesta como AxiosResponse, uso el método signUp de la instancia de axios authService
+
+~~~js
+import { authService } from '@gateway/services/api/auth.service';
+import { AxiosResponse } from 'axios';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class SignUp {
+  public async create(req: Request, res: Response): Promise<void> {
+
+                                          //authService de api-gateway/src/services/api/auth.service
+    const response: AxiosResponse = await authService.signUp(req.body);
+    req.session = { jwt: response.data.token };
+    res.status(StatusCodes.CREATED).json({ message: response.data.message, user: response.data.user });
+  }
+}
+~~~
+
+- AuthService llama a la instancia de axios que irá llamando a los distintos endpoints
+
+~~~js
+
+class AuthService {
+  axiosService: AxiosService;
+
+  constructor() {
+    this.axiosService = new AxiosService(`${config.AUTH_BASE_URL}/api/v1/auth`, 'auth');
+    axiosAuthInstance = this.axiosService.axios;
+  }
+
+  (...)
+}
+~~~
+
+- Como es un controlador, lo llamo desde el api-gateway/src/routes/auth.route.ts
+
+~~~js
+import { Password } from '@gateway/controllers/auth/password';
+import { AuthSeed } from '@gateway/controllers/auth/seed';
+import { SignIn } from '@gateway/controllers/auth/signin';
+import { Signout } from '@gateway/controllers/auth/signout';
+import { SignUp } from '@gateway/controllers/auth/signup';
+import { VerifyEmail } from '@gateway/controllers/auth/verify-email';
+import { VerifyOTP } from '@gateway/controllers/auth/verify-otp';
+import express, { Router } from 'express';
+
+class AuthRoutes {
+  private router: Router;
+
+  constructor() {
+    this.router = express.Router();
+  }
+
+  public routes(): Router {
+    this.router.post('/auth/signup', SignUp.prototype.create);
+    this.router.post('/auth/signin', SignIn.prototype.read);
+    this.router.post('/auth/signout', Signout.prototype.update);
+    this.router.put('/auth/verify-email', VerifyEmail.prototype.update);
+    this.router.put('/auth/verify-otp/:otp', VerifyOTP.prototype.update);
+    this.router.put('/auth/forgot-password', Password.prototype.forgotPassword);
+    this.router.put('/auth/reset-password/:token', Password.prototype.resetPassword);
+    this.router.put('/auth/change-password', Password.prototype.changePassword);
+    this.router.put('/auth/seed/:count', AuthSeed.prototype.create);
+    return this.router;
+  }
+}
+
+export const authRoutes: AuthRoutes = new AuthRoutes();
+~~~
+
+- Echando un vistazo al AuthService, al final(!) estoy creando una instancia que exporto e importo en el api-gateway/src/controller/auth.controller.ts
+
+~~~js
+import axios, { AxiosResponse } from 'axios';
+import { AxiosService } from '@gateway/services/axios';
+import { config } from '@gateway/config';
+import { IAuth } from '@uzochukwueddie/jobber-shared';
+
+export let axiosAuthInstance: ReturnType<typeof axios.create>;
+
+class AuthService {
+  axiosService: AxiosService;
+
+  constructor() {
+    this.axiosService = new AxiosService(`${config.AUTH_BASE_URL}/api/v1/auth`, 'auth');
+    axiosAuthInstance = this.axiosService.axios;
+  }
+
+  async getCurrentUser(): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get('/currentuser');
+    return response;
+  }
+
+  async getRefreshToken(username: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get(`/refresh-token/${username}`);
+    return response;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/change-password', { currentPassword, newPassword });
+    return response;
+  }
+
+  async verifyEmail(token: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/verify-email', { token });
+    return response;
+  }
+
+  async verifyOTP(otp: string, body: { browserName: string, deviceType: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put(`/verify-otp/${otp}`, body);
+    return response;
+  }
+
+  async resendEmail(data: { userId: number, email: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.post('/resend-email', data);
+    return response;
+  }
+
+  //AQUI!!!
+  async signUp(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signup', body);
+    return response;
+  }
+
+  async signIn(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signin', body);
+    return response;
+  }
+
+  async forgotPassword(email: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put('/forgot-password', { email });
+    return response;
+  }
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/reset-password/${token}`, { password, confirmPassword });
+    return response;
+  }
+
+  async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
+    return response;
+  }
+
+  async getGig(gigId: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${gigId}`);
+    return response;
+  }
+
+  async seed(count: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/seed/${count}`);
+    return response;
+  }
+}
+
+//AQUI!!!
+export const authService: AuthService = new AuthService();
+~~~
+
+- Estoy conectando con los endpoints de auth-ms/routes/auth.ts
+
+~~~js
+import { changePassword, forgotPassword, resetPassword } from '@auth/controllers/password';
+import { read } from '@auth/controllers/signin';
+import { create } from '@auth/controllers/signup';
+import { update } from '@auth/controllers/verify-email';
+import { updateOTP } from '@auth/controllers/verify-otp';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+export function authRoutes(): Router {
+  router.post('/signup', create);
+  router.post('/signin', read);
+  router.put('/verify-email', update);
+  router.put('/verify-otp/:otp', updateOTP);
+  router.put('/forgot-password', forgotPassword);
+  router.put('/reset-password/:token', resetPassword);
+  router.put('/change-password', changePassword);
+
+  return router;
+}
+~~~
+
+- En auth-ms/src/controllers/signup.ts del microservicio tengo **la lógica de negocio**
+
+~~~js
+import crypto from 'crypto';
+
+import { signupSchema } from '@auth/schemes/signup';
+import { createAuthUser, getUserByUsernameOrEmail, signToken } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails, firstLetterUppercase, lowerCase, uploads } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { v4 as uuidV4 } from 'uuid';
+import { UploadApiResponse } from 'cloudinary';
+import { config } from '@auth/config';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { StatusCodes } from 'http-status-codes';
+
+export async function create(req: Request, res: Response): Promise<void> {
+  const { error } = await Promise.resolve(signupSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'SignUp create() method error');
+  }
+  const { username, email, password, country, profilePicture, browserName, deviceType } = req.body;
+  const checkIfUserExist: IAuthDocument | undefined = await getUserByUsernameOrEmail(username, email);
+  if (checkIfUserExist) {
+    throw new BadRequestError('Invalid credentials. Email or Username', 'SignUp create() method error');
+  }
+
+  const profilePublicId = uuidV4();
+  const uploadResult: UploadApiResponse = await uploads(profilePicture, `${profilePublicId}`, true, true) as UploadApiResponse;
+  if (!uploadResult.public_id) {
+    throw new BadRequestError('File upload error. Try again', 'SignUp create() method error');
+  }
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+  const randomCharacters: string = randomBytes.toString('hex');
+  const authData: IAuthDocument = {
+    username: firstLetterUppercase(username),
+    email: lowerCase(email),
+    profilePublicId,
+    password,
+    country,
+    profilePicture: uploadResult?.secure_url,
+    emailVerificationToken: randomCharacters,
+    browserName,
+    deviceType
+  } as IAuthDocument;
+  const result: IAuthDocument = await createAuthUser(authData) as IAuthDocument;
+  const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=${authData.emailVerificationToken}`;
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: result.email,
+    verifyLink: verificationLink,
+    template: 'verifyEmail'
+  };
+  await publishDirectMessage(
+    authChannel,
+    'jobber-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Verify email message has been sent to notification service.'
+  );
+  const userJWT: string = signToken(result.id!, result.email!, result.username!);
+  res.status(StatusCodes.CREATED).json({ message: 'User created successfully', user: result, token: userJWT });
+}
+~~~
+~~~
