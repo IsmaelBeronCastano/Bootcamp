@@ -2755,18 +2755,18 @@ export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDo
   }
 }
 
-export async function getAuthUserByOTP(otp: string): Promise<IAuthDocument | undefined> {
-  try {
-    const user: Model = await AuthModel.findOne({
-      where: {
-        [Op.and]: [{ otp }, { otpExpiration: { [Op.gt]: new Date() }}]
-      },
-    }) as Model;
-    return user?.dataValues;
-  } catch (error) {
-    log.error(error);
-  }
-}
+// export async function getAuthUserByOTP(otp: string): Promise<IAuthDocument | undefined> {
+//   try {
+//     const user: Model = await AuthModel.findOne({
+//       where: {
+//         [Op.and]: [{ otp }, { otpExpiration: { [Op.gt]: new Date() }}]
+//       },
+//     }) as Model;
+//     return user?.dataValues;
+//   } catch (error) {
+//     log.error(error);
+//   }
+// }
 
 export async function updateVerifyEmailField(authId: number, emailVerified: number, emailVerificationToken?: string): Promise<void> {
   try {
@@ -2813,21 +2813,21 @@ export async function updatePassword(authId: number, password: string): Promise<
   }
 }
 
-export async function updateUserOTP(authId: number, otp: string, otpExpiration: Date, browserName: string, deviceType: string): Promise<void> {
-  try {
-    await AuthModel.update(
-      {
-        otp,
-        otpExpiration,
-        ...(browserName.length > 0 && { browserName }),
-        ...(deviceType.length > 0 && { deviceType })
-      },
-      { where: { id: authId }}
-    );
-  } catch (error) {
-    log.error(error);
-  }
-}
+// export async function updateUserOTP(authId: number, otp: string, otpExpiration: Date, browserName: string, deviceType: string): Promise<void> {
+//   try {
+//     await AuthModel.update(
+//       {
+//         otp,
+//         otpExpiration,
+//         ...(browserName.length > 0 && { browserName }),
+//         ...(deviceType.length > 0 && { deviceType })
+//       },
+//       { where: { id: authId }}
+//     );
+//   } catch (error) {
+//     log.error(error);
+//   }
+// }
 
 export function signToken(id: number, email: string, username: string): string {
   return sign(
@@ -2929,6 +2929,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   //hasheo el password con el método de AuthModel que le pasé con la interfaz
   const hashedPassword: string = await AuthModel.prototype.hashPassword(password); 
 
+  //uso updatePassword de auth.service
   await updatePassword(existingUser.id!, hashedPassword);
   const messageDetails: IEmailMessageDetails = {
     username: existingUser.username,
@@ -3168,6 +3169,657 @@ Reset your Jobber Password
 ~~~
 ------
 
+- Los schemas de validación están en auth-ms/src/schemes/password.ts
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const emailSchema: ObjectSchema = Joi.object().keys({
+  email: Joi.string().email().required().messages({
+    'string.base': 'Field must be valid',
+    'string.required': 'Field must be valid',
+    'string.email': 'Field must be valid'
+  })
+});
+
+const passwordSchema: ObjectSchema = Joi.object().keys({
+  password: Joi.string().required().min(4).max(12).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  confirmPassword: Joi.string().required().valid(Joi.ref('password')).messages({
+    'any.only': 'Passwords should match',
+    'any.required': 'Confirm password is a required field'
+  })
+});
+
+const changePasswordSchema: ObjectSchema = Joi.object().keys({
+  currentPassword: Joi.string().required().min(4).max(8).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+  newPassword: Joi.string().required().min(4).max(12).messages({
+    'string.base': 'Password should be of type string',
+    'string.min': 'Invalid password',
+    'string.max': 'Invalid password',
+    'string.empty': 'Password is a required field'
+  }),
+});
+
+export { emailSchema, passwordSchema, changePasswordSchema };
+~~~
+
+- En api-gateway/src/controllers/auth/password.ts
+
+~~~js
+import { authService } from '@gateway/services/api/auth.service';
+import { AxiosResponse } from 'axios';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class Password {
+  public async forgotPassword(req: Request, res: Response): Promise<void> {
+    const response: AxiosResponse = await authService.forgotPassword(req.body.email);
+    res.status(StatusCodes.OK).json({ message: response.data.message });
+  }
+
+  public async resetPassword(req: Request, res: Response): Promise<void> {
+    const { password, confirmPassword } = req.body;
+    const response: AxiosResponse = await authService.resetPassword(req.params.token, password, confirmPassword);
+    res.status(StatusCodes.OK).json({ message: response.data.message });
+  }
+
+  public async changePassword(req: Request, res: Response): Promise<void> {
+    const { currentPassword, newPassword } = req.body;
+    const response: AxiosResponse = await authService.changePassword(currentPassword, newPassword);
+    res.status(StatusCodes.OK).json({ message: response.data.message });
+  }
+}
+~~~
+
+- En el servicio de api-gateway es donde llamamos al endpoint de auth-ms y sus controladores
+
+~~~js
+import axios, { AxiosResponse } from 'axios';
+import { AxiosService } from '@gateway/services/axios';
+import { config } from '@gateway/config';
+import { IAuth } from '@uzochukwueddie/jobber-shared';
+
+export let axiosAuthInstance: ReturnType<typeof axios.create>;
+
+class AuthService {
+  axiosService: AxiosService;
+
+  constructor() {
+    this.axiosService = new AxiosService(`${config.AUTH_BASE_URL}/api/v1/auth`, 'auth');
+    axiosAuthInstance = this.axiosService.axios;
+  }
+
+  async getCurrentUser(): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get('/currentuser');
+    return response;
+  }
+
+  async getRefreshToken(username: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get(`/refresh-token/${username}`);
+    return response;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/change-password', { currentPassword, newPassword });
+    return response;
+  }
+
+  async verifyEmail(token: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/verify-email', { token });
+    return response;
+  }
+
+  async verifyOTP(otp: string, body: { browserName: string, deviceType: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put(`/verify-otp/${otp}`, body);
+    return response;
+  }
+
+  async resendEmail(data: { userId: number, email: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.post('/resend-email', data);
+    return response;
+  }
+
+  async signUp(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signup', body);
+    return response;
+  }
+
+  async signIn(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signin', body);
+    return response;
+  }
+
+  async forgotPassword(email: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put('/forgot-password', { email });
+    return response;
+  }
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/reset-password/${token}`, { password, confirmPassword });
+    return response;
+  }
+
+  async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
+    return response;
+  }
+
+  async getGig(gigId: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${gigId}`);
+    return response;
+  }
+
+  async seed(count: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/seed/${count}`);
+    return response;
+  }
+}
+
+export const authService: AuthService = new AuthService();
+~~~
+
 ## Current User Method 
 
-- 
+- En auth-ms/src/controllers/user-current.ts
+
+~~~js
+import crypto from 'crypto';
+
+import { getAuthUserById, getUserByEmail, updateVerifyEmailField } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails, lowerCase } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { config } from '@auth/config';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+
+
+//este método estará en una ruta protegida
+//servirá para verificar que el user sigue autenticado
+export async function read(req: Request, res: Response): Promise<void> {
+  let user = null;
+                                                  //uso el servicio para encontar el usuario
+  const existingUser: IAuthDocument | undefined = await getAuthUserById(req.currentUser!.id);
+    //valido nuevamente y guardo en user el usuario
+  if (Object.keys(existingUser!).length) {
+    user = existingUser;
+  }
+  res.status(StatusCodes.OK).json({ message: 'Authenticated user', user });
+}
+
+
+
+export async function resendEmail(req: Request, res: Response): Promise<void> {
+  const { email, userId } = req.body;
+
+  const checkIfUserExist: IAuthDocument | undefined = await getUserByEmail(lowerCase(email));
+
+  if (!checkIfUserExist) {
+    throw new BadRequestError('Email is invalid', 'CurrentUser resentEmail() method error');
+  }
+
+  //creamos el token
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+  const randomCharacters: string = randomBytes.toString('hex');
+
+  const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=${randomCharacters}`;
+
+  //uso el servicio
+  await updateVerifyEmailField(parseInt(userId), 0, randomCharacters);
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: lowerCase(email),
+    verifyLink: verificationLink,
+    template: 'verifyEmail'
+  };
+
+  await publishDirectMessage(
+    authChannel,
+    'jobber-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Verify email message has been sent to notification service.'
+  );
+  const updatedUser = await getAuthUserById(parseInt(userId));
+  res.status(StatusCodes.OK).json({ message: 'Email verification sent', user: updatedUser });
+}
+~~~
+
+- Desde el controller auth-ms/src/controller/current-user llamo a auth-ms/src/services/auth.ts
+
+~~~js
+import { config } from '@auth/config';
+import { AuthModel } from '@auth/models/auth.schema';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { IAuthBuyerMessageDetails, IAuthDocument, firstLetterUppercase, lowerCase, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { sign } from 'jsonwebtoken';
+import { omit } from 'lodash';
+import { Model, Op } from 'sequelize';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService', 'debug');
+
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth'
+    };
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update',
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserById(authId: number): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { id: authId },
+      attributes: {
+        exclude: ['password']
+      }
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        [Op.or]: [{ username: firstLetterUppercase(username)}, { email: lowerCase(email)}]
+      },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsername(username: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { username: firstLetterUppercase(username) },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { email: lowerCase(email) },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserByVerificationToken(token: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { emailVerificationToken: token },
+      attributes: {
+        exclude: ['password']
+      }
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        [Op.and]: [{ passwordResetToken: token}, { passwordResetExpires: { [Op.gt]: new Date() }}]
+      },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+// export async function getAuthUserByOTP(otp: string): Promise<IAuthDocument | undefined> {
+//   try {
+//     const user: Model = await AuthModel.findOne({
+//       where: {
+//         [Op.and]: [{ otp }, { otpExpiration: { [Op.gt]: new Date() }}]
+//       },
+//     }) as Model;
+//     return user?.dataValues;
+//   } catch (error) {
+//     log.error(error);
+//   }
+// }
+
+export async function updateVerifyEmailField(authId: number, emailVerified: number, emailVerificationToken?: string): Promise<void> {
+  try {
+    await AuthModel.update(
+    !emailVerificationToken ?  {
+        emailVerified
+      } : {
+        emailVerified,
+        emailVerificationToken
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updatePasswordToken(authId: number, token: string, tokenExpiration: Date): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        passwordResetToken: token,
+        passwordResetExpires: tokenExpiration
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updatePassword(authId: number, password: string): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        password,
+        passwordResetToken: '',
+        passwordResetExpires: new Date()
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+// export async function updateUserOTP(authId: number, otp: string, otpExpiration: Date, browserName: string, deviceType: string): Promise<void> {
+//   try {
+//     await AuthModel.update(
+//       {
+//         otp,
+//         otpExpiration,
+//         ...(browserName.length > 0 && { browserName }),
+//         ...(deviceType.length > 0 && { deviceType })
+//       },
+//       { where: { id: authId }}
+//     );
+//   } catch (error) {
+//     log.error(error);
+//   }
+// }
+
+export function signToken(id: number, email: string, username: string): string {
+  return sign(
+    {
+      id,
+      email,
+      username
+    },
+    config.JWT_TOKEN!
+  );
+}
+~~~
+
+- El current-user controller del api-gateway
+- api-gateway/src/controllers/current-user.ts
+
+~~~js
+import { GatewayCache } from '@gateway/redis/gateway.cache';
+import { socketIO } from '@gateway/server';
+import { authService } from '@gateway/services/api/auth.service';
+import { AxiosResponse } from 'axios';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gatewayCache: GatewayCache = new GatewayCache();
+export class CurrentUser {
+  
+  public async read(_req: Request, res: Response): Promise<void> {
+    const response: AxiosResponse = await authService.getCurrentUser();
+    res.status(StatusCodes.OK).json({ message: response.data.message, user: response.data.user });
+  }
+
+  public async resendEmail(req: Request, res: Response): Promise<void> {
+    const response: AxiosResponse = await authService.resendEmail(req.body);
+    res.status(StatusCodes.OK).json({ message: response.data.message, user: response.data.user });
+  }
+
+  // public async getLoggedInUsers(_req: Request, res: Response): Promise<void> {
+  //   const response: string[] = await gatewayCache.getLoggedInUsersFromCache('loggedInUsers');
+  //   socketIO.emit('online', response);
+  //   res.status(StatusCodes.OK).json({ message: 'User is online' });
+  // }
+
+  // public async removeLoggedInUser(req: Request, res: Response): Promise<void> {
+  //   const response: string[] = await gatewayCache.removeLoggedInUserFromCache('loggedInUsers', req.params.username);
+  //   socketIO.emit('online', response);
+  //   res.status(StatusCodes.OK).json({ message: 'User is offline' });
+  // }
+}
+~~~
+
+- Desde aquí llamo al api-gateway/auth.service
+- Tengo el current-user en api-gateway/src/routes/current-user.ts
+
+~~~js
+import { CurrentUser } from '@gateway/controllers/auth/current-user';
+import { Refresh } from '@gateway/controllers/auth/refresh-token';
+import { authMiddleware } from '@gateway/services/auth-middleware';
+import express, { Router } from 'express';
+
+class CurrentUserRoutes {
+  private router: Router;
+
+  constructor() {
+    this.router = express.Router();
+  }
+
+  public routes(): Router {
+    this.router.get('/auth/refresh-token/:username', authMiddleware.checkAuthentication, Refresh.prototype.token);
+    this.router.get('/auth/currentuser', authMiddleware.checkAuthentication, CurrentUser.prototype.read);
+    this.router.post('/auth/resend-email', authMiddleware.checkAuthentication, CurrentUser.prototype.resendEmail);
+    // this.router.delete('/auth/logged-in-user/:username', authMiddleware.checkAuthentication, CurrentUser.prototype.removeLoggedInUser);
+    return this.router;
+  }
+}
+
+export const currentUserRoutes: CurrentUserRoutes = new CurrentUserRoutes();
+~~~
+
+- El middleware está en api-gateway/src/servicfes/auth-middleware.ts
+
+~~~js
+import { config } from '@gateway/config';
+import { BadRequestError, IAuthPayload, NotAuthorizedError } from '@uzochukwueddie/jobber-shared';
+import { Request, Response, NextFunction } from 'express';
+import { verify } from 'jsonwebtoken';
+
+class AuthMiddleware {
+  public verifyUser(req: Request, _res: Response, next: NextFunction): void {
+    if (!req.session?.jwt) {
+      throw new NotAuthorizedError('Token is not available. Please login again.', 'GatewayService verifyUser() method error');
+    }
+
+    try {
+      const payload: IAuthPayload = verify(req.session?.jwt, `${config.JWT_TOKEN}`) as IAuthPayload;
+      req.currentUser = payload;
+    } catch (error) {
+      throw new NotAuthorizedError('Token is not available. Please login again.', 'GatewayService verifyUser() method invalid session error');
+    }
+    next();
+  }
+
+  public checkAuthentication(req: Request, _res: Response, next: NextFunction): void {
+    if (!req.currentUser) {
+      throw new BadRequestError('Authentication is required to access this route.', 'GatewayService checkAuthentication() method error');
+    }
+    next();
+  }
+}
+
+export const authMiddleware: AuthMiddleware = new AuthMiddleware();
+~~~
+
+
+- Paso el controller de api-gateway de verify-email
+
+~~~js
+import { authService } from '@gateway/services/api/auth.service';
+import { AxiosResponse } from 'axios';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class VerifyEmail {
+  public async update(req: Request, res: Response): Promise<void> {
+    const response: AxiosResponse = await authService.verifyEmail(req.body.token);
+    res.status(StatusCodes.OK).json({ message: response.data.message, user: response.data.user });
+  }
+}
+~~~
+
+-----
+
+## Refresh Token
+
+- El mismo procedimiento para refresh-token
+
+~~~js
+import { authService } from '@gateway/services/api/auth.service';
+import { AxiosResponse } from 'axios';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class Refresh {
+  public async token(req: Request, res: Response): Promise<void> {
+    const response: AxiosResponse = await authService.getRefreshToken(req.params.username);
+    req.session = { jwt: response.data.token };
+    res.status(StatusCodes.OK).json({ message: response.data.message, user: response.data.user });
+  }
+}
+~~~
+
+- auth-ms/src/controllers/refresh-token
+
+~~~js
+import { getUserByUsername, signToken } from '@auth/services/auth.service';
+import { IAuthDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export async function token(req: Request, res: Response): Promise<void> {
+  const existingUser: IAuthDocument | undefined = await getUserByUsername(req.params.username);
+
+  //le paso lo que quiero dentro del token
+  const userJWT: string = signToken(existingUser!.id!, existingUser!.email!, existingUser!.username!);
+  res.status(StatusCodes.OK).json({ message: 'Refresh token', user: existingUser, token: userJWT });
+}
+~~~
+----
+
+## Health 
+
+- En api-gateway/src/controllers/health.ts
+
+~~~js
+
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export class Health {
+  public health(_req: Request, res: Response): void {
+    res.status(StatusCodes.OK).send('API Gateway service is healthy and OK.');
+  }
+}
+~~~
+
+- En api-hgateway/src/routes
+
+~~~js
+import { Health } from '@gateway/controllers/health';
+import express, { Router } from 'express';
+
+class HealthRoutes {
+  private router: Router;
+
+  constructor() {
+    this.router = express.Router();
+  }
+
+  public routes(): Router {
+    this.router.get('/gateway-health', Health.prototype.health);
+    return this.router;
+  }
+}
+
+export const healthRoutes: HealthRoutes = new HealthRoutes();
+~~~
+
+- Por supuesto debe estar en el routes general de api-gateway, como el resto de routes
+
+~~~js
+import { Application } from 'express';
+import { healthRoutes } from '@gateway/routes/health';
+import { authRoutes } from '@gateway/routes/auth';
+import { currentUserRoutes } from '@gateway/routes/current-user';
+import { authMiddleware } from '@gateway/services/auth-middleware';
+import { searchRoutes } from '@gateway/routes/search';
+import { buyerRoutes } from '@gateway/routes/buyer';
+import { sellerRoutes } from '@gateway/routes/seller';
+import { gigRoutes } from '@gateway/routes/gig';
+import { messageRoutes } from '@gateway/routes/message';
+import { orderRoutes } from '@gateway/routes/order';
+import { reviewRoutes } from '@gateway/routes/review';
+
+const BASE_PATH = '/api/gateway/v1';
+
+export const appRoutes = (app: Application) => {
+  app.use('', healthRoutes.routes());
+  app.use(BASE_PATH, authRoutes.routes());
+  app.use(BASE_PATH, searchRoutes.routes());
+
+  app.use(BASE_PATH, authMiddleware.verifyUser, currentUserRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, buyerRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, sellerRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, gigRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, messageRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, orderRoutes.routes());
+  // app.use(BASE_PATH, authMiddleware.verifyUser, reviewRoutes.routes());
+};
+~~~
+
