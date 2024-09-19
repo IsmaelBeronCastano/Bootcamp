@@ -2539,7 +2539,7 @@ export async function read(req: Request, res: Response): Promise<void> {
     userData = omit(existingUser, ['password']);
   
   //En la respuesta retorno el userJWT, el message, etc
-  res.status(StatusCodes.OK).json({ message, user: userData, token: userJWT });
+  res.status(StatusCodes.OK).json({ message, user: userData, token: userJWT, browserName: userBrowserName, deviceType: userDeviceType });
 
 ~~~
 
@@ -2614,5 +2614,560 @@ const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthM
 ----
 
 ## VerifyEmail Controller
+
+- auth-ms/src/controllers/verify-email.ts
+- Por default emailVerified es 0 (false, lo actualizamos a 1)
+
+~~~js
+import { getAuthUserById, getAuthUserByVerificationToken, updateVerifyEmailField } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+export async function update(req: Request, res: Response): Promise<void> {
+  const { token } = req.body;
+
+  const checkIfUserExist: IAuthDocument | undefined = await getAuthUserByVerificationToken(token);
+  if (!checkIfUserExist) {
+    throw new BadRequestError('Verification token is either invalid or is already used.', 'VerifyEmail update() method error');
+  }
+  await updateVerifyEmailField(checkIfUserExist.id!, 1);//cambio a 1 emailVerified
+
+  const updatedUser = await getAuthUserById(checkIfUserExist.id!);
+  res.status(StatusCodes.OK).json({ message: 'Email verified successfully.', user: updatedUser }); //devuelvo el usuario
+}
+~~~
+
+- Uso los métodos del servicio auth.service
+- auth-ms/src/services/auth.service.ts
+
+~~~js
+import { config } from '@auth/config';
+import { AuthModel } from '@auth/models/auth.schema';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { IAuthBuyerMessageDetails, IAuthDocument, firstLetterUppercase, lowerCase, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { sign } from 'jsonwebtoken';
+import { omit } from 'lodash';
+import { Model, Op } from 'sequelize';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService', 'debug');
+
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth'
+    };
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update',
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserById(authId: number): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { id: authId },
+      attributes: {
+        exclude: ['password']
+      }
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        [Op.or]: [{ username: firstLetterUppercase(username)}, { email: lowerCase(email)}]
+      },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByUsername(username: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { username: firstLetterUppercase(username) },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { email: lowerCase(email) },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserByVerificationToken(token: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: { emailVerificationToken: token },
+      attributes: {
+        exclude: ['password']
+      }
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        [Op.and]: [{ passwordResetToken: token}, { passwordResetExpires: { [Op.gt]: new Date() }}]
+      },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function getAuthUserByOTP(otp: string): Promise<IAuthDocument | undefined> {
+  try {
+    const user: Model = await AuthModel.findOne({
+      where: {
+        [Op.and]: [{ otp }, { otpExpiration: { [Op.gt]: new Date() }}]
+      },
+    }) as Model;
+    return user?.dataValues;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updateVerifyEmailField(authId: number, emailVerified: number, emailVerificationToken?: string): Promise<void> {
+  try {
+    await AuthModel.update(
+    !emailVerificationToken ?  {
+        emailVerified
+      } : {
+        emailVerified,
+        emailVerificationToken
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updatePasswordToken(authId: number, token: string, tokenExpiration: Date): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        passwordResetToken: token,
+        passwordResetExpires: tokenExpiration
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updatePassword(authId: number, password: string): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        password,
+        passwordResetToken: '',
+        passwordResetExpires: new Date()
+      },
+      { where: { id: authId }},
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export async function updateUserOTP(authId: number, otp: string, otpExpiration: Date, browserName: string, deviceType: string): Promise<void> {
+  try {
+    await AuthModel.update(
+      {
+        otp,
+        otpExpiration,
+        ...(browserName.length > 0 && { browserName }),
+        ...(deviceType.length > 0 && { deviceType })
+      },
+      { where: { id: authId }}
+    );
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+export function signToken(id: number, email: string, username: string): string {
+  return sign(
+    {
+      id,
+      email,
+      username
+    },
+    config.JWT_TOKEN!
+  );
+}
+~~~
+-----
+
+## Forgot Password, Reset Password, Change Password
+
+- auth-ms/src/controllers/password.ts
+- Uso la misma estrategia copn Promise.resolve para extraer el error
+- Desestructuro el email del req.body y uso getUserByEmail, verifico que exista el usuario
+- Creo el token random con 
+
+~~~js
+import crypto from 'crypto';
+
+import { changePasswordSchema, emailSchema, passwordSchema } from '@auth/schemes/password';
+import { getAuthUserByPasswordToken, getUserByEmail, getUserByUsername, updatePassword, updatePasswordToken } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { config } from '@auth/config';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { StatusCodes } from 'http-status-codes';
+import { AuthModel } from '@auth/models/auth.schema';
+
+
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+
+  const { error } = await Promise.resolve(emailSchema.validate(req.body));
+ 
+ if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Password forgotPassword() method error');
+  }
+
+  const { email } = req.body;
+
+  const existingUser: IAuthDocument | undefined = await getUserByEmail(email);
+  if (!existingUser) {
+    throw new BadRequestError('Invalid credentials', 'Password forgotPassword() method error');
+  }
+
+  //Creo el Buffer con cripto para crear un token random
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+  //lo paso a hexadecimal
+  const randomCharacters: string = randomBytes.toString('hex'); 
+  
+  const date: Date = new Date();//genero la fecha
+  
+  date.setHours(date.getHours() + 1); //le añado una hora 
+
+                                              //le paso el user, token y la fecha de expiración
+  await updatePasswordToken(existingUser.id!, randomCharacters, date);
+
+  //creo el link para resetear el password
+  const resetLink = `${config.CLIENT_URL}/reset_password?token=${randomCharacters}`;
+  //creo el objeto del mensaje
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: existingUser.email,
+    resetLink,
+    username: existingUser.username,
+    template: 'forgotPassword'
+  };
+  await publishDirectMessage( //uso el metodo de auth.producer
+    authChannel,
+    'jobber-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Forgot password message sent to notification service.'
+  );
+  res.status(StatusCodes.OK).json({ message: 'Password reset email sent.' });
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const { error } = await Promise.resolve(passwordSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Password resetPassword() method error');
+  }
+  const { password, confirmPassword } = req.body;
+
+  const { token } = req.params; //el token lo recojo de la url
+  if (password !== confirmPassword) {
+    throw new BadRequestError('Passwords do not match', 'Password resetPassword() method error');
+  }
+
+  const existingUser: IAuthDocument | undefined = await getAuthUserByPasswordToken(token);
+  if (!existingUser) {
+    throw new BadRequestError('Reset token has expired', 'Password resetPassword() method error');
+  }
+  //hasheo el password con el método de AuthModel que le pasé con la interfaz
+  const hashedPassword: string = await AuthModel.prototype.hashPassword(password); 
+
+  await updatePassword(existingUser.id!, hashedPassword);
+  const messageDetails: IEmailMessageDetails = {
+    username: existingUser.username,
+    template: 'resetPasswordSuccess' //le paso el template
+  };
+  await publishDirectMessage(
+    authChannel,
+    'jobber-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Reset password success message sent to notification service.'
+  );
+  res.status(StatusCodes.OK).json({ message: 'Password successfully updated.' });
+}
+
+//cambiar password cuando el usuario ya está loggeado
+
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  const { error } = await Promise.resolve(changePasswordSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Password changePassword() method error');
+  }
+  const { newPassword } = req.body;
+
+  const existingUser: IAuthDocument | undefined = await getUserByUsername(`${req.currentUser?.username}`);
+  if (!existingUser) {
+    throw new BadRequestError('Invalid password', 'Password changePassword() method error');
+  }
+  const hashedPassword: string = await AuthModel.prototype.hashPassword(newPassword);
+  
+  //uso updatePassword de auth.service
+  await updatePassword(existingUser.id!, hashedPassword);
+  const messageDetails: IEmailMessageDetails = {
+    username: existingUser.username,
+    template: 'resetPasswordSuccess' ///le paso el template
+  };
+
+  await publishDirectMessage(
+    authChannel,//importo authChannel de auth.server
+    'jobber-email-notification', //exchange
+    'auth-email',//routingkey
+    JSON.stringify(messageDetails), //paso a string el messageDetails
+    'Password change success message sent to notification service.'
+  );
+  res.status(StatusCodes.OK).json({ message: 'Password successfully updated.' });
+}
+~~~
+
+- Las rutas de auth-ms/src/routes/auth.ts
+
+~~~js
+import { changePassword, forgotPassword, resetPassword } from '@auth/controllers/password';
+import { read } from '@auth/controllers/signin';
+import { create } from '@auth/controllers/signup';
+import { update } from '@auth/controllers/verify-email';
+import { updateOTP } from '@auth/controllers/verify-otp';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+export function authRoutes(): Router {
+  router.post('/signup', create);
+  router.post('/signin', read);
+  router.put('/verify-email', update);
+  router.put('/verify-otp/:otp', updateOTP);
+  //AQUI!
+  router.put('/forgot-password', forgotPassword);
+  router.put('/reset-password/:token', resetPassword);
+  router.put('/change-password', changePassword);
+
+  return router;
+}
+~~~
+
+- El método publishDirectmessage de src/queues/auth.producer es este 
+
+~~~js
+import { config } from '@auth/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@auth/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authServiceProducer', 'debug');
+
+export async function publishDirectMessage(
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    await channel.assertExchange(exchangeName, 'direct');
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'AuthService Provider publishDirectMessage() method error:', error);
+  }
+}
+~~~
+
+- Los templates estan en notification-ms/src/emails
+- Por ejemplo el de forgotPassword
+
+~~~html
+<div>
+  <div></div>
+  <div tabindex="-1"></div>
+  <div>
+    <div>
+      <u></u>
+
+      <div style="margin: 0 !important; padding: 0 !important;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tbody>
+            <tr>
+              <td width="100%" align="center" valign="top" bgcolor="#eeeeee" height="20"></td>
+            </tr>
+            <tr>
+              <td bgcolor="#eeeeee" align="center" style="padding: 0px 15px 0px 15px;">
+                <table bgcolor="#ffffff" border="0" cellpadding="0" cellspacing="0" width="100%"
+                  style="max-width: 600px;">
+                  <tbody>
+                    <tr>
+                      <td>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                          <tbody>
+                            <tr>
+                              <td align="center" style="padding: 40px 40px 0px 40px;">
+                                <a href="<%= appLink %>"
+                                  target="_blank">
+                                  <img
+                                    src="<%= appIcon %>"
+                                    width="70" border="0" style="vertical-align: middle;" class="CToWUd"
+                                    data-bit="iit" />
+                                </a>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center"
+                                style="font-size: 18px; color: #0e0e0f; font-weight: 700; font-family: Helvetica Neue; line-height: 28px; vertical-align: top; text-align: center; padding: 35px 40px 0px 40px;">
+                                <strong>Reset Your Jobber Password</strong>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td align="center" bgcolor="#ffffff" height="1" style="padding: 10px 40px 5px;"
+                                valign="top" width="100%">
+                                <table cellpadding="0" cellspacing="0" width="100%">
+                                  <tbody>
+                                    <tr>
+                                      <td style="border-top: 1px solid #e4e4e4;"></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td
+                                style="font: 16px/22px 'Helvetica Neue', Arial, 'sans-serif'; text-align: left; color: #555555; padding: 40px 40px 0px 40px;">
+                                <p>
+                                  Hi <%= username %>,<br />
+                                  We got a request to reset your Jobber password.<br />
+                                  To start the process, please click the following link:
+                                </p>
+                                <a href="<%= resetLink %>"
+                                  style="color: #4aa1f3; text-decoration: none;" target="_blank">
+                                  <%= resetLink %>
+                                </a>
+                                <p>
+                                  If the above link doesn’t work, copy and paste the URL in a new browser window. The
+                                  URL will expire in 1 hour for security reasons. If you didn’t make this request,
+                                  simply ignore this message.
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0"
+                                  style="margin: 30px 0px;">
+                                  <tbody>
+                                    <tr>
+                                      <td align="center" style="text-align: center;">
+                                        <a bgcolor="#1dbf73" style="
+                                          color: #ffffff;
+                                          background-color: #4aa1f3;
+                                          display: inline-block;
+                                          font-family: Helvetica Neue;
+                                          font-size: 16px;
+                                          line-height: 30px;
+                                          text-align: center;
+                                          font-weight: bold;
+                                          text-decoration: none;
+                                          padding: 5px 20px;
+                                          border-radius: 3px;
+                                          text-transform: none;"
+                                        href="<%= resetLink %>"
+                                          target="_blank">
+                                          Reset Your Password
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td width="100%" align="center" valign="top" bgcolor="#ffffff" height="45"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+~~~
+
+
+- subject.ejs
+
+~~~
+Reset your Jobber Password
+~~~
+------
+
+## Current User Method 
 
 - 

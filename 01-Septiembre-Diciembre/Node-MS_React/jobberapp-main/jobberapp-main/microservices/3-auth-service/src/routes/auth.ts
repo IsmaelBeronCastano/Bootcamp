@@ -12,6 +12,7 @@ export function authRoutes(): Router {
   router.post('/signin', read);
   router.put('/verify-email', update);
   router.put('/verify-otp/:otp', updateOTP);
+  //AQUI!
   router.put('/forgot-password', forgotPassword);
   router.put('/reset-password/:token', resetPassword);
   router.put('/change-password', changePassword);
