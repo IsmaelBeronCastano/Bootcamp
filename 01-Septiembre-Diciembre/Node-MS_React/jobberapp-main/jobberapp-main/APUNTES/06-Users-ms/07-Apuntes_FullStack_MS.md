@@ -483,7 +483,7 @@ const username = async (req: Request, res: Response): Promise<void> => {
 export { email, username, currentUsername };
 ~~~
 
-- Que llama al buyer.service
+- Que llama al src/services/buyer.ts
 
 ~~~js
 import { BuyerModel } from '@users/models/buyer.schema';
@@ -505,6 +505,7 @@ const getRandomBuyers = async (count: number): Promise<IBuyerDocument[]> => {
 };
 
 const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
+  //me aseguro de que el user no exista 
   const checkIfBuyerExist: IBuyerDocument | null = await getBuyerByEmail(`${buyerData.email}`);
   if (!checkIfBuyerExist) {
     await BuyerModel.create(buyerData);
@@ -548,7 +549,7 @@ export {
 };
 ~~~
 
-- El modelo de buyer
+- El modelo de buyer en src/models/buyer.ts
 
 ~~~js
 import { IBuyerDocument } from '@uzochukwueddie/jobber-shared';
@@ -561,14 +562,14 @@ const buyerSchema: Schema = new Schema(
     profilePicture: { type: String, required: true },
     country: { type: String, required: true },
     isSeller: { type: Boolean, default: false },
-    purchasedGigs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Gig' }],
+    purchasedGigs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Gig' }], //relación
     createdAt: { type: Date }
   },
   {
     versionKey: false
   }
 );
-
+                                                            //nombre del modelo, el schema, colección
 const BuyerModel: Model<IBuyerDocument> = model<IBuyerDocument>('Buyer', buyerSchema, 'Buyer');
 export { BuyerModel };
 ~~~
@@ -595,8 +596,10 @@ export interface IReduxBuyer {
   payload: IBuyerDocument;
 }
 ~~~
+-------
+## Seller
 
-- Seller.ts
+- src/routes/seller.ts
 
 ~~~js
 import { seller as createSeller } from '@users/controllers/seller/create';
@@ -622,7 +625,7 @@ export { sellerRoutes };
 ~~~
 
 - Con sus controladores para cada caso de uso, create, get, update, seed
-- create
+- src/controller/create
 
 ~~~js
 import { sellerSchema } from '@users/schemes/seller';
@@ -727,6 +730,7 @@ export { seller };
 ~~~
 
 - El servicio de Seller
+- src/services/seller.ts
 
 ~~~js
 import { SellerModel } from '@users/models/seller.schema';
@@ -849,7 +853,7 @@ export {
 };
 ~~~
 
-- El schema de Seller
+- El schema de Seller en src/models/seller
 
 ~~~js
 import { ISellerDocument } from '@uzochukwueddie/jobber-shared';
@@ -924,6 +928,142 @@ const sellerSchema: Schema = new Schema(
 
 const SellerModel: Model<ISellerDocument> = model<ISellerDocument>('Seller', sellerSchema, 'Seller');
 export { SellerModel };
+~~~
+
+- La validación del schema en src/schemes/seller.ts
+
+~~~js
+import Joi, { ObjectSchema } from 'joi';
+
+const sellerSchema: ObjectSchema = Joi.object().keys({
+  fullName: Joi.string().required().messages({
+    'string.base': 'Fullname must be of type string',
+    'string.empty': 'Fullname is required',
+    'any.required': 'Fullname is required'
+  }),
+  _id: Joi.string().optional(),
+  id: Joi.string().optional(),
+  username: Joi.string().optional(),
+  profilePublicId: Joi.string().optional().allow(null, ''),
+  email: Joi.string().optional(),
+  profilePicture: Joi.string().required().messages({
+    'string.base': 'Please add a profile picture',
+    'string.empty': 'Profile picture is required',
+    'any.required': 'Profile picture is required'
+  }),
+  description: Joi.string().required().messages({
+    'string.base': 'Please add a seller description',
+    'string.empty': 'Seller description is required',
+    'any.required': 'Seller description is required'
+  }),
+  country: Joi.string().required().messages({
+    'string.base': 'Please select a country',
+    'string.empty': 'Country field is required',
+    'any.required': 'Country field is required'
+  }),
+  oneliner: Joi.string().required().messages({
+    'string.base': 'Please add your oneliner',
+    'string.empty': 'Oneliner field is required',
+    'any.required': 'Oneliner field is required'
+  }),
+  skills: Joi.array().items(Joi.string()).required().min(1).messages({
+    'string.base': 'Please add at least one skill',
+    'string.empty': 'Skills are required',
+    'any.required': 'Skills are required',
+    'array.min': 'Please add at least one skill'
+  }),
+  languages: Joi.array()
+    .items(
+      Joi.object({
+        _id: Joi.string().optional(),
+        language: Joi.string(),
+        level: Joi.string()
+      })
+    )
+    .required()
+    .min(1)
+    .messages({
+      'string.base': 'Please add at least one language',
+      'string.empty': 'Languages are required',
+      'any.required': 'Languages are required',
+      'array.min': 'Please add at least one language'
+    }),
+  responseTime: Joi.number().required().greater(0).messages({
+    'string.base': 'Please add a response time',
+    'string.empty': 'Response time is required',
+    'any.required': 'Response time is required',
+    'number.greater': 'Response time must be greater than zero'
+  }),
+  experience: Joi.array()
+    .items(
+      Joi.object({
+        _id: Joi.string().optional(),
+        company: Joi.string(),
+        title: Joi.string(),
+        startDate: Joi.string(),
+        endDate: Joi.string(),
+        description: Joi.string(),
+        currentlyWorkingHere: Joi.boolean()
+      })
+    )
+    .required()
+    .min(1)
+    .messages({
+      'string.base': 'Please add at least one work experience',
+      'string.empty': 'Experience is required',
+      'any.required': 'Experience is required',
+      'array.min': 'Please add at least one work experience'
+    }),
+  education: Joi.array()
+    .items(
+      Joi.object({
+        _id: Joi.string().optional(),
+        country: Joi.string(),
+        university: Joi.string(),
+        title: Joi.string(),
+        major: Joi.string(),
+        year: Joi.string()
+      })
+    )
+    .required()
+    .min(1)
+    .messages({
+      'string.base': 'Please add at least one education',
+      'string.empty': 'Education is required',
+      'any.required': 'Education is required',
+      'array.min': 'Please add at least one education'
+    }),
+  socialLinks: Joi.array().optional().allow(null, ''),
+  certificates: Joi.array()
+    .items(
+      Joi.object({
+        _id: Joi.string().optional(),
+        name: Joi.string(),
+        from: Joi.string(),
+        year: Joi.number()
+      })
+    )
+    .optional()
+    .allow(null, ''),
+  ratingsCount: Joi.number().optional(),
+  ratingCategories: Joi.object({
+    five: { value: Joi.number(), count: Joi.number() },
+    four: { value: Joi.number(), count: Joi.number() },
+    three: { value: Joi.number(), count: Joi.number() },
+    two: { value: Joi.number(), count: Joi.number() },
+    one: { value: Joi.number(), count: Joi.number() }
+  }).optional(),
+  ratingSum: Joi.number().optional(),
+  recentDelivery: Joi.string().optional().allow(null, ''),
+  ongoingJobs: Joi.number().optional(),
+  completedJobs: Joi.number().optional(),
+  cancelledJobs: Joi.number().optional(),
+  totalEarnings: Joi.number().optional(),
+  totalGigs: Joi.number().optional(),
+  createdAt: Joi.string().optional()
+});
+
+export { sellerSchema };
 ~~~
 
 - El seed
@@ -1028,6 +1168,8 @@ const randomEducation = (count: number): IEducation[] => {
 
 export { seed };
 ~~~
+
+- Puedo querer mandar la data del seed a elasticSearch y no mongoDB
 - Seller Interface de job-shared
 
 
@@ -1122,7 +1264,7 @@ export interface ISellerDocument extends Record<string, SellerType> {
 }
 ~~~
 
-- En las src/queues creo la conexión con rabbitMQ
+- En las src/queues/connection creo la conexión con rabbitMQ
 
 ~~~js
 import { config } from '@users/config';
@@ -1155,8 +1297,8 @@ function closeConnection(channel: Channel, connection: Connection): void {
 export { createConnection } ;
 ~~~
 
-- El user-producer
-- recuerda: rabbitMQ trabaja con Buffers
+- El user-producer tambien en src/queues/user.producer.ts
+- recuerda: rabbitMQ trabaja con Buffers!
 
 ~~~js
 import { config } from '@users/config';
@@ -1351,3 +1493,9 @@ const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => 
 
 export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
 ~~~
+
+- Si vemos la foto, users service produce para enviar los gigs, pero recibe (o consume) de Auth, Order, Gig y Review
+![services](notification.png)
+
+- Entonces crearemos más de un consumer
+- 
