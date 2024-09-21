@@ -1657,7 +1657,147 @@ export { publishDirectMessage };
 
 ## Buyer Message Consumer
 
-- En users-ms/src/queues/user.consumer.ts
+- El users-consumer consumirá los mensajes enviados por auth-ms con createAuthUser
+- auth-ms/src/controllers/signup
+
+~~~js
+import crypto from 'crypto';
+
+import { signupSchema } from '@auth/schemes/signup';
+import { createAuthUser, getUserByUsernameOrEmail, signToken } from '@auth/services/auth.service';
+import { BadRequestError, IAuthDocument, IEmailMessageDetails, firstLetterUppercase, lowerCase, uploads } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { v4 as uuidV4 } from 'uuid';
+import { UploadApiResponse } from 'cloudinary';
+import { config } from '@auth/config';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { StatusCodes } from 'http-status-codes';
+
+export async function create(req: Request, res: Response): Promise<void> {
+  const { error } = await Promise.resolve(signupSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'SignUp create() method error');
+  }
+  const { username, email, password, country, profilePicture, browserName, deviceType } = req.body;
+  const checkIfUserExist: IAuthDocument | undefined = await getUserByUsernameOrEmail(username, email);
+  if (checkIfUserExist) {
+    throw new BadRequestError('Invalid credentials. Email or Username', 'SignUp create() method error');
+  }
+
+  const profilePublicId = uuidV4();
+  const uploadResult: UploadApiResponse = await uploads(profilePicture, `${profilePublicId}`, true, true) as UploadApiResponse;
+  if (!uploadResult.public_id) {
+    throw new BadRequestError('File upload error. Try again', 'SignUp create() method error');
+  }
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+  const randomCharacters: string = randomBytes.toString('hex');
+  const authData: IAuthDocument = {
+    username: firstLetterUppercase(username),
+    email: lowerCase(email),
+    profilePublicId,
+    password,
+    country,
+    profilePicture: uploadResult?.secure_url,
+    emailVerificationToken: randomCharacters,
+    browserName,
+    deviceType
+  } as IAuthDocument;                  //AQUI LLAMO AL SERVICIO!!
+  const result: IAuthDocument = await createAuthUser(authData) as IAuthDocument;
+  const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=${authData.emailVerificationToken}`;
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: result.email,
+    verifyLink: verificationLink,
+    template: 'verifyEmail'
+  };
+  await publishDirectMessage(
+    authChannel,
+    'jobber-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Verify email message has been sent to notification service.'
+  );
+  const userJWT: string = signToken(result.id!, result.email!, result.username!);
+  res.status(StatusCodes.CREATED).json({ message: 'User created successfully', user: result, token: userJWT });
+}
+~~~
+
+- Si voy al servicio de src/services/auth.service.ts
+
+~~~js
+import { config } from '@auth/config';
+import { AuthModel } from '@auth/models/auth.schema';
+import { publishDirectMessage } from '@auth/queues/auth.producer';
+import { authChannel } from '@auth/server';
+import { IAuthBuyerMessageDetails, IAuthDocument, firstLetterUppercase, lowerCase, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { sign } from 'jsonwebtoken';
+import { omit } from 'lodash';
+import { Model, Op } from 'sequelize';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService', 'debug');
+
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth'
+    };
+    await publishDirectMessage(
+      authChannel,    
+      'jobber-buyer-update', 0
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+
+(...code)
+~~~
+
+- Este publishDirectMessage está en auth-ms/src/queues/auth.producer
+
+~~~js
+import { config } from '@auth/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@auth/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authServiceProducer', 'debug');
+
+export async function publishDirectMessage(
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    await channel.assertExchange(exchangeName, 'direct');
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'AuthService Provider publishDirectMessage() method error:', error);
+  }
+}
+
+~~~
+- Volviendo al consumer en users-ms/src/queues/user.producer.ts
+- Uso el createConnection y hago un poco lo mismo
 
 ~~~js
 import { config } from '@users/config';
@@ -1686,11 +1826,15 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
     const exchangeName = 'jobber-buyer-update';
     const routingKey = 'user-buyer';
     const queueName = 'user-buyer-queue';
+
     await channel.assertExchange(exchangeName, 'direct');
+
     const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
     await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+
     channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
       const { type } = JSON.parse(msg!.content.toString());
+
       if (type === 'auth') {
         const { username, email, profilePicture, country, createdAt } = JSON.parse(msg!.content.toString());
         const buyer: IBuyerDocument = {
@@ -1819,5 +1963,22 @@ const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => 
 };
 
 export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
-
 ~~~
+
+- El createBuyer que llama el ConsumBuyerDirectMessage está en el buyer.service
+
+~~~js
+const getBuyerByEmail = async (email: string): Promise<IBuyerDocument | null> => {
+  const buyer: IBuyerDocument | null = await BuyerModel.findOne({ email }).exec() as IBuyerDocument;
+  return buyer;
+};
+
+const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
+  const checkIfBuyerExist: IBuyerDocument | null = await getBuyerByEmail(`${buyerData.email}`);
+  if (!checkIfBuyerExist) {
+    await BuyerModel.create(buyerData);
+  }
+};
+~~~
+
+- 
