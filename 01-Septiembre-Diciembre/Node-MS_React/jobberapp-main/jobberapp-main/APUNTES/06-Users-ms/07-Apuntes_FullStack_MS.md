@@ -407,14 +407,14 @@ import { config } from '@users/config';
 import express, { Express } from 'express';
 import { start } from '@users/server';
 
-const initilize = (): void => {
+const initialize = (): void => {
   config.cloudinaryConfig();
   databaseConnection();
   const app: Express = express();
   start(app);
 };
 
-initilize();
+initialize();
 ~~~
 
 - El src/routes.ts es este
@@ -457,7 +457,7 @@ const buyerRoutes = (): Router => {
 export { buyerRoutes };
 ~~~
 
-- Con su controlador con los métodos get
+- Con su controlador buyer con los métodos get
 
 ~~~js
 import { getBuyerByEmail, getBuyerByUsername } from '@users/services/buyer.service';
@@ -484,7 +484,8 @@ export { email, username, currentUsername };
 ~~~
 
 - Que llama al src/services/buyer.ts
-
+- Uso exec para ejecutar la query
+- 
 ~~~js
 import { BuyerModel } from '@users/models/buyer.schema';
 import { IBuyerDocument } from '@uzochukwueddie/jobber-shared';
@@ -499,7 +500,10 @@ const getBuyerByUsername = async (username: string): Promise<IBuyerDocument | nu
   return buyer;
 };
 
+                                                            //devuelvo un array
 const getRandomBuyers = async (count: number): Promise<IBuyerDocument[]> => {
+                                                                //uso aggregate, dentro de los corchetes uso $sample operator
+                                                                //retornará el numero que le pase como count
   const buyers: IBuyerDocument[] = await BuyerModel.aggregate([{ $sample: { size: count }}]);
   return buyers;
 };
@@ -514,10 +518,10 @@ const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
 
 const updateBuyerIsSellerProp = async (email: string): Promise<void> => {
   await BuyerModel.updateOne(
-    { email },
+    { email }, //el email que coincida
     {
-      $set: {
-        isSeller: true
+      $set: { //uso set para cambiar el valor
+        isSeller: true //por defecto en false en el modelo
       }
     }
   ).exec();
@@ -526,14 +530,16 @@ const updateBuyerIsSellerProp = async (email: string): Promise<void> => {
 const updateBuyerPurchasedGigsProp = async (buyerId: string, purchasedGigId: string, type: string): Promise<void> => {
   await BuyerModel.updateOne(
     { _id: buyerId },
+
+    //uso un ternario con el type del parámetro
     type === 'purchased-gigs' ?
     {
       $push: {
-        purchasedGigs: purchasedGigId
+        purchasedGigs: purchasedGigId //si el tipo coincide subo el gig
       }
     } : {
       $pull: {
-        purchasedGigs: purchasedGigId
+        purchasedGigs: purchasedGigId //si no coincide lo borro
       }
     }
   ).exec();
@@ -561,7 +567,7 @@ const buyerSchema: Schema = new Schema(
     email: { type: String, required: true, index: true },
     profilePicture: { type: String, required: true },
     country: { type: String, required: true },
-    isSeller: { type: Boolean, default: false },
+    isSeller: { type: Boolean, default: false }, //por defecto en false
     purchasedGigs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Gig' }], //relación
     createdAt: { type: Date }
   },
@@ -1279,11 +1285,13 @@ async function createConnection(): Promise<Channel | undefined> {
     const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
     const channel: Channel = await connection.createChannel();
     log.info('Users server connected to queue successfully...');
+    //si hay error cierro la conexión
     closeConnection(channel, connection);
+    //si no retorno el channel
     return channel;
   } catch (error) {
     log.log('error', 'UsersService createConnection() method error:', error);
-    return undefined;
+    return undefined;//si hay error devuelvo undefined
   }
 }
 
@@ -1299,6 +1307,12 @@ export { createConnection } ;
 
 - El user-producer tambien en src/queues/user.producer.ts
 - recuerda: rabbitMQ trabaja con Buffers!
+- Creo el método publishDirectMessage, le paso las variables como parámetro
+- Uso try catch
+- Compruebo que hay un channel, si no lo hay lo creo
+- Aseguro el exchange pasándole el nombre del exchange y el tipo
+- Uso channel.publish, le paso el exchange, la routingkey, y el message (siempre como buffer)
+- Devuelvo con el log el exito o el error en el catch
 
 ~~~js
 import { config } from '@users/config';
@@ -1309,6 +1323,7 @@ import { createConnection } from '@users/queues/connection';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceProducer', 'debug');
 
+//creo el método publish 
 const publishDirectMessage = async (
   channel: Channel,
   exchangeName: string,
@@ -1317,10 +1332,13 @@ const publishDirectMessage = async (
   logMessage: string
 ): Promise<void> => {
   try {
-    if (!channel) {
+    if (!channel) {                      //as channel!
       channel = await createConnection() as Channel;
     }
-    await channel.assertExchange(exchangeName, 'direct'); //lo aseguro, usaré el método direct
+     //aseguro el exchange, usaré el tipo  de exchange direct
+    await channel.assertExchange(exchangeName, 'direct'); 
+
+                                              //el message siempre será un Buffer
     channel.publish(exchangeName, routingKey, Buffer.from(message));
     log.info(logMessage);
   } catch (error) {
@@ -1332,6 +1350,18 @@ export { publishDirectMessage };
 ~~~
 
 - Y el user-consumer
+- ConsumBuyerDirectMessage, le paso el channel como parámetro de la función
+- Uso un try catch
+- Si no existe el channel lo creo
+- Guardo las variables exchangeName, routingKey y quewueName
+- Aseguro el exchange con assertExchange
+- Aseguro la queue con assertQueue, si no existe la crea
+  - Será de tipo Replies.AssertQueue de amqplib
+- Creo el path entre la queue, el exchange y la routingKey con .bind
+- Consumo la queue con channel.consume
+- En publishDirectMessage envio el mensaje como un buffer, ahi uso JSON.stringify
+  - Para extraer el tipo del message enviado como buffer debo pasarlo a String y luego parsearlo a JSON
+
 
 ~~~js
 import { config } from '@users/config';
@@ -1353,6 +1383,7 @@ import { publishDirectMessage } from '@users/queues/user.producer';
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceConsumer', 'debug');
 
 const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
+  
   try {
     if (!channel) {
       channel = (await createConnection()) as Channel;
@@ -1363,17 +1394,24 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
 
     await channel.assertExchange(exchangeName, 'direct');
 
+    //aseguro la queue. Si no existe la crea
     const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
 
+    //creo el path de la queue con el exchange y la routingKey  
     await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
 
+    //consumo la queue
     channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
 
+      //para extraer el tipo del buffer debo pasarlo a String y luego parsearlo a JSON
       const { type } = JSON.parse(msg!.content.toString());
+      
       //aquí está el tipo que hay en el array
-      if (type === 'auth') {                                            //tengo que parsear a JSON despues de pasarlo a String
+      //si viene de type auth como puse en el auth.service ***
+      if (type === 'auth') {                                //tengo que parsear a JSON despues de pasar el message a String
         const { username, email, profilePicture, country, createdAt } = JSON.parse(msg!.content.toString()); 
         
+
         const buyer: IBuyerDocument = {
           username,
           email,
@@ -1382,6 +1420,8 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
           purchasedGigs: [],
           createdAt
         };
+
+        //uso el método de buyer.service
         await createBuyer(buyer);
       } else {
         const { buyerId, purchasedGigs } = JSON.parse(msg!.content.toString());
@@ -1493,6 +1533,84 @@ const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => 
 
 export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
 ~~~
+
+- El tipo auth que desestructuro es el mismo type que puse en el servicio
+
+~~~js
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth' //<--- *** este tipo es el que desestructuro desde el consumer
+
+    };
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update',
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+~~~
+
+- El createBuyer de buyer.service.ts es este
+- Uso el modelo para crear el buyer, primero compruebo de que existe con getBuyerByEmail pasándole la data
+
+~~~js
+const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
+  const checkIfBuyerExist: IBuyerDocument | null = await getBuyerByEmail(`${buyerData.email}`);
+  if (!checkIfBuyerExist) {
+    await BuyerModel.create(buyerData);
+  }
+};
+~~~
+
+
+- El método createConnection en src/queues/connection.ts
+
+~~~js
+import { config } from '@users/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import client, { Channel, Connection } from 'amqplib';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersQueueConnection', 'debug');
+
+async function createConnection(): Promise<Channel | undefined> {
+  try {
+    const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
+    const channel: Channel = await connection.createChannel();
+    log.info('Users server connected to queue successfully...');
+    closeConnection(channel, connection);
+    return channel;
+  } catch (error) {
+    log.log('error', 'UsersService createConnection() method error:', error);
+    return undefined;
+  }
+}
+
+function closeConnection(channel: Channel, connection: Connection): void {
+  process.once('SIGINT', async () => {
+    await channel.close();
+    await connection.close();
+  });
+}
+
+export { createConnection } ;
+~~~
+
+
 
 - Si vemos la foto, users service produce para enviar los gigs, pero recibe (o consume) de Auth, Order, Gig y Review
 ![services](notification.png)

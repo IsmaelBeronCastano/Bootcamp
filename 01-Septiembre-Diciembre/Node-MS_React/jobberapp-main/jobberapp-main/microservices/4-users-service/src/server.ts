@@ -60,8 +60,10 @@ const routesMiddleware = (app: Application): void => {
   appRoutes(app);
 };
 
+
 const startQueues = async (): Promise<void> => {
   const userChannel: Channel = await createConnection() as Channel;
+  //consumers
   await consumeBuyerDirectMessage(userChannel);
   await consumeSellerDirectMessage(userChannel);
   await consumeReviewFanoutMessages(userChannel);
