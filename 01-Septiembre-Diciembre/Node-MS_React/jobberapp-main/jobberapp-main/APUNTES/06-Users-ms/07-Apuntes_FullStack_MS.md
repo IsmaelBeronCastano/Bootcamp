@@ -735,7 +735,7 @@ const seller = async (req: Request, res: Response): Promise<void> => {
 export { seller };
 ~~~
 
-- El servicio de Seller
+- En el servicio de Seller hacemos uso del model
 - src/services/seller.ts
 
 ~~~js
@@ -790,7 +790,7 @@ const updateSeller = async (sellerId: string, sellerData: ISellerDocument): Prom
         certificates: sellerData.certificates
       }
     },
-    { new: true }
+    { new: true } //le pongo new en true para que devuelva el objeto actualizado
   ).exec() as ISellerDocument;
   return updatedSeller;
 };
@@ -857,6 +857,99 @@ export {
   updateSellerReview,
   updateSellerCancelledJobsProp
 };
+~~~
+
+- La interfaz de seller
+
+~~~js
+import { ObjectId } from "mongoose";
+import { IRatingCategories } from "./review.interface";
+
+// By extending ISellerDocument with the Record<string, any> you allow an object to contain other
+// string keys with any values along with those defined in the interface.
+// The nice part is that you still have the autocompletion for the defined properties
+export type SellerType =
+  | string
+  | string[]
+  | number
+  | IRatingCategories
+  | Date
+  | IExperience
+  | IExperience[]
+  | IEducation
+  | IEducation[]
+  | ICertificate
+  | ICertificate[]
+  | ILanguage
+  | ILanguage[]
+  | unknown
+  | undefined;
+
+export interface ILanguage {
+  [key: string]: string | number | undefined;
+  _id?: string;
+  language: string;
+  level: string;
+}
+
+export interface IExperience {
+  [key: string]: string | number | boolean | undefined;
+  _id?: string;
+  company: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  currentlyWorkingHere: boolean | undefined;
+}
+
+export interface IEducation {
+  [key: string]: string | number | undefined;
+  _id?: string;
+  country: string;
+  university: string;
+  title: string;
+  major: string;
+  year: string;
+}
+
+export interface ICertificate {
+  [key: string]: string | number | undefined;
+  _id?: string;
+  name: string;
+  from: string;
+  year: number | string;
+}
+
+export interface ISellerDocument extends Record<string, SellerType> {
+  _id?: string | ObjectId;
+  profilePublicId?: string;
+  fullName: string;
+  username?: string;
+  email?: string;
+  profilePicture?: string;
+  description: string;
+  country: string;
+  oneliner: string;
+  skills: string[];
+  ratingsCount?: number;
+  ratingSum?: number;
+  ratingCategories?: IRatingCategories;
+  languages: ILanguage[];
+  responseTime: number;
+  recentDelivery?: Date | string;
+  experience: IExperience[];
+  education: IEducation[];
+  socialLinks: string[];
+  certificates: ICertificate[];
+  ongoingJobs?: number;
+  completedJobs?: number;
+  cancelledJobs?: number;
+  totalEarnings?: number;
+  totalGigs?: number;
+  paypal?: string; // not needed
+  createdAt?: Date | string;
+}
 ~~~
 
 - El schema de Seller en src/models/seller
@@ -1176,99 +1269,6 @@ export { seed };
 ~~~
 
 - Puedo querer mandar la data del seed a elasticSearch y no mongoDB
-- Seller Interface de job-shared
-
-
-~~~js
-import { ObjectId } from "mongoose";
-import { IRatingCategories } from "./review.interface";
-
-// By extending ISellerDocument with the Record<string, any> you allow an object to contain other
-// string keys with any values along with those defined in the interface.
-// The nice part is that you still have the autocompletion for the defined properties
-export type SellerType =
-  | string
-  | string[]
-  | number
-  | IRatingCategories
-  | Date
-  | IExperience
-  | IExperience[]
-  | IEducation
-  | IEducation[]
-  | ICertificate
-  | ICertificate[]
-  | ILanguage
-  | ILanguage[]
-  | unknown
-  | undefined;
-
-export interface ILanguage {
-  [key: string]: string | number | undefined;
-  _id?: string;
-  language: string;
-  level: string;
-}
-
-export interface IExperience {
-  [key: string]: string | number | boolean | undefined;
-  _id?: string;
-  company: string;
-  title: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  currentlyWorkingHere: boolean | undefined;
-}
-
-export interface IEducation {
-  [key: string]: string | number | undefined;
-  _id?: string;
-  country: string;
-  university: string;
-  title: string;
-  major: string;
-  year: string;
-}
-
-export interface ICertificate {
-  [key: string]: string | number | undefined;
-  _id?: string;
-  name: string;
-  from: string;
-  year: number | string;
-}
-
-export interface ISellerDocument extends Record<string, SellerType> {
-  _id?: string | ObjectId;
-  profilePublicId?: string;
-  fullName: string;
-  username?: string;
-  email?: string;
-  profilePicture?: string;
-  description: string;
-  country: string;
-  oneliner: string;
-  skills: string[];
-  ratingsCount?: number;
-  ratingSum?: number;
-  ratingCategories?: IRatingCategories;
-  languages: ILanguage[];
-  responseTime: number;
-  recentDelivery?: Date | string;
-  experience: IExperience[];
-  education: IEducation[];
-  socialLinks: string[];
-  certificates: ICertificate[];
-  ongoingJobs?: number;
-  completedJobs?: number;
-  cancelledJobs?: number;
-  totalEarnings?: number;
-  totalGigs?: number;
-  paypal?: string; // not needed
-  createdAt?: Date | string;
-}
-~~~
 
 - En las src/queues/connection creo la conexión con rabbitMQ
 
@@ -1616,4 +1616,208 @@ export { createConnection } ;
 ![services](notification.png)
 
 - Entonces crearemos más de un consumer
-- 
+- Primero creamos el user.producer
+- Le paso el channel, exchangeName,routingKey, message y logMessage
+- He aseguro de que existe el channel con asert, si no lo crea. De tipo direct
+-  Hago uso de publish, le paso el exchangeName el routingKey y le message como un Buffer
+-  Lanzo el log de success o capturo con el catch el error
+
+~~~js
+import { config } from '@users/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@users/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceProducer', 'debug');
+
+const publishDirectMessage = async (
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel; //si no hay channel lo creo
+    }
+
+    await channel.assertExchange(exchangeName, 'direct');
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'UsersService publishDirectMessage() method error:', error);
+  }
+};
+
+export { publishDirectMessage };
+~~~
+-----
+
+## Buyer Message Consumer
+
+- En users-ms/src/queues/user.consumer.ts
+
+~~~js
+import { config } from '@users/config';
+import { IBuyerDocument, ISellerDocument, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage, Replies } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@users/queues/connection';
+import { createBuyer, updateBuyerPurchasedGigsProp } from '@users/services/buyer.service';
+import {
+  getRandomSellers,
+  updateSellerCancelledJobsProp,
+  updateSellerCompletedJobsProp,
+  updateSellerOngoingJobsProp,
+  updateSellerReview,
+  updateTotalGigsCount
+} from '@users/services/seller.service';
+import { publishDirectMessage } from '@users/queues/user.producer';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceConsumer', 'debug');
+
+const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-buyer-update';
+    const routingKey = 'user-buyer';
+    const queueName = 'user-buyer-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'auth') {
+        const { username, email, profilePicture, country, createdAt } = JSON.parse(msg!.content.toString());
+        const buyer: IBuyerDocument = {
+          username,
+          email,
+          profilePicture,
+          country,
+          purchasedGigs: [],
+          createdAt
+        };
+        await createBuyer(buyer);
+      } else {
+        const { buyerId, purchasedGigs } = JSON.parse(msg!.content.toString());
+        await updateBuyerPurchasedGigsProp(buyerId, purchasedGigs, type);
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeBuyerDirectMessage() method error:', error);
+  }
+};
+
+const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-seller-update';
+    const routingKey = 'user-seller';
+    const queueName = 'user-seller-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type, sellerId, ongoingJobs, completedJobs, totalEarnings, recentDelivery, gigSellerId, count } = JSON.parse(
+        msg!.content.toString()
+      );
+      if (type === 'create-order') {
+        await updateSellerOngoingJobsProp(sellerId, ongoingJobs);
+      } else if (type === 'approve-order') {
+        await updateSellerCompletedJobsProp({
+          sellerId,
+          ongoingJobs,
+          completedJobs,
+          totalEarnings,
+          recentDelivery
+        });
+      } else if (type === 'update-gig-count') {
+        await updateTotalGigsCount(`${gigSellerId}`, count);
+      } else if (type === 'cancel-order') {
+        await updateSellerCancelledJobsProp(sellerId);
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeSellerDirectMessage() method error:', error);
+  }
+};
+
+const consumeReviewFanoutMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-review';
+    const queueName = 'seller-review-queue';
+    await channel.assertExchange(exchangeName, 'fanout');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, '');
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'buyer-review') {
+        await updateSellerReview(JSON.parse(msg!.content.toString()));
+        await publishDirectMessage(
+          channel,
+          'jobber-update-gig',
+          'update-gig',
+          JSON.stringify({ type: 'updateGig', gigReview: msg!.content.toString() }),
+          'Message sent to gig service.'
+        );
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+
+const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-gig';
+    const routingKey = 'get-sellers';
+    const queueName = 'user-gig-queue';
+
+    await channel.assertExchange(exchangeName, 'direct');
+
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      
+      if (type === 'getSellers') {
+       
+       const { count } = JSON.parse(msg!.content.toString());
+        const sellers: ISellerDocument[] = await getRandomSellers(parseInt(count, 10));
+        
+        await publishDirectMessage(
+          channel,
+          'jobber-seed-gig',
+          'receive-sellers',
+          JSON.stringify({ type: 'receiveSellers', sellers, count }),
+          'Message sent to gig service.'
+        );
+      }
+      
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+
+export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
+
+~~~
