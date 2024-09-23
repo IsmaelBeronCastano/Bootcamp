@@ -6,9 +6,11 @@ dotenv.config()
 class Config{
 
     public PORT: string | undefined
+    public DATABASE_URL: string
 
     constructor(){
-        this.PORT = process.env.PORT || ''
+        this.PORT = process.env.PORT || '',
+        this.DATABASE_URL = process.env.DATABASE_URL || ''
     }
 }
 

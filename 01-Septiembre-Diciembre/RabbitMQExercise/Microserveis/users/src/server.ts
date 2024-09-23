@@ -15,8 +15,9 @@ export class Server{
 
 
     public start(){
-    this.routesMiddleware(this.app)    
     this.standardMiddlewares()
+    this.routesMiddleware(this.app)    
+
 
  
     }
@@ -29,4 +30,5 @@ export class Server{
     routesMiddleware(app: Application){
         appRoutes(app)
     }
+
 }

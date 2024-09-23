@@ -1,8 +1,11 @@
 import express  from "express"
 import { Server } from "./server"
+import { connectionDB } from "./db/connection"
 
 
 const initialize=()=>{
+
+    connectionDB()
     const app = express()
 
     const server: Server = new Server(app)
