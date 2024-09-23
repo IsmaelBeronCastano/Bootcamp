@@ -1,6 +1,6 @@
 import { Application, json } from "express";
 import cors from 'cors'
-import { config } from "./config";
+import { appRoutes } from "./routes";
 
 
 
@@ -15,10 +15,18 @@ export class Server{
 
 
     public start(){
+    this.routesMiddleware(this.app)    
+    this.standardMiddlewares()
+
+ 
+    }
+
+    standardMiddlewares(){
         this.app.use(json())
         this.app.use(cors())
-        this.app.listen(config.PORT, ()=>{
-            console.log("Server running on port: "+ config.PORT)
-        })
+    }
+
+    routesMiddleware(app: Application){
+        appRoutes(app)
     }
 }

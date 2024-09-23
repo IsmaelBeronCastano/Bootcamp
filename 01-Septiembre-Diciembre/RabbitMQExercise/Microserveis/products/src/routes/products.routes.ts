@@ -1,6 +1,5 @@
 import { Router } from "express";
-import productsController from "../products/controllers/products.controller";
-
+import productsController from "../controllers/products.controller";
 
 export class ProductsRoutes{
 
