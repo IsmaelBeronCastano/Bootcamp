@@ -14,8 +14,8 @@ export let productsChannel: Channel
 
     export function start(app:Application): void{
         dbConnection()
-        routesMiddleware(app)
         middlewareStandard(app)
+        routesMiddleware(app)
         startQueues()
 
 

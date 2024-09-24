@@ -1,4 +1,6 @@
 import { Request, Response } from "express"
+import { createProductService } from "../services/products.service"
+import { IProduct } from "@users/interfaces/IProduct.interface"
 
 export const getProduct=(_:Request, res: Response)=>{
 
@@ -14,10 +16,12 @@ export const getProducts=(_:Request, res: Response)=>{
         message: "method GET"
     })
 }
-export const createProduct=(_:Request, res: Response)=>{
-    
+export const createProduct= async (req:Request, res: Response)=>{
+    const {name, price, quantity, avaliable} = req.body
+    const product = await createProductService({name, price, quantity, avaliable} as IProduct)
     res.status(200).json({
-        message: "method POST"
+        message: "create-product",
+        product
     })
 }
 export const updateProduct=(_:Request, res: Response)=>{

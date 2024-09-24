@@ -1,5 +1,5 @@
 import { Router } from "express";
-import productsController from "../controllers/products.controller";
+import { createProduct, deleteProduct, getProduct, getProducts, updateProduct } from "../controllers/products.controller";
 
 export class ProductsRoutes{
 
@@ -12,11 +12,11 @@ export class ProductsRoutes{
 
     public routes(): Router{
 
-        this.router.post('/create-product', productsController.createProduct)
-        this.router.put('/update-product/:id', productsController.updateProduct)
-        this.router.get('/get-product/:id', productsController.getProduct)
-        this.router.get('/get-products', productsController.getProducts)
-        this.router.delete('/delete-product', productsController.deleteProduct)
+        this.router.post('/create-product', createProduct)
+        this.router.put('/update-product/:id',updateProduct)
+        this.router.get('/get-product/:id', getProduct)
+        this.router.get('/get-products', getProducts)
+        this.router.delete('/delete-product', deleteProduct)
 
 
 

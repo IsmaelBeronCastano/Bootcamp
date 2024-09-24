@@ -4,6 +4,7 @@ export interface IProduct{
     price: number
     quantity: number
     avaliable: boolean
+    creator: string
     createdAt: Date
     updatedAt: Date
     

@@ -2,15 +2,15 @@ import { sequelize } from "../database/dbConnection";
 import { IProduct } from "../interfaces/IProduct.interface";
 import { DataTypes, Model, ModelDefined, Optional } from "sequelize";
 
-type ProductsCreationAttributes = Optional<IProduct, 'id' | 'createdAt' | 'updatedAt'> //id no necesario en la creación (auto mysql)
-
-const ProductModel: ModelDefined<IProduct, ProductsCreationAttributes>= sequelize.define('products',{
+ //id no necesario en la creación (auto mysql)
+type ProductsCreationAttributes = Optional<IProduct, 'id' | 'createdAt' | 'updatedAt'>
+export const ProductModel: ModelDefined<IProduct, ProductsCreationAttributes>= sequelize.define('products',{
     name: {
         type: DataTypes.STRING,
         allowNull: false
     },
     price:{
-        type: DataTypes.NUMBER,
+        type: DataTypes.STRING,
         allowNull: false
     },
     quantity:{
@@ -21,13 +21,17 @@ const ProductModel: ModelDefined<IProduct, ProductsCreationAttributes>= sequeliz
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
+    creator: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
     createdAt:{
         type: DataTypes.DATE,
-        allowNull: false
+        
     },
     updateedAt:{
         type: DataTypes.DATE,
-        allowNull: false
+
     }
     
 },{
