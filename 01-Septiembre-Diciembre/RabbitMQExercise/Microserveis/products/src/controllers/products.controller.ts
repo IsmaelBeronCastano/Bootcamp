@@ -1,6 +1,8 @@
 import { Request, Response } from "express"
 
 export const getProduct=(_:Request, res: Response)=>{
+
+    
     
     res.status(200).json({
         message: "method GET"

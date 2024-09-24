@@ -1,13 +1,17 @@
 import express  from "express"
-import { Server } from "./server"
+import {config} from './config'
+import { start } from "./server"
 
 
 const initialize=()=>{
     const app = express()
     
-    const server = new Server(app)
+    start(app)
+    
+    app.listen(`${config.PORT}`, ()=>{
+        console.log("Server running on port: "+ config.PORT)
+    })
 
-    server.start()
 }
 
 initialize()

@@ -3,8 +3,6 @@ import { IUser } from "../interfaces/user.interface";
 
 export const createUserService = async ({name, email, password}: IUser)=>{
 
-    
-
     const user = await UserModel.create({name, email, password})
 
     await user.save()

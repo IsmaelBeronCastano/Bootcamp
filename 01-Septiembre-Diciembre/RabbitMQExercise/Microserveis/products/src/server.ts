@@ -1,40 +1,35 @@
 import { Application, json } from "express";
 import cors from 'cors'
-import { config } from "./config";
 import { appRoutes } from "./routes";
+import { createConnection } from "./queues/connection";
+import {Channel} from 'amqplib'
 
 
 
 
 
 
-export class Server{
-    private app: Application
+export let productsChannel: Channel
 
-    constructor(app: Application){
-        this.app = app
-    }
-
-
-
-    public start(): void{
-        this.routesMiddleware(this.app)
-        this.middlewareStandard()
-
-        this.app.listen(config.PORT, ()=>{
-            console.log("Server running on port"+ config.PORT)
-        })
+    export function start(app:Application): void{
+        routesMiddleware(app)
+        middlewareStandard(app)
+        startQueues()
 
     }
 
-    middlewareStandard(): void{
-        this.app.use(json())
-        this.app.use(cors())
+    function middlewareStandard(app:Application): void{
+        app.use(json())
+        app.use(cors())
 
     }
 
-    routesMiddleware(app:Application){
+    function routesMiddleware(app:Application){
         appRoutes(app)
     }
-}
+
+    async function startQueues(){
+       productsChannel = await createConnection() as Channel
+    }
+
 
