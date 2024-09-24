@@ -1,15 +1,47 @@
-import { IProduct } from '@users/interfaces/IProduct.interface'
-import { model, Model, Schema } from 'mongoose'
+import { sequelize } from "../database/dbConnection";
+import { IProduct } from "../interfaces/IProduct.interface";
+import { DataTypes, Model, ModelDefined, Optional } from "sequelize";
 
-export const ProductSchema: Schema =  new Schema({
-    name: {type: String, required: true},
-    price:{type: Number, required: true, },
-    quantity:{type: Number, required: true},
-    avaliable:{type: Boolean, default: true}
+type ProductsCreationAttributes = Optional<IProduct, 'id' | 'createdAt' | 'updatedAt'> //id no necesario en la creación (auto mysql)
+
+const ProductModel: ModelDefined<IProduct, ProductsCreationAttributes>= sequelize.define('products',{
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    price:{
+        type: DataTypes.NUMBER,
+        allowNull: false
+    },
+    quantity:{
+        type: DataTypes.NUMBER,
+        allowNull: true
+    },
+    avaliable:{
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    createdAt:{
+        type: DataTypes.DATE,
+        allowNull: false
+    },
+    updateedAt:{
+        type: DataTypes.DATE,
+        allowNull: false
+    }
+    
 },{
-    timestamps: true
-})  
+    indexes: [
+        {
+            unique: true,
+            fields: ['name']
+        }
+    ]
+})
 
-const productModel: Model<IProduct>= model<IProduct>('Product', ProductSchema, 'Product')
+ProductModel.addHook('beforeCreate', async (product: Model<IProduct>)=>{
 
-export {productModel}
+    product.dataValues.name = product.dataValues.name.replace(/\s+/g, '_').toLowerCase()
+    
+})
+

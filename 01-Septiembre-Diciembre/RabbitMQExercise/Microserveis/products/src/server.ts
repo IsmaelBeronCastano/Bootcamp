@@ -3,6 +3,7 @@ import cors from 'cors'
 import { appRoutes } from "./routes";
 import { createConnection } from "./queues/connection";
 import {Channel} from 'amqplib'
+import { databaseConnection } from "./database/dbConnection";
 
 
 
@@ -12,9 +13,11 @@ import {Channel} from 'amqplib'
 export let productsChannel: Channel
 
     export function start(app:Application): void{
+        dbConnection()
         routesMiddleware(app)
         middlewareStandard(app)
         startQueues()
+
 
     }
 
@@ -30,6 +33,10 @@ export let productsChannel: Channel
 
     async function startQueues(){
        productsChannel = await createConnection() as Channel
+    }
+
+    function dbConnection(){
+        databaseConnection()
     }
 
 
