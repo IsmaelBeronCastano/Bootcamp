@@ -163,140 +163,7 @@ const startServer = (app: Application): void => {
 export { start, gigChannel };
 ~~~
 
-## ElasticSearch
 
-- Para elasticSearch tenemos el mismo archivo en gig-ms/src/elasticsearch.ts
-- La data siempre está en ._source
-
-~~~js
-import { Client } from '@elastic/elasticsearch';
-import { ClusterHealthResponse, CountResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
-import { config } from '@gig/config';
-import { ISellerGig, winstonLogger } from '@uzochukwueddie/jobber-shared';
-import { Logger } from 'winston';
-
-const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigElasticSearchServer', 'debug');
-
-const elasticSearchClient = new Client({
-  node: `${config.ELASTIC_SEARCH_URL}`
-});
-            //la invoco en el server
-const checkConnection = async (): Promise<void> => {
-  let isConnected = false;
-  while (!isConnected) {
-    try {
-      const health: ClusterHealthResponse = await elasticSearchClient.cluster.health({});
-      log.info(`GigService Elasticsearch health status - ${health.status}`);
-      isConnected = true;
-    } catch (error) {
-      log.error('Connection to Elasticsearch failed. Retrying...');
-      log.log('error', 'GigService checkConnection() method:', error);
-    }
-  }
-};
-
-async function checkIfIndexExist(indexName: string): Promise<boolean> {
-  const result: boolean = await elasticSearchClient.indices.exists({ index: indexName });
-  return result;
-}
-
-//esta función será llamada en el server
-async function createIndex(indexName: string): Promise<void> {
-  try {
-    const result: boolean = await checkIfIndexExist(indexName);
-    if (result) {
-      log.info(`Index "${indexName}" already exist.`);
-    } else {
-    //creo el index y hago un refresh 
-    //desde que se crea un index, todo documento adherido será buscable
-      await elasticSearchClient.indices.create({ index: indexName });
-      await elasticSearchClient.indices.refresh({ index: indexName });
-      log.info(`Created index ${indexName}`);
-    }
-  } catch (error) {
-    log.error(`An error occurred while creating the index ${indexName}`);
-    log.log('error', 'GigService createIndex() method error:', error);
-  }
-}
-
-const getDocumentCount = async (index: string): Promise<number> => {
-  try {
-    const result: CountResponse = await elasticSearchClient.count({ index });
-    return result.count;
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
-    return 0;
-  }
-};
-
-    //guardo en result la data
-const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig> => {
-  try {                                                             //id de tipo itemId               
-    const result: GetResponse = await elasticSearchClient.get({ index, id: itemId });
-                //la data siempre está en _source
-    return result._source as ISellerGig;
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch getIndexedData() method error:', error);
-    return {} as ISellerGig; //en caso de error retorno un objeto vacio como ISellerGig
-  }
-};
-
-const addDataToIndex = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
-  try {
-    await elasticSearchClient.index({
-      index,
-      id: itemId,
-      document: gigDocument //para añadir la data usaremos document 
-    });
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch addDataToIndex() method error:', error);
-  }
-};
-
-const updateIndexedData = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
-  try {
-    await elasticSearchClient.update({
-      index,
-      id: itemId,
-      doc: gigDocument //para documentos con el update usaremos doc
-    });
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch updateIndexedData() method error:', error);
-  }
-};
-
-const deleteIndexedData = async (index: string, itemId: string): Promise<void> => {
-  try {
-    await elasticSearchClient.delete({
-      index,
-      id: itemId
-    });
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch deleteIndexedData() method error:', error);
-  }
-};
-
-export {
-  elasticSearchClient, //exporto el cliente!
-  checkConnection,
-  createIndex,
-  getDocumentCount,
-  getIndexedData,
-  addDataToIndex,
-  updateIndexedData,
-  deleteIndexedData
-};
-~~~
-
-- También se pueden hacer consultas con SQL
-
-~~~js
-client.sql.query({
-    query: "SELECT * FROM ..."
-})
-~~~
-
-- Estos son los métodos que necesitamos para realizar operaciones dentro de un index en ElasticSearch
 - Llamo a la función de checkConnection y createIndex en el server
 
 ~~~js
@@ -308,118 +175,8 @@ const startElasticSearch = (): void => {
 
 ## Controllers
 
-- Tendremos controllers en archivos separados
+- Tendremos controllers en archivos separados porque tienen mucho código
 - create, delete, get, health, search, seed, update
-- create
-
-~~~js
-import { getDocumentCount } from '@gig/elasticsearch';
-import { gigCreateSchema } from '@gig/schemes/gig';
-import { createGig } from '@gig/services/gig.service';
-import { BadRequestError, ISellerGig, uploads } from '@uzochukwueddie/jobber-shared';
-import { UploadApiResponse } from 'cloudinary';
-import { Request, Response } from 'express';
-import { StatusCodes } from 'http-status-codes';
-
-const gigCreate = async (req: Request, res: Response): Promise<void> => {
-  const { error } = await Promise.resolve(gigCreateSchema.validate(req.body));
-  if (error?.details) {
-    throw new BadRequestError(error.details[0].message, 'Create gig() method');
-  }
-                                          //jobber-shared
-  const result: UploadApiResponse = await uploads(req.body.coverImage) as UploadApiResponse;
-  if (!result.public_id) {
-    throw new BadRequestError('File upload error. Try again.', 'Create gig() method');
-  }
-                                //de elasticsearch
-  const count: number = await getDocumentCount('gigs');
-  const gig: ISellerGig = {
-    sellerId: req.body.sellerId,
-    username: req.currentUser!.username,
-    email: req.currentUser!.email,
-    profilePicture: req.body.profilePicture,
-    title: req.body.title,
-    description: req.body.description,
-    categories: req.body.categories,
-    subCategories: req.body.subCategories,
-    tags: req.body.tags,
-    price: req.body.price,
-    expectedDelivery: req.body.expectedDelivery,
-    basicTitle: req.body.basicTitle,
-    basicDescription: req.body.basicDescription,
-    coverImage: `${result?.secure_url}`,
-    sortId: count + 1
-  };                                    //gig.service
-  const createdGig: ISellerGig = await createGig(gig);
-  res.status(StatusCodes.CREATED).json({ message: 'Gig created successfully.', gig: createdGig });
-};
-
-export { gigCreate };
-~~~
-
-- metodo uploads (to Cloudinary) de jobber-shared
-
-~~~js
-export function uploads(
-  file: string,
-  public_id?: string,
-  overwrite?: boolean,
-  invalidate?: boolean
-): Promise<UploadApiResponse | UploadApiErrorResponse | undefined> {
-  return new Promise((resolve) => {
-    cloudinary.v2.uploader.upload(
-      file,
-      {
-        public_id,
-        overwrite,
-        invalidate,
-        resource_type: 'auto' // zip, images
-      },
-      (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
-        if (error) resolve(error);
-        resolve(result);
-      }
-    );
-  });
-}
-~~~
-
-- método getDocumentCount de gig-ms/src/elasticSearch.ts
-
-~~~js
-const getDocumentCount = async (index: string): Promise<number> => {
-  try {
-    const result: CountResponse = await elasticSearchClient.count({ index });
-    return result.count;
-  } catch (error) {
-    log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
-    return 0;
-  }
-};
-~~~
-
-- el método createGig de gig-ms/src/services/gig.service
-
-~~~js
-const createGig = async (gig: ISellerGig): Promise<ISellerGig> => {
-  const createdGig: ISellerGig = await GigModel.create(gig);
-  if (createdGig) {
-    const data: ISellerGig = createdGig.toJSON?.() as ISellerGig;
-
-    //envío un mensaje al ms user para actualizar los valores 
-    await publishDirectMessage(
-      gigChannel,
-      'jobber-seller-update',
-      'user-seller',
-      JSON.stringify({ type: 'update-gig-count', gigSellerId: `${data.sellerId}`, count: 1 }),
-      'Details sent to users service.'
-    );
-    await addDataToIndex('gigs', `${createdGig._id}`, data);
-  }
-  return createdGig;
-};
-~~~
-
 - Las interfaces de gig
 
 ~~~js
@@ -721,8 +478,143 @@ const gigUpdateSchema: ObjectSchema = Joi.object().keys({
 export { gigCreateSchema, gigUpdateSchema };
 ~~~
 
+## ElasticSearch
+
+- Para elasticSearch tenemos el mismo archivo en gig-ms/src/elasticsearch.ts
+- La data siempre está en ._source
+
+~~~js
+import { Client } from '@elastic/elasticsearch';
+import { ClusterHealthResponse, CountResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
+import { config } from '@gig/config';
+import { ISellerGig, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigElasticSearchServer', 'debug');
+
+const elasticSearchClient = new Client({
+  node: `${config.ELASTIC_SEARCH_URL}`
+});
+            //la invoco en el server
+const checkConnection = async (): Promise<void> => {
+  let isConnected = false;
+  while (!isConnected) {
+    try {
+      const health: ClusterHealthResponse = await elasticSearchClient.cluster.health({});
+      log.info(`GigService Elasticsearch health status - ${health.status}`);
+      isConnected = true;
+    } catch (error) {
+      log.error('Connection to Elasticsearch failed. Retrying...');
+      log.log('error', 'GigService checkConnection() method:', error);
+    }
+  }
+};
+
+async function checkIfIndexExist(indexName: string): Promise<boolean> {
+  const result: boolean = await elasticSearchClient.indices.exists({ index: indexName });
+  return result;
+}
+
+//esta función será llamada en el server
+async function createIndex(indexName: string): Promise<void> {
+  try {
+    const result: boolean = await checkIfIndexExist(indexName);
+    if (result) {
+      log.info(`Index "${indexName}" already exist.`);
+    } else {
+    //creo el index y hago un refresh 
+    //desde que se crea un index, todo documento adherido será buscable
+      await elasticSearchClient.indices.create({ index: indexName });
+      await elasticSearchClient.indices.refresh({ index: indexName });
+      log.info(`Created index ${indexName}`);
+    }
+  } catch (error) {
+    log.error(`An error occurred while creating the index ${indexName}`);
+    log.log('error', 'GigService createIndex() method error:', error);
+  }
+}
+
+const getDocumentCount = async (index: string): Promise<number> => {
+  try {
+    const result: CountResponse = await elasticSearchClient.count({ index });
+    return result.count;
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
+    return 0;
+  }
+};
+
+    //guardo en result la data
+const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig> => {
+  try {                                                             //id de tipo itemId               
+    const result: GetResponse = await elasticSearchClient.get({ index, id: itemId });
+                //la data siempre está en _source
+    return result._source as ISellerGig;
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getIndexedData() method error:', error);
+    return {} as ISellerGig; //en caso de error retorno un objeto vacio como ISellerGig
+  }
+};
+
+const addDataToIndex = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
+  try {
+    await elasticSearchClient.index({
+      index,
+      id: itemId,
+      document: gigDocument //para añadir la data usaremos document 
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch addDataToIndex() method error:', error);
+  }
+};
+
+const updateIndexedData = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
+  try {
+    await elasticSearchClient.update({
+      index,
+      id: itemId,
+      doc: gigDocument //para documentos con el update usaremos doc
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch updateIndexedData() method error:', error);
+  }
+};
+
+const deleteIndexedData = async (index: string, itemId: string): Promise<void> => {
+  try {
+    await elasticSearchClient.delete({
+      index,
+      id: itemId
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch deleteIndexedData() method error:', error);
+  }
+};
+
+export {
+  elasticSearchClient, //exporto el cliente!
+  checkConnection,
+  createIndex,
+  getDocumentCount,
+  getIndexedData,
+  addDataToIndex,
+  updateIndexedData,
+  deleteIndexedData
+};
+~~~
+
+- También se pueden hacer consultas con SQL
+
+~~~js
+client.sql.query({
+    query: "SELECT * FROM ..."
+})
+~~~
+
+- Estos son los métodos que necesitamos para realizar operaciones dentro de un index en ElasticSearch
 - Ahora el servicio de gig (completo)
 - gig-ms/src/services/gig.service.ts
+- Obtendremos la data desde elasticSearch
 
 ~~~js
 import { addDataToIndex, deleteIndexedData, getIndexedData, updateIndexedData } from '@gig/elasticsearch';
@@ -1138,8 +1030,107 @@ function closeConnection(channel: Channel, connection: Connection): void {
 export { createConnection } ;
 ~~~
 
-- Se pueden hacer querys SQL en elasticSearch con client.sql
+- El gig.producer es el mismo también
+- gig-ms/src/queues/gig.producer
 
+~~~js
+import { config } from '@gig/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@gig/queues/connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServiceProducer', 'debug');
+
+const publishDirectMessage = async (
+  channel: Channel,
+  exchangeName: string,
+  routingKey: string,
+  message: string,
+  logMessage: string
+): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = await createConnection() as Channel;
+    }
+    await channel.assertExchange(exchangeName, 'direct');
+    channel.publish(exchangeName, routingKey, Buffer.from(message));
+    log.info(logMessage);
+  } catch (error) {
+    log.log('error', 'GigService publishDirectMessage() method error:', error);
+  }
+};
+
+export { publishDirectMessage };
+~~~
+
+- El gig.consumer
+- gig-ms/src/queues/gig.consumer.ts
+
+~~~js
+import { config } from '@gig/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage, Replies } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@gig/queues/connection';
+import { seedData, updateGigReview } from '@gig/services/gig.service';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServiceConsumer', 'debug');
+
+const consumeGigDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-update-gig';
+    const routingKey = 'update-gig';
+    const queueName = 'gig-update-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { gigReview } = JSON.parse(msg!.content.toString());
+      await updateGigReview(JSON.parse(gigReview));
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'GigService GigConsumer consumeGigDirectMessage() method error:', error);
+  }
+};
+
+const consumeSeedDirectMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-seed-gig';
+    const routingKey = 'receive-sellers';
+    const queueName = 'seed-gig-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { sellers, count } = JSON.parse(msg!.content.toString());
+      await seedData(sellers, count);
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'GigService GigConsumer consumeGigDirectMessage() method error:', error);
+  }
+};
+
+export { consumeGigDirectMessage, consumeSeedDirectMessages };
+~~~
+
+- En el server tengo los dos consumers escuchando
+
+~~~js
+const startQueues = async (): Promise<void> => {
+  gigChannel = await createConnection() as Channel;
+  await consumeGigDirectMessage(gigChannel);
+  await consumeSeedDirectMessages(gigChannel);
+};
+~~~
 
 
 
