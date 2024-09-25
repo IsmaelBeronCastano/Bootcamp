@@ -11,10 +11,12 @@ const gigCreate = async (req: Request, res: Response): Promise<void> => {
   if (error?.details) {
     throw new BadRequestError(error.details[0].message, 'Create gig() method');
   }
+                                          //jobber-shared
   const result: UploadApiResponse = await uploads(req.body.coverImage) as UploadApiResponse;
   if (!result.public_id) {
     throw new BadRequestError('File upload error. Try again.', 'Create gig() method');
   }
+                                //de elasticsearch
   const count: number = await getDocumentCount('gigs');
   const gig: ISellerGig = {
     sellerId: req.body.sellerId,
@@ -32,7 +34,7 @@ const gigCreate = async (req: Request, res: Response): Promise<void> => {
     basicDescription: req.body.basicDescription,
     coverImage: `${result?.secure_url}`,
     sortId: count + 1
-  };
+  };                                    //gig.service
   const createdGig: ISellerGig = await createGig(gig);
   res.status(StatusCodes.CREATED).json({ message: 'Gig created successfully.', gig: createdGig });
 };

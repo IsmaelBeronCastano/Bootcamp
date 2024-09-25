@@ -1800,20 +1800,20 @@ export async function publishDirectMessage(
 
 ~~~
 - Volviendo al consumer en users-ms/src/queues/user.producer.ts
-- le paso un Channel a la función
-- me aseguro de que hay un canal, uso el createConnection si no lo hay
-- Nombro el exchange, routingKey con los strings del message enviado desde auth-ms/auth.service
-- Nombro la queue
-- Utilizo asssertExchange para asegurar el exchange
-- Aseguro la queue con assertQueue pasándole el nombre de la queue y unas opciones
-- Utilizo bindQueue para crear el path pasándole la queue, el exchangeName y la routingKey
-  - En el callback de esta función obtengo el msg
+- Le paso un **Channel** a la función
+- Me aseguro de que hay un canal, uso el createConnection si no lo hay
+- Nombro el **exchange, routingKey** con los strings del message enviado desde auth-ms/auth.service
+- Nombro **la queue**
+- Utilizo **asssertExchange** para asegurar el exchange
+- Aseguro la queue con **assertQueue** pasándole el nombre de la queue y unas opciones
+- Utilizo **bindQueue** para crear el path pasándole la queue, el exchangeName y la routingKey
+  - En el callback de esta función **obtengo el msg**
   - Utilizo la desestructuración para obtener el type ('auth', lo puse en auth-ms)
   - Me servirá para asegurarme de que estoy en la queue correcta
-  - En el publishDirectMessage de auth-ms/auth.service pasé el mensaje como Buffer.from
-  - Para consumirlo aqui lo paso a string con toString y lo parseo a JSON
-  - La data está en msg.content
-  - Si el tipo es auth hago lo mismo para desestructurar la data que hay en msg.content
+  - En el publishDirectMessage de auth-ms/auth.service **pasé el mensaje como Buffer.from**
+  - Para consumirlo aqui **lo paso a string con toString y lo parseo a JSON**
+  - La data está en **msg.content**
+  - Si el tipo es auth **desestructuro la data que hay en msg.content**
   - Lo hago así para evitar errores
   - LLamo a createBuyer
 
@@ -1976,3 +1976,927 @@ const startQueues = async (): Promise<void> => {
 };
 ~~~
 -----
+
+## RabitMQ review message consumer
+
+- Este consumer de user-ms, cuando buyer haga una review, la review desde el frontend irá al api-gateway, desde la api-gateway irá al review-service
+- Cuando la review **es introducida en la DB** es cuando enviaremos le mensaje con publish
+- El método será fanout, por lo que **no hace falta la routingKey**
+- En el bindQueue lo dejo como un string vacío como parámetro
+- Todo consumer escuchando esta queue con el mismo exchange recibirá la data
+- Si el buyer deja una review de un gig en particular, queremos hacer un update del ratingsCount y ratingsSum del seller
+- El consumer (debajo del consumer anterior) queda así. Es un poco la misma historia pero sin el routingKey
+- users-ms/src/queues/users.consumer.ts
+
+~~~js
+const consumeReviewFanoutMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-review';
+    const queueName = 'seller-review-queue';
+
+    await channel.assertExchange(exchangeName, 'fanout');
+
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, '');//como no hay routingkey dejo el string vacío
+
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+    
+    if (type === 'buyer-review') {//Hago el mismo chequeo con type
+        await updateSellerReview(JSON.parse(msg!.content.toString()));//sellers.service le paso la data
+
+  //Una vez hecho la review enviamos el message a gig-ms
+        await publishDirectMessage(
+          channel,
+          'jobber-update-gig',
+          'update-gig',
+          JSON.stringify({ type: 'updateGig', gigReview: msg!.content.toString() }),//lo envio como un string
+          'Message sent to gig service.'
+        );
+      }
+      channel.ack(msg!); //elimino la queue!
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+~~~
+
+- users/src/schemas/Seller.schema.ts
+
+~~~js
+import { ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import { Model, Schema, model } from 'mongoose';
+
+const sellerSchema: Schema = new Schema(
+  {
+    fullName: { type: String, required: true },
+    username: { type: String, required: true, index: true },
+    email: { type: String, required: true, index: true },
+    profilePicture: { type: String, required: true },
+    description: { type: String, required: true },
+    profilePublicId: { type: String, required: true },
+    oneliner: { type: String, default: '' },
+    country: { type: String, required: true },
+    languages: [
+      {
+        language: { type: String, required: true },
+        level: { type: String, required: true },
+      }
+    ],
+    skills: [{ type: String, required: true }],
+    ratingsCount: { type: Number, default: 0 }, //AQUI!
+    ratingSum: { type: Number, default: 0 }, //AQUI!
+    ratingCategories: {
+      five: { value: { type: Number, default: 0 }, count: { type: Number, default: 0 }},
+      four: { value: { type: Number, default: 0 }, count: { type: Number, default: 0 }},
+      three: { value: { type: Number, default: 0 }, count: { type: Number, default: 0 }},
+      two: { value: { type: Number, default: 0 }, count: { type: Number, default: 0 }},
+      one: { value: { type: Number, default: 0 }, count: { type: Number, default: 0 }},
+    },
+    responseTime: { type: Number, default: 0 },
+    recentDelivery: { type: Date, default: '' },
+    experience: [
+      {
+        company: { type: String, default: '' },
+        title: { type: String, default: '' },
+        startDate: { type: String, default: '' },
+        endDate: { type: String, default: '' },
+        description: { type: String, default: '' },
+        currentlyWorkingHere: { type: Boolean, default: false },
+      }
+    ],
+    education: [
+      {
+        country: { type: String, default: '' },
+        university: { type: String, default: '' },
+        title: { type: String, default: '' },
+        major: { type: String, default: '' },
+        year: { type: String, default: '' },
+      }
+    ],
+    socialLinks: [{ type: String, default: '' }],
+    certificates: [
+      {
+        name: { type: String },
+        from: { type: String },
+        year: { type: Number },
+      }
+    ],
+    ongoingJobs: { type: Number, default: 0 },
+    completedJobs: { type: Number, default: 0 },
+    cancelledJobs: { type: Number, default: 0 },
+    totalEarnings: { type: Number, default: 0 },
+    totalGigs: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+  },
+  {
+    versionKey: false
+  }
+);
+
+const SellerModel: Model<ISellerDocument> = model<ISellerDocument>('Seller', sellerSchema, 'Seller');
+export { SellerModel };
+~~~
+
+- En el users/src/services/sellers.service.ts tengo UpdateSellerReview
+
+~~~js
+import { SellerModel } from '@users/models/seller.schema';
+import { IOrderMessage, IRatingTypes, IReviewMessageDetails, ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import mongoose from 'mongoose';
+import { updateBuyerIsSellerProp } from '@users/services/buyer.service';
+
+const getSellerById = async (sellerId: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ _id: new mongoose.Types.ObjectId(sellerId) }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getSellerByUsername = async (username: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ username }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getSellerByEmail = async (email: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ email }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getRandomSellers = async (size: number): Promise<ISellerDocument[]> => {
+  const sellers: ISellerDocument[] = await SellerModel.aggregate([{ $sample: { size }}]);
+  return sellers;
+};
+
+const createSeller = async (sellerData: ISellerDocument): Promise<ISellerDocument> => {
+  const createdSeller: ISellerDocument = await SellerModel.create(sellerData) as ISellerDocument;
+  await updateBuyerIsSellerProp(`${createdSeller.email}`);
+  return createdSeller;
+};
+
+const updateSeller = async (sellerId: string, sellerData: ISellerDocument): Promise<ISellerDocument> => {
+  const updatedSeller: ISellerDocument = await SellerModel.findOneAndUpdate(
+    { _id: sellerId },
+    {
+      $set: {
+        profilePublicId: sellerData.profilePublicId,
+        fullName: sellerData.fullName,
+        profilePicture: sellerData.profilePicture,
+        description: sellerData.description,
+        country: sellerData.country,
+        skills: sellerData.skills,
+        oneliner: sellerData.oneliner,
+        languages: sellerData.languages,
+        responseTime: sellerData.responseTime,
+        experience: sellerData.experience,
+        education: sellerData.education,
+        socialLinks: sellerData.socialLinks,
+        certificates: sellerData.certificates
+      }
+    },
+    { new: true }
+  ).exec() as ISellerDocument;
+  return updatedSeller;
+};
+
+const updateTotalGigsCount = async (sellerId: string, count: number): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { totalGigs: count } }).exec();
+};
+
+const updateSellerOngoingJobsProp = async (sellerId: string, ongoingJobs: number): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs } }).exec();
+};
+
+const updateSellerCancelledJobsProp = async (sellerId: string): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs: -1, cancelledJobs: 1 } }).exec();
+};
+
+const updateSellerCompletedJobsProp = async (data: IOrderMessage): Promise<void> => {
+  const { sellerId, ongoingJobs, completedJobs, totalEarnings, recentDelivery } = data;
+  await SellerModel.updateOne(
+    { _id: sellerId },
+    {
+      $inc: {
+        ongoingJobs,
+        completedJobs,
+        totalEarnings
+      },
+      $set: { recentDelivery: new Date(recentDelivery!) }
+    }
+    ).exec();
+};
+
+//AQUI!!!
+const updateSellerReview = async (data: IReviewMessageDetails): Promise<void> => {
+  const ratingTypes: IRatingTypes = {
+    '1': 'one',
+    '2': 'two',
+    '3': 'three',
+    '4': 'four',
+    '5': 'five',
+  };
+
+  //Y AQUI!!
+  const ratingKey: string = ratingTypes[`${data.rating}`];
+  await SellerModel.updateOne(
+    { _id: data.sellerId },
+    {
+      $inc: {
+        ratingsCount: 1,
+        ratingSum: data.rating,
+        [`ratingCategories.${ratingKey}.value`]: data.rating,
+        [`ratingCategories.${ratingKey}.count`]: 1,
+      }
+    }
+  ).exec();
+};
+
+export {
+  getSellerById,
+  getSellerByUsername,
+  getSellerByEmail,
+  getRandomSellers,
+  createSeller,
+  updateSeller,
+  updateTotalGigsCount,
+  updateSellerOngoingJobsProp,
+  updateSellerCompletedJobsProp,
+  updateSellerReview,
+  updateSellerCancelledJobsProp
+};
+~~~
+
+- Tengo un consumer también para el Seed del gig-ms
+- Cuando creamos el seed para el gig, el gig-ms pedirá data del seller
+- Si queremos crear 10 gigs, habrá que crear varios vendedores random 
+
+~~~js
+const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-gig';
+    const routingKey = 'get-sellers';
+    const queueName = 'user-gig-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'getSellers') {
+        
+        const { count } = JSON.parse(msg!.content.toString());//sellers.service
+        const sellers: ISellerDocument[] = await getRandomSellers(parseInt(count, 10)); 
+        
+        await publishDirectMessage(
+          channel,
+          'jobber-seed-gig',
+          'receive-sellers',
+          JSON.stringify({ type: 'receiveSellers', sellers, count }),
+          'Message sent to gig service.'
+        );
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+~~~
+
+- Para que los consumers escuchen tengo que hacerlo en users-ms/src/server.ts
+
+~~~js
+const startQueues = async (): Promise<void> => {
+  const userChannel: Channel = await createConnection() as Channel;
+  //consumers
+  await consumeBuyerDirectMessage(userChannel);
+  await consumeSellerDirectMessage(userChannel);
+  await consumeReviewFanoutMessages(userChannel);
+  await consumeSeedGigDirectMessages(userChannel);
+};
+~~~
+-----
+
+## Buyer controller routes
+
+- En users-ms/src/controllers/buyer.controller llamamos al servicio 
+
+~~~js
+import { getBuyerByEmail, getBuyerByUsername } from '@users/services/buyer.service';
+import { IBuyerDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const email = async (req: Request, res: Response): Promise<void> => {
+  const buyer: IBuyerDocument | null = await getBuyerByEmail(req.currentUser!.email);
+  res.status(StatusCodes.OK).json({ message: 'Buyer profile', buyer });
+};
+
+const currentUsername = async (req: Request, res: Response): Promise<void> => {
+  const buyer: IBuyerDocument | null = await getBuyerByUsername(req.currentUser!.username);
+  res.status(StatusCodes.OK).json({ message: 'Buyer profile', buyer });
+};
+
+const username = async (req: Request, res: Response): Promise<void> => {
+  const buyer: IBuyerDocument | null = await getBuyerByUsername(req.params.username);
+  res.status(StatusCodes.OK).json({ message: 'Buyer profile', buyer });
+};
+
+export { email, username, currentUsername };
+~~~
+
+- En el users-ms/src/services/buyer.service.ts hago uso del modelo de mongo para interactuar con la db
+
+~~~js
+import { BuyerModel } from '@users/models/buyer.schema';
+import { IBuyerDocument } from '@uzochukwueddie/jobber-shared';
+
+const getBuyerByEmail = async (email: string): Promise<IBuyerDocument | null> => {
+  const buyer: IBuyerDocument | null = await BuyerModel.findOne({ email }).exec() as IBuyerDocument;
+  return buyer;
+};
+
+const getBuyerByUsername = async (username: string): Promise<IBuyerDocument | null> => {
+  const buyer: IBuyerDocument | null = await BuyerModel.findOne({ username }).exec() as IBuyerDocument;
+  return buyer;
+};
+
+const getRandomBuyers = async (count: number): Promise<IBuyerDocument[]> => {
+  const buyers: IBuyerDocument[] = await BuyerModel.aggregate([{ $sample: { size: count }}]);
+  return buyers;
+};
+
+const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
+  const checkIfBuyerExist: IBuyerDocument | null = await getBuyerByEmail(`${buyerData.email}`);
+  if (!checkIfBuyerExist) {
+    await BuyerModel.create(buyerData);
+  }
+};
+
+const updateBuyerIsSellerProp = async (email: string): Promise<void> => {
+  await BuyerModel.updateOne(
+    { email },
+    {
+      $set: {
+        isSeller: true
+      }
+    }
+  ).exec();
+};
+
+const updateBuyerPurchasedGigsProp = async (buyerId: string, purchasedGigId: string, type: string): Promise<void> => {
+  await BuyerModel.updateOne(
+    { _id: buyerId },
+    type === 'purchased-gigs' ?
+    {
+      $push: {
+        purchasedGigs: purchasedGigId
+      }
+    } : {
+      $pull: {
+        purchasedGigs: purchasedGigId
+      }
+    }
+  ).exec();
+};
+
+export {
+  getBuyerByEmail,
+  getBuyerByUsername,
+  getRandomBuyers,
+  createBuyer,
+  updateBuyerIsSellerProp,
+  updateBuyerPurchasedGigsProp
+};
+~~~
+
+- La interfaz de IBuyer es esta
+
+~~~js
+import { ObjectId } from "mongoose";
+
+export interface IBuyerDocument {
+  _id?: string | ObjectId;
+  username?: string;
+  email?: string;
+  profilePicture?: string;
+  country: string;
+  isSeller?: boolean;
+  purchasedGigs: string[];
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface IReduxBuyer {
+  type?: string;
+  payload: IBuyerDocument;
+}
+~~~
+
+- En users-ms/src/routes/buyer.routes
+
+~~~js
+import { email, currentUsername, username } from '@users/controllers/buyer/get';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+const buyerRoutes = (): Router => {
+  router.get('/email', email);
+  router.get('/username', currentUsername);
+  router.get('/:username', username);
+
+  return router;
+};
+
+export { buyerRoutes };
+~~~
+
+- En users-ms/src/controllers/seller tengo varios
+- create.ts
+
+~~~js
+import { sellerSchema } from '@users/schemes/seller';
+import { createSeller, getSellerByEmail } from '@users/services/seller.service';
+import { BadRequestError, ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const seller = async (req: Request, res: Response): Promise<void> => {
+  const { error } = await Promise.resolve(sellerSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Create seller() method error');
+  }
+  const checkIfSellerExist: ISellerDocument | null = await getSellerByEmail(req.body.email);
+  if (checkIfSellerExist) {
+    throw new BadRequestError('Seller already exist. Go to your account page to update.', 'Create seller() method error');
+  }
+  const seller: ISellerDocument = {
+    profilePublicId: req.body.profilePublicId,
+    fullName: req.body.fullName,
+    username: req.currentUser!.username,
+    email: req.body.email,
+    profilePicture: req.body.profilePicture,
+    description: req.body.description,
+    oneliner: req.body.oneliner,
+    country: req.body.country,
+    skills: req.body.skills,
+    languages: req.body.languages,
+    responseTime: req.body.responseTime,
+    experience: req.body.experience,
+    education: req.body.education,
+    socialLinks: req.body.socialLinks,
+    certificates: req.body.certificates
+  };
+  const createdSeller: ISellerDocument = await createSeller(seller);
+  res.status(StatusCodes.CREATED).json({ message: 'Seller created successfully.', seller: createdSeller });
+};
+
+export { seller };
+~~~
+
+- /get.ts
+
+~~~js
+import { getRandomSellers, getSellerById, getSellerByUsername } from '@users/services/seller.service';
+import { ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const id = async (req: Request, res: Response): Promise<void> => {
+  const seller: ISellerDocument | null = await getSellerById(req.params.sellerId);
+  res.status(StatusCodes.OK).json({ message: 'Seller profile', seller });
+};
+
+const username = async (req: Request, res: Response): Promise<void> => {
+  const seller: ISellerDocument | null = await getSellerByUsername(req.params.username);
+  res.status(StatusCodes.OK).json({ message: 'Seller profile', seller });
+};
+
+const random = async (req: Request, res: Response): Promise<void> => {
+  const sellers: ISellerDocument[] = await getRandomSellers(parseInt(req.params.size, 10));
+  res.status(StatusCodes.OK).json({ message: 'Random sellers profile', sellers });
+};
+
+export { id, username, random };
+~~~
+
+- /update.ts
+
+~~~js
+import { sellerSchema } from '@users/schemes/seller';
+import { updateSeller } from '@users/services/seller.service';
+import { BadRequestError, ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const seller = async (req: Request, res: Response): Promise<void> => {
+  const { error } = await Promise.resolve(sellerSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Update seller() method error');
+  }
+  const seller: ISellerDocument = {
+    profilePublicId: req.body.profilePublicId,
+    fullName: req.body.fullName,
+    profilePicture: req.body.profilePicture,
+    description: req.body.description,
+    oneliner: req.body.oneliner,
+    country: req.body.country,
+    skills: req.body.skills,
+    languages: req.body.languages,
+    responseTime: req.body.responseTime,
+    experience: req.body.experience,
+    education: req.body.education,
+    socialLinks: req.body.socialLinks,
+    certificates: req.body.certificates
+  };
+  const updatedSeller: ISellerDocument = await updateSeller(req.params.sellerId, seller);
+  res.status(StatusCodes.OK).json({ message: 'Seller created successfully.', seller: updatedSeller });
+};
+
+export { seller };
+~~~
+
+- /seed.ts
+- Haré uso de faker
+
+~~~js
+import { faker } from '@faker-js/faker';
+import { BadRequestError, IBuyerDocument, IEducation, IExperience, ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import { floor, random, sample, sampleSize } from 'lodash';
+import { Request, Response } from 'express';
+import { getRandomBuyers } from '@users/services/buyer.service';
+import { createSeller, getSellerByEmail } from '@users/services/seller.service';
+import { v4 as uuidv4 } from 'uuid';
+import { StatusCodes } from 'http-status-codes';
+
+const seed = async (req: Request, res: Response): Promise<void> => {
+  const { count } = req.params;
+  const buyers: IBuyerDocument[] = await getRandomBuyers(parseInt(count, 10));
+  for(let i = 0; i < buyers.length; i++) {
+    const buyer: IBuyerDocument = buyers[i];
+    const checkIfSellerExist: ISellerDocument | null = await getSellerByEmail(`${buyer.email}`);
+    if (checkIfSellerExist) {
+      throw new BadRequestError('Seller already exist.', 'SellerSeed seller() method error');
+    }
+    const basicDescription: string = faker.commerce.productDescription();
+    const skills: string[] = ['Programming', 'Web development', 'Mobile development', 'Proof reading', 'UI/UX', 'Data Science', 'Financial modeling', 'Data analysis' ];
+    const seller: ISellerDocument = {
+      profilePublicId: uuidv4(),
+      fullName: faker.person.fullName(),
+      username: buyer.username,
+      email: buyer.email,
+      country: faker.location.country(),
+      profilePicture: buyer.profilePicture,
+      description: basicDescription.length <= 250 ? basicDescription : basicDescription.slice(0, 250),
+      oneliner: faker.word.words({ count: { min: 5, max: 10 }}),
+      skills: sampleSize(skills, sample([1, 4])),
+      languages: [
+        {'language': 'English', 'level': 'Native' },
+        {'language': 'Spnish', 'level': 'Basic' },
+        {'language': 'German', 'level': 'Basic' },
+      ],
+      responseTime: parseInt(faker.commerce.price({ min: 1, max: 5, dec: 0 })),
+      experience: randomExperiences(parseInt(faker.commerce.price({ min: 2, max: 4, dec: 0 }))),
+      education: randomEducation(parseInt(faker.commerce.price({ min: 2, max: 4, dec: 0 }))),
+      socialLinks: ['https://kickchatapp.com', 'http://youtube.com', 'https://facebook.com'],
+      certificates: [
+        {
+          'name': 'Flutter App Developer',
+          'from': 'Flutter Academy',
+          'year': 2021
+        },
+        {
+          'name': 'Android App Developer',
+          'from': '2019',
+          'year': 2020
+        },
+        {
+          'name': 'IOS App Developer',
+          'from': 'Apple Inc.',
+          'year': 2019
+        }
+      ]
+    };
+    await createSeller(seller);
+  }
+  res.status(StatusCodes.CREATED).json({ message: 'Sellers created successfully' });
+};
+
+const randomExperiences = (count: number): IExperience[] => {
+  const result: IExperience[] = [];
+  for(let i = 0; i < count; i++) {
+    const randomStartYear = [2020, 2021, 2022, 2023, 2024, 2025];
+    const randomEndYear = ['Present', '2024', '2025', '2026', '2027'];
+    const endYear = randomEndYear[floor(random(0.9) * randomEndYear.length)];
+    const experience = {
+      company: faker.company.name(),
+      title: faker.person.jobTitle(),
+      startDate: `${faker.date.month()} ${randomStartYear[floor(random(0.9) * randomStartYear.length)]}`,
+      endDate: endYear === 'Present' ? 'Present' : `${faker.date.month()} ${endYear}`,
+      description: faker.commerce.productDescription().slice(0, 100),
+      currentlyWorkingHere: endYear === 'Present'
+    };
+    result.push(experience);
+  }
+  return result;
+};
+
+const randomEducation = (count: number): IEducation[] => {
+  const result: IEducation[] = [];
+  for(let i = 0; i < count; i++) {
+    const randomYear = [2020, 2021, 2022, 2023, 2024, 2025];
+    const education = {
+      country: faker.location.country(),
+      university: faker.person.jobTitle(),
+      title: faker.person.jobTitle(),
+      major: `${faker.person.jobArea()} ${faker.person.jobDescriptor()}`,
+      year: `${randomYear[floor(random(0.9) * randomYear.length)]}`,
+    };
+    result.push(education);
+  }
+  return result;
+};
+
+export { seed };
+~~~
+
+- El users-ms/src/services/seller.service.ts
+
+~~~js
+import { SellerModel } from '@users/models/seller.schema';
+import { IOrderMessage, IRatingTypes, IReviewMessageDetails, ISellerDocument } from '@uzochukwueddie/jobber-shared';
+import mongoose from 'mongoose';
+import { updateBuyerIsSellerProp } from '@users/services/buyer.service';
+
+const getSellerById = async (sellerId: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ _id: new mongoose.Types.ObjectId(sellerId) }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getSellerByUsername = async (username: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ username }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getSellerByEmail = async (email: string): Promise<ISellerDocument | null> => {
+  const seller: ISellerDocument | null = await SellerModel.findOne({ email }).exec() as ISellerDocument;
+  return seller;
+};
+
+const getRandomSellers = async (size: number): Promise<ISellerDocument[]> => {
+  const sellers: ISellerDocument[] = await SellerModel.aggregate([{ $sample: { size }}]);
+  return sellers;
+};
+
+const createSeller = async (sellerData: ISellerDocument): Promise<ISellerDocument> => {
+  const createdSeller: ISellerDocument = await SellerModel.create(sellerData) as ISellerDocument;
+  await updateBuyerIsSellerProp(`${createdSeller.email}`);
+  return createdSeller;
+};
+
+const updateSeller = async (sellerId: string, sellerData: ISellerDocument): Promise<ISellerDocument> => {
+  const updatedSeller: ISellerDocument = await SellerModel.findOneAndUpdate(
+    { _id: sellerId },
+    {
+      $set: {
+        profilePublicId: sellerData.profilePublicId,
+        fullName: sellerData.fullName,
+        profilePicture: sellerData.profilePicture,
+        description: sellerData.description,
+        country: sellerData.country,
+        skills: sellerData.skills,
+        oneliner: sellerData.oneliner,
+        languages: sellerData.languages,
+        responseTime: sellerData.responseTime,
+        experience: sellerData.experience,
+        education: sellerData.education,
+        socialLinks: sellerData.socialLinks,
+        certificates: sellerData.certificates
+      }
+    },
+    { new: true }
+  ).exec() as ISellerDocument;
+  return updatedSeller;
+};
+
+const updateTotalGigsCount = async (sellerId: string, count: number): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { totalGigs: count } }).exec();
+};
+
+const updateSellerOngoingJobsProp = async (sellerId: string, ongoingJobs: number): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs } }).exec();
+};
+
+const updateSellerCancelledJobsProp = async (sellerId: string): Promise<void> => {
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs: -1, cancelledJobs: 1 } }).exec();
+};
+
+const updateSellerCompletedJobsProp = async (data: IOrderMessage): Promise<void> => {
+  const { sellerId, ongoingJobs, completedJobs, totalEarnings, recentDelivery } = data;
+  await SellerModel.updateOne(
+    { _id: sellerId },
+    {
+      $inc: {
+        ongoingJobs,
+        completedJobs,
+        totalEarnings
+      },
+      $set: { recentDelivery: new Date(recentDelivery!) }
+    }
+    ).exec();
+};
+
+
+const updateSellerReview = async (data: IReviewMessageDetails): Promise<void> => {
+  const ratingTypes: IRatingTypes = {
+    '1': 'one',
+    '2': 'two',
+    '3': 'three',
+    '4': 'four',
+    '5': 'five',
+  };
+  const ratingKey: string = ratingTypes[`${data.rating}`];
+  await SellerModel.updateOne(
+    { _id: data.sellerId },
+    {
+      $inc: {
+        ratingsCount: 1,
+        ratingSum: data.rating,
+        [`ratingCategories.${ratingKey}.value`]: data.rating,
+        [`ratingCategories.${ratingKey}.count`]: 1,
+      }
+    }
+  ).exec();
+};
+
+export {
+  getSellerById,
+  getSellerByUsername,
+  getSellerByEmail,
+  getRandomSellers,
+  createSeller,
+  updateSeller,
+  updateTotalGigsCount,
+  updateSellerOngoingJobsProp,
+  updateSellerCompletedJobsProp,
+  updateSellerReview,
+  updateSellerCancelledJobsProp
+};
+~~~
+
+- En el seller.routes presto atención a **como llamo los endpoints**(!)
+
+~~~js
+import { seller as createSeller } from '@users/controllers/seller/create';
+import { id, random, username } from '@users/controllers/seller/get';
+import { seed } from '@users/controllers/seller/seed';
+import { seller as updateSeller } from '@users/controllers/seller/update';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+const sellerRoutes = (): Router => {
+  router.get('/id/:sellerId', id);
+  router.get('/username/:username', username);
+  router.get('/random/:size', random);
+  router.post('/create', createSeller);
+  router.put('/:sellerId', updateSeller);
+  router.put('/seed/:count', seed);
+
+  return router;
+};
+
+export { sellerRoutes };
+~~~
+
+- En users-ms/src/routes.ts
+
+~~~js
+import { verifyGatewayRequest } from '@uzochukwueddie/jobber-shared';
+import { Application } from 'express';
+import { buyerRoutes } from '@users/routes/buyer';
+import { healthRoutes } from '@users/routes/health';
+import { sellerRoutes } from '@users/routes/seller';
+
+const BUYER_BASE_PATH = '/api/v1/buyer';
+const SELLER_BASE_PATH = '/api/v1/seller';
+
+const appRoutes = (app: Application): void => {
+  app.use('', healthRoutes());
+  app.use(BUYER_BASE_PATH, verifyGatewayRequest, buyerRoutes());
+  app.use(SELLER_BASE_PATH, verifyGatewayRequest, sellerRoutes());
+};
+
+export { appRoutes };
+~~~
+
+- En el users-ms/src/server
+
+~~~js
+import http from 'http';
+
+import 'express-async-errors';
+import { CustomError, IAuthPayload, IErrorResponse, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { config } from '@users/config';
+import { Application, Request, Response, NextFunction, json, urlencoded } from 'express';
+import hpp from 'hpp';
+import helmet from 'helmet';
+import cors from 'cors';
+import { verify } from 'jsonwebtoken';
+import compression from 'compression';
+import { checkConnection } from '@users/elasticsearch';
+import { appRoutes } from '@users/routes';
+import { createConnection } from '@users/queues/connection';
+import { Channel } from 'amqplib';
+import { consumeBuyerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages, consumeSellerDirectMessage } from '@users/queues/user.consumer';
+
+const SERVER_PORT = 4003;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServer', 'debug');
+
+const start = (app: Application): void => {
+  securityMiddleware(app);
+  standardMiddleware(app);
+  routesMiddleware(app);
+  startQueues();
+  startElasticSearch();
+  usersErrorHandler(app);
+  startServer(app);
+};
+
+const securityMiddleware = (app: Application): void => {
+  app.set('trust proxy', 1);
+  app.use(hpp());
+  app.use(helmet());
+  app.use(
+    cors({
+      origin: config.API_GATEWAY_URL,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    })
+  );
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (req.headers.authorization) {
+      const token = req.headers.authorization.split(' ')[1];
+      const payload: IAuthPayload = verify(token, config.JWT_TOKEN!) as IAuthPayload;
+      req.currentUser = payload;
+    }
+    next();
+  });
+};
+
+const standardMiddleware = (app: Application): void => {
+  app.use(compression());
+  app.use(json({ limit: '200mb' }));
+  app.use(urlencoded({ extended: true, limit: '200mb' }));
+};
+
+const routesMiddleware = (app: Application): void => {
+  appRoutes(app);
+};
+
+
+const startQueues = async (): Promise<void> => {
+  const userChannel: Channel = await createConnection() as Channel;
+  //consumers
+  await consumeBuyerDirectMessage(userChannel);
+  await consumeSellerDirectMessage(userChannel);
+  await consumeReviewFanoutMessages(userChannel);
+  await consumeSeedGigDirectMessages(userChannel);
+};
+
+const startElasticSearch = (): void => {
+  checkConnection();
+};
+
+const usersErrorHandler = (app: Application): void => {
+  app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction) => {
+    log.log('error', `UsersService ${error.comingFrom}:`, error);
+    if (error instanceof CustomError) {
+      res.status(error.statusCode).json(error.serializeErrors());
+    }
+    next();
+  });
+};
+
+const startServer = (app: Application): void => {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Users server has started with process id ${process.pid}`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Users server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService startServer() method error:', error);
+  }
+};
+
+export { start };
+~~~

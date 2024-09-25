@@ -81,6 +81,7 @@ const updateSellerCompletedJobsProp = async (data: IOrderMessage): Promise<void>
     ).exec();
 };
 
+
 const updateSellerReview = async (data: IReviewMessageDetails): Promise<void> => {
   const ratingTypes: IRatingTypes = {
     '1': 'one',
