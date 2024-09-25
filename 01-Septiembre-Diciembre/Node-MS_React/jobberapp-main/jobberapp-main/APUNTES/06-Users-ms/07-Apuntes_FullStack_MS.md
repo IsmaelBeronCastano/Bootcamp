@@ -1675,6 +1675,7 @@ import { authChannel } from '@auth/server';
 import { StatusCodes } from 'http-status-codes';
 
 export async function create(req: Request, res: Response): Promise<void> {
+  //uso esto como dto (hay otras formas)
   const { error } = await Promise.resolve(signupSchema.validate(req.body));
   if (error?.details) {
     throw new BadRequestError(error.details[0].message, 'SignUp create() method error');
@@ -1710,6 +1711,8 @@ export async function create(req: Request, res: Response): Promise<void> {
     verifyLink: verificationLink,
     template: 'verifyEmail'
   };
+
+  //envio un messgae a email-notification
   await publishDirectMessage(
     authChannel,
     'jobber-email-notification',
@@ -1722,7 +1725,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 }
 ~~~
 
-- Si voy al servicio de src/services/auth.service.ts
+- Si voy al servicio de auth-ms/src/services/auth.service.ts
 
 ~~~js
 import { config } from '@auth/config';
@@ -1746,7 +1749,7 @@ export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument
       profilePicture: result.dataValues.profilePicture!,
       country: result.dataValues.country!,
       createdAt: result.dataValues.createdAt!,
-      type: 'auth'
+      type: 'auth' //usaré este type para asegurarme que es la queue correcta
     };
     await publishDirectMessage(
       authChannel,    
@@ -1797,7 +1800,22 @@ export async function publishDirectMessage(
 
 ~~~
 - Volviendo al consumer en users-ms/src/queues/user.producer.ts
-- Uso el createConnection y hago un poco lo mismo
+- le paso un Channel a la función
+- me aseguro de que hay un canal, uso el createConnection si no lo hay
+- Nombro el exchange, routingKey con los strings del message enviado desde auth-ms/auth.service
+- Nombro la queue
+- Utilizo asssertExchange para asegurar el exchange
+- Aseguro la queue con assertQueue pasándole el nombre de la queue y unas opciones
+- Utilizo bindQueue para crear el path pasándole la queue, el exchangeName y la routingKey
+  - En el callback de esta función obtengo el msg
+  - Utilizo la desestructuración para obtener el type ('auth', lo puse en auth-ms)
+  - Me servirá para asegurarme de que estoy en la queue correcta
+  - En el publishDirectMessage de auth-ms/auth.service pasé el mensaje como Buffer.from
+  - Para consumirlo aqui lo paso a string con toString y lo parseo a JSON
+  - La data está en msg.content
+  - Si el tipo es auth hago lo mismo para desestructurar la data que hay en msg.content
+  - Lo hago así para evitar errores
+  - LLamo a createBuyer
 
 ~~~js
 import { config } from '@users/config';
@@ -1835,7 +1853,7 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
     channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
       const { type } = JSON.parse(msg!.content.toString());
 
-      if (type === 'auth') {
+      if (type === 'auth') { //este type está en en auth-ms/auth service
         const { username, email, profilePicture, country, createdAt } = JSON.parse(msg!.content.toString());
         const buyer: IBuyerDocument = {
           username,
@@ -1848,7 +1866,7 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
         await createBuyer(buyer);
       } else {
         const { buyerId, purchasedGigs } = JSON.parse(msg!.content.toString());
-        await updateBuyerPurchasedGigsProp(buyerId, purchasedGigs, type);
+        await updateBuyerPurchasedGigsProp(buyerId, purchasedGigs, type);//lo veremos mas adelante
       }
       channel.ack(msg!);
     });
@@ -1857,6 +1875,7 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
   }
 };
 
+//uso la misma estrategia que en el anterior, verificando con el type
 const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
   try {
     if (!channel) {
@@ -1894,78 +1913,40 @@ const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
   }
 };
 
-const consumeReviewFanoutMessages = async (channel: Channel): Promise<void> => {
-  try {
-    if (!channel) {
-      channel = (await createConnection()) as Channel;
-    }
-    const exchangeName = 'jobber-review';
-    const queueName = 'seller-review-queue';
-    await channel.assertExchange(exchangeName, 'fanout');
-    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
-    await channel.bindQueue(jobberQueue.queue, exchangeName, '');
-    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
-      const { type } = JSON.parse(msg!.content.toString());
-      if (type === 'buyer-review') {
-        await updateSellerReview(JSON.parse(msg!.content.toString()));
-        await publishDirectMessage(
-          channel,
-          'jobber-update-gig',
-          'update-gig',
-          JSON.stringify({ type: 'updateGig', gigReview: msg!.content.toString() }),
-          'Message sent to gig service.'
-        );
-      }
-      channel.ack(msg!);
-    });
-  } catch (error) {
-    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
-  }
-};
-
-const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => {
-  try {
-    if (!channel) {
-      channel = (await createConnection()) as Channel;
-    }
-    const exchangeName = 'jobber-gig';
-    const routingKey = 'get-sellers';
-    const queueName = 'user-gig-queue';
-
-    await channel.assertExchange(exchangeName, 'direct');
-
-    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
-
-    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
-
-    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
-      const { type } = JSON.parse(msg!.content.toString());
-      
-      if (type === 'getSellers') {
-       
-       const { count } = JSON.parse(msg!.content.toString());
-        const sellers: ISellerDocument[] = await getRandomSellers(parseInt(count, 10));
-        
-        await publishDirectMessage(
-          channel,
-          'jobber-seed-gig',
-          'receive-sellers',
-          JSON.stringify({ type: 'receiveSellers', sellers, count }),
-          'Message sent to gig service.'
-        );
-      }
-      
-      channel.ack(msg!);
-    });
-  } catch (error) {
-    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
-  }
-};
 
 export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
 ~~~
 
-- El createBuyer que llama el ConsumBuyerDirectMessage está en el buyer.service
+- EL type para asegurar que hago bien la desestructuración de type está en auth-ms/src/services/auth.service.ts
+
+~~~js
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
+  try {
+    const result: Model = await AuthModel.create(data);
+    const messageDetails: IAuthBuyerMessageDetails = {
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      type: 'auth' //AQUI!!!
+    };
+    await publishDirectMessage(
+      authChannel,
+      'jobber-buyer-update',
+      'user-buyer',
+      JSON.stringify(messageDetails),
+      'Buyer details sent to buyer service.'
+    );
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    return userData;
+  } catch (error) {
+    log.error(error);
+  }
+}
+~~~
+
+- El createBuyer que llama el ConsumBuyerDirectMessage está en el users-ms/src/services/buyer.service
 
 ~~~js
 const getBuyerByEmail = async (email: string): Promise<IBuyerDocument | null> => {
@@ -1981,4 +1962,17 @@ const createBuyer = async (buyerData: IBuyerDocument): Promise<void> => {
 };
 ~~~
 
-- 
+- Debo poner a escuchar el consumer en el users/src/server
+
+~~~js
+const startQueues = async (): Promise<void> => {
+  const userChannel: Channel = await createConnection() as Channel;
+  //consumers
+  await consumeBuyerDirectMessage(userChannel);
+  await consumeSellerDirectMessage(userChannel);
+  
+  // await consumeReviewFanoutMessages(userChannel);
+  // await consumeSeedGigDirectMessages(userChannel);
+};
+~~~
+-----
