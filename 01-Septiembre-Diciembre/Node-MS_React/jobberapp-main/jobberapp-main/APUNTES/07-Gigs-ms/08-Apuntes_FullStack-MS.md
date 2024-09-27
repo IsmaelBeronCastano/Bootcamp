@@ -322,9 +322,9 @@ const gigSchema: Schema = new Schema(
   },
   {
     versionKey: false,
-    toJSON: {
-      transform(_doc, rec) {
-        rec.id = rec._id;
+    toJSON: { //para no usar el _id
+      transform(_doc, rec) { //doc es un objeto de mongoose, con mi data
+        rec.id = rec._id;    //rec es el objeto puro JSON, lo que necesito cambiar
         delete rec._id;
         return rec;
       }
@@ -332,7 +332,7 @@ const gigSchema: Schema = new Schema(
   }
 );
 
-gigSchema.virtual('id').get(function() {
+gigSchema.virtual('id').get(function() { //ahora tendré mi id
   return this._id;
 });
 
@@ -652,14 +652,16 @@ const getSellerPausedGigs = async (sellerId: string): Promise<ISellerGig[]> => {
 const createGig = async (gig: ISellerGig): Promise<ISellerGig> => {
   const createdGig: ISellerGig = await GigModel.create(gig);
   if (createdGig) {
+                      //No queremos el _id de mongo, uso el método toJSON del schema
     const data: ISellerGig = createdGig.toJSON?.() as ISellerGig;
+    
     await publishDirectMessage(
       gigChannel,
-      'jobber-seller-update',
-      'user-seller',
+      'jobber-seller-update', //consumer= consumeSellerDirectMessage
+      'user-seller',      //lo pasamos como un string con stringify
       JSON.stringify({ type: 'update-gig-count', gigSellerId: `${data.sellerId}`, count: 1 }),
       'Details sent to users service.'
-    );
+    );      //elasticSearch method    //podría usar data.id
     await addDataToIndex('gigs', `${createdGig._id}`, data);
   }
   return createdGig;
@@ -667,6 +669,7 @@ const createGig = async (gig: ISellerGig): Promise<ISellerGig> => {
 
 const deleteGig = async (gigId: string, sellerId: string): Promise<void> => {
   await GigModel.deleteOne({ _id: gigId }).exec();
+
   await publishDirectMessage(
     gigChannel,
     'jobber-seller-update',
@@ -674,7 +677,7 @@ const deleteGig = async (gigId: string, sellerId: string): Promise<void> => {
     JSON.stringify({ type: 'update-gig-count', gigSellerId: sellerId, count: -1 }),
     'Details sent to users service.'
   );
-  await deleteIndexedData('gigs', `${gigId}`);
+  await deleteIndexedData('gigs', `${gigId}`);//elasticSearch
 };
 
 const updateGig = async (gigId: string, gigData: ISellerGig): Promise<ISellerGig> => {
@@ -703,15 +706,16 @@ const updateGig = async (gigId: string, gigData: ISellerGig): Promise<ISellerGig
   return document;
 };
 
+//le paso el id y modifico active
 const updateActiveGigProp = async (gigId: string, gigActive: boolean): Promise<ISellerGig> => {
   const document: ISellerGig = await GigModel.findOneAndUpdate(
     { _id: gigId },
     {
-      $set: {
+      $set: { //para actualizar un campo uso $set
         active: gigActive
       }
     },
-    { new: true }
+    { new: true } //para que me lo devuelva actualizado
   ).exec() as ISellerGig;
   if (document) {
     const data: ISellerGig = document.toJSON?.() as ISellerGig;
@@ -732,7 +736,7 @@ const updateGigReview = async (data: IReviewMessageDetails): Promise<void> => {
   const gig = await GigModel.findOneAndUpdate(
     { _id: data.gigId },
     {
-      $inc: {
+      $inc: { //inc de increment
         ratingsCount: 1,
         ratingSum: data.rating,
         [`ratingCategories.${ratingKey}.value`]: data.rating,
@@ -814,6 +818,220 @@ export {
   updateGigReview,
   seedData
 };
+~~~
+
+- Vemaos el users-ms/src/queues/user.consumer
+
+~~~js
+import { config } from '@users/config';
+import { IBuyerDocument, ISellerDocument, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage, Replies } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@users/queues/connection';
+import { createBuyer, updateBuyerPurchasedGigsProp } from '@users/services/buyer.service';
+import {
+  getRandomSellers,
+  updateSellerCancelledJobsProp,
+  updateSellerCompletedJobsProp,
+  updateSellerOngoingJobsProp,
+  updateSellerReview,
+  updateTotalGigsCount
+} from '@users/services/seller.service';
+import { publishDirectMessage } from '@users/queues/user.producer';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceConsumer', 'debug');
+
+const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-buyer-update';
+    const routingKey = 'user-buyer';
+    const queueName = 'user-buyer-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'auth') {
+        const { username, email, profilePicture, country, createdAt } = JSON.parse(msg!.content.toString());
+        const buyer: IBuyerDocument = {
+          username,
+          email,
+          profilePicture,
+          country,
+          purchasedGigs: [],
+          createdAt
+        };
+        await createBuyer(buyer);
+      } else {
+        const { buyerId, purchasedGigs } = JSON.parse(msg!.content.toString());
+        await updateBuyerPurchasedGigsProp(buyerId, purchasedGigs, type);
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeBuyerDirectMessage() method error:', error);
+  }
+};
+
+//este es el consumer para createGig
+const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-seller-update';
+    const routingKey = 'user-seller';
+    const queueName = 'user-seller-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type, sellerId, ongoingJobs, completedJobs, totalEarnings, recentDelivery, gigSellerId, count } = JSON.parse(
+        msg!.content.toString()
+      );
+      if (type === 'create-order') {
+        await updateSellerOngoingJobsProp(sellerId, ongoingJobs);
+      } else if (type === 'approve-order') {
+        await updateSellerCompletedJobsProp({
+          sellerId,
+          ongoingJobs,
+          completedJobs,
+          totalEarnings,
+          recentDelivery
+        });
+      } else if (type === 'update-gig-count') {
+        await updateTotalGigsCount(`${gigSellerId}`, count);
+      } else if (type === 'cancel-order') {
+        await updateSellerCancelledJobsProp(sellerId);
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeSellerDirectMessage() method error:', error);
+  }
+};
+
+const consumeReviewFanoutMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-review';
+    const queueName = 'seller-review-queue';
+    await channel.assertExchange(exchangeName, 'fanout');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, '');
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'buyer-review') {
+        await updateSellerReview(JSON.parse(msg!.content.toString()));
+        await publishDirectMessage(
+          channel,
+          'jobber-update-gig',
+          'update-gig',
+          JSON.stringify({ type: 'updateGig', gigReview: msg!.content.toString() }),
+          'Message sent to gig service.'
+        );
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+
+const consumeSeedGigDirectMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-gig';
+    const routingKey = 'get-sellers';
+    const queueName = 'user-gig-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { type } = JSON.parse(msg!.content.toString());
+      if (type === 'getSellers') {
+        const { count } = JSON.parse(msg!.content.toString());
+        const sellers: ISellerDocument[] = await getRandomSellers(parseInt(count, 10));
+        await publishDirectMessage(
+          channel,
+          'jobber-seed-gig',
+          'receive-sellers',
+          JSON.stringify({ type: 'receiveSellers', sellers, count }),
+          'Message sent to gig service.'
+        );
+      }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeReviewFanoutMessages() method error:', error);
+  }
+};
+
+export { consumeBuyerDirectMessage, consumeSellerDirectMessage, consumeReviewFanoutMessages, consumeSeedGigDirectMessages };
+~~~
+
+- El gig/src/queues/gig.consumer.ts (el producer es el mismo que en los casos anteriores)
+
+~~~js
+import { config } from '@gig/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Channel, ConsumeMessage, Replies } from 'amqplib';
+import { Logger } from 'winston';
+import { createConnection } from '@gig/queues/connection';
+import { seedData, updateGigReview } from '@gig/services/gig.service';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServiceConsumer', 'debug');
+
+const consumeGigDirectMessage = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-update-gig';
+    const routingKey = 'update-gig';
+    const queueName = 'gig-update-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { gigReview } = JSON.parse(msg!.content.toString());
+      await updateGigReview(JSON.parse(gigReview));
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'GigService GigConsumer consumeGigDirectMessage() method error:', error);
+  }
+};
+
+const consumeSeedDirectMessages = async (channel: Channel): Promise<void> => {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'jobber-seed-gig';
+    const routingKey = 'receive-sellers';
+    const queueName = 'seed-gig-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const jobberQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(jobberQueue.queue, exchangeName, routingKey);
+    channel.consume(jobberQueue.queue, async (msg: ConsumeMessage | null) => {
+      const { sellers, count } = JSON.parse(msg!.content.toString());
+      await seedData(sellers, count);
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'GigService GigConsumer consumeGigDirectMessage() method error:', error);
+  }
+};
+
+export { consumeGigDirectMessage, consumeSeedDirectMessages };
 ~~~
 
 - Paso el resto de controllers
@@ -1131,6 +1349,10 @@ const startQueues = async (): Promise<void> => {
   await consumeSeedDirectMessages(gigChannel);
 };
 ~~~
+------
 
+## Create Reddis Connection
+
+- 
 
 
