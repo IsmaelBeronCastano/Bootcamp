@@ -568,7 +568,7 @@ const ConversationModel: Model<IConversationDocument> = model<IConversationDocum
 export { ConversationModel };
 ~~~
 
-- chat-ms/src/models/message.schema
+- chat-ms/src/models/message.schema de los messages desde el frontend
 
 ~~~js
 import { IMessageDocument } from '@uzochukwueddie/jobber-shared';
@@ -621,11 +621,12 @@ const messageSchema: ObjectSchema = Joi.object().keys({
   conversationId: Joi.string().optional().allow(null, ''),
   _id: Joi.string().optional(),
   body: Joi.string().optional().allow(null, ''),
+  //luego veremos que haremos con esta propiedad
   hasConversationId: Joi.boolean().optional(), // this is only for checking if conversation id exist
   file: Joi.string().optional().allow(null, ''),
-  fileType: Joi.string().optional().allow(null, ''),
+  fileType: Joi.string().optional().allow(null, ''), //image, video
   fileName: Joi.string().optional().allow(null, ''),
-  fileSize: Joi.string().optional().allow(null, ''),
+  fileSize: Joi.string().optional().allow(null, ''),/
   gigId: Joi.string().optional().allow(null, ''),
   sellerId: Joi.string().required().messages({
     'string.base': 'Seller id is required',
@@ -637,7 +638,7 @@ const messageSchema: ObjectSchema = Joi.object().keys({
     'string.empty': 'Buyer id is required',
     'any.required': 'Buyer id is required'
   }),
-  senderUsername: Joi.string().required().messages({
+  senderUsername: Joi.string().required().messages({ //en la aplicación usaremos esta info
     'string.base': 'Sender username is required',
     'string.empty': 'Sender username is required',
     'any.required': 'Sender username is required'
@@ -658,7 +659,7 @@ const messageSchema: ObjectSchema = Joi.object().keys({
     'any.required': 'Receiver picture is required'
   }),
   isRead: Joi.boolean().optional(),
-  hasOffer: Joi.boolean().optional(),
+  hasOffer: Joi.boolean().optional(), //si tiene oferta
   offer: Joi.object({
     gigTitle: Joi.string().optional(),
     price: Joi.number().optional(),
@@ -690,21 +691,26 @@ import { StatusCodes } from 'http-status-codes';
 
 const message = async (req: Request, res: Response): Promise<void> => {
   const { error } = await Promise.resolve(messageSchema.validate(req.body));
+  //compruebo si hay algo en error como resultado de la promesa
   if (error?.details) {
     throw new BadRequestError(error.details[0].message, 'Create message() method');
   }
+  //obtengo el file del body
   let file: string = req.body.file;
+  
+  //creo un id para el archivo
   const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
   const randomCharacters: string = randomBytes.toString('hex');
   let result: UploadApiResponse;
-  if (file) {
+  
+  if (file) {//si hay archivo lo subo con el helper uploads a cloudinary
     result = (req.body.fileType === 'zip' ? await uploads(file, `${randomCharacters}.zip`) : await uploads(file)) as UploadApiResponse;
-    if (!result.public_id) {
+    if (!result.public_id) {//si no hay public_id proveniente de cloudinary lanzo un error de upload
       throw new BadRequestError('File upload error. Try again', 'Create message() method');
     }
-    file = result?.secure_url;
+    file = result?.secure_url;//guardo la secure_url de result en file
   }
-  const messageData: IMessageDocument = {
+  const messageData: IMessageDocument = { //un poco de carpintería
     conversationId: req.body.conversationId,
     body: req.body.body,
     file,
@@ -722,10 +728,10 @@ const message = async (req: Request, res: Response): Promise<void> => {
     hasOffer: req.body.hasOffer,
     offer: req.body.offer
   };
-  if (!req.body.hasConversationId) {
+  if (!req.body.hasConversationId) { //si no hay conversación la creo
     await createConversation(`${messageData.conversationId}`, `${messageData.senderUsername}`, `${messageData.receiverUsername}`);
   }
-  await addMessage(messageData);
+  await addMessage(messageData);//añado el mensaje
   res.status(StatusCodes.OK).json({ message: 'Message added', conversationId: req.body.conversationId, messageData });
 };
 
@@ -801,6 +807,36 @@ const markSingleMessage = async (req: Request, res: Response): Promise<void> => 
 export { offer, markMultipleMessages, markSingleMessage };
 ~~~
 
+- Vuelvo a pasar el router
+
+~~~js
+import { message } from '@chat/controllers/create';
+import { conversation, conversationList, messages, userMessages } from '@chat/controllers/get';
+import { markMultipleMessages, markSingleMessage, offer } from '@chat/controllers/update';
+import express, { Router } from 'express';
+
+const router: Router = express.Router();
+
+const messageRoutes = (): Router => {
+  router.get('/conversation/:senderUsername/:receiverUsername', conversation);
+  router.get('/conversations/:username', conversationList);
+  router.get('/:senderUsername/:receiverUsername', messages);
+  router.get('/:conversationId', userMessages);
+  router.post('/', message);
+  router.put('/offer', offer);
+  router.put('/mark-as-read', markSingleMessage);
+  router.put('/mark-multiple-as-read', markMultipleMessages);
+
+  return router;
+};
+
+export { messageRoutes };
+~~~
+------
+
+
+## Messages.service
+
 - El chat-ms/src/services/message.service
 
 ~~~js
@@ -810,7 +846,9 @@ import { publishDirectMessage } from '@chat/queues/message.producer';
 import { chatChannel, socketIOChatObject } from '@chat/server';
 import { IConversationDocument, IMessageDetails, IMessageDocument, lowerCase } from '@uzochukwueddie/jobber-shared';
 
+//creamos la conversación
 const createConversation = async (conversationId: string, sender: string, receiver: string): Promise<void> => {
+  //importo el modelo de mongoose
   await ConversationModel.create({
     conversationId,
     senderUsername: sender,
@@ -820,37 +858,77 @@ const createConversation = async (conversationId: string, sender: string, receiv
 
 const addMessage = async (data: IMessageDocument): Promise<IMessageDocument> => {
   const message: IMessageDocument = await MessageModel.create(data) as IMessageDocument;
+    //si tiene oferta
   if (data.hasOffer) {
     const emailMessageDetails: IMessageDetails = {
       sender: data.senderUsername,
       amount: `${data.offer?.price}`,
-      buyerUsername: lowerCase(`${data.receiverUsername}`),
+      buyerUsername: lowerCase(`${data.receiverUsername}`),//lo paso a minúsculaS
       sellerUsername: lowerCase(`${data.senderUsername}`),
       title: data.offer?.gigTitle,
       description: data.offer?.description,
       deliveryDays: `${data.offer?.deliveryInDays}`,
       template: 'offer'
     };
-    // send email
+    // MANDO MENSAJE A NOTIFICATION-SERVICE
     await publishDirectMessage(
       chatChannel,
-      'jobber-order-notification',
-      'order-email',
+      'jobber-order-notification', //exchange
+      'order-email',//routingKey
       JSON.stringify(emailMessageDetails),
       'Order email sent to notification service.'
     );
   }
+  //importo socketIOChatObject del chat-ms/src/server (instancia de Server socket.io)
+  //emito el evento message- received al api-gateway
   socketIOChatObject.emit('message received', message);
-  return message;
-};
+  return message;//retorno el message
+
+
+ };
+
+  //En api-gateway/src/sockets/sokets.ts añado este evento
+
+//  private chatSocketServiceIOConnections(): void {
+//     chatSocketClient = io(`${config.MESSAGE_BASE_URL}`, {
+//       transports: ['websocket', 'polling'],
+//       secure: true
+//     });
+
+//     chatSocketClient.on('connect', () => {
+//       log.info('ChatService socket connected');
+//     });
+
+//     chatSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+//       log.log('error', 'ChatSocket disconnect reason:', reason);
+//       chatSocketClient.connect();
+//     });
+
+//     chatSocketClient.on('connect_error', (error: Error) => {
+//       log.log('error', 'ChatService socket connection error:', error);
+//       chatSocketClient.connect();
+//     });
+
+//     // custom events
+//     chatSocketClient.on('message received', (data: IMessageDocument) => { <---AQUI!!!!
+//       this.io.emit('message received', data);
+//     });
+
+//     chatSocketClient.on('message updated', (data: IMessageDocument) => {<---Aqui el update
+//       this.io.emit('message updated', data);
+//     });
+//   }
+
+
 
 const getConversation = async (sender: string, receiver: string): Promise<IConversationDocument[]> => {
+  //creo un query para mongoose
   const query = {
-    $or: [
+    $or: [ //que haga match con una cosa u otra
       { senderUsername: sender, receiverUsername: receiver },
       { senderUsername: receiver, receiverUsername: sender },
     ]
-  };
+  };                                                                    //uso aggregate para hacer match    
   const conversation: IConversationDocument[] = await ConversationModel.aggregate([{ $match: query }]);
   return conversation;
 };
@@ -866,12 +944,16 @@ const getUserConversationList = async (username: string): Promise<IMessageDocume
     { $match: query },
     {
       $group: {
-        _id: '$conversationId',
+        _id: '$conversationId',//agrupo los mensajes por id
+        //de este result obtengo las propiedades
+                  //solo quiero el último mensaje, por eso top
+                  //$$ROOT agrupa en base a createdAt
+                  //createdAt -1 es el último
         result: { $top: { output: '$$ROOT', sortBy: { createdAt: -1 }}}
       }
     },
     {
-      $project: {
+      $project: { //uso project operator, quiero estas propiedades que obtengo de result
         _id: '$result._id',
         conversationId: '$result.conversationId',
         sellerId: '$result.sellerId',
@@ -901,7 +983,7 @@ const getMessages = async (sender: string, receiver: string): Promise<IMessageDo
   };
   const messages: IMessageDocument[] = await MessageModel.aggregate([
     { $match: query },
-    { $sort: { createdAt: 1 }}
+    { $sort: { createdAt: 1 }}//ordeno el resultado del primero al último
   ]);
   return messages;
 };
@@ -919,10 +1001,10 @@ const updateOffer = async (messageId: string, type: string): Promise<IMessageDoc
     { _id: messageId },
     {
       $set: {
-        [`offer.${type}`]: true
+        [`offer.${type}`]: true //uso $set para cambiar el valor de la propiedad
       }
     },
-    { new: true }
+    { new: true } //para que me devuelva el objeto actualizado
   ) as IMessageDocument;
   return message;
 };
@@ -937,20 +1019,23 @@ const markMessageAsRead = async (messageId: string): Promise<IMessageDocument> =
     },
     { new: true }
   ) as IMessageDocument;
+
+  //emito el mensaje updated, lo recojo en api-gateway
   socketIOChatObject.emit('message updated', message);
   return message;
 };
 
 const markManyMessagesAsRead = async (receiver: string, sender: string, messageId: string): Promise<IMessageDocument> => {
   await MessageModel.updateMany(
-    { senderUsername: sender, receiverUsername: receiver, isRead: false },
+    { senderUsername: sender, receiverUsername: receiver, isRead: false }, //mientras se cumpla esta condición
     {
       $set: {
-        isRead: true
+        isRead: true //cambia el valor a true
       }
     },
   ) as IMessageDocument;
   const message: IMessageDocument = await MessageModel.findOne({ _id: messageId }).exec() as IMessageDocument;
+  //emito  el message-updated, lo recojo en api-gateway
   socketIOChatObject.emit('message updated', message);
   return message;
 };
@@ -967,34 +1052,13 @@ export {
   markManyMessagesAsRead
 };
 ~~~
+-----
 
-- Vuelvo a pasar el router
-
-~~~js
-import { message } from '@chat/controllers/create';
-import { conversation, conversationList, messages, userMessages } from '@chat/controllers/get';
-import { markMultipleMessages, markSingleMessage, offer } from '@chat/controllers/update';
-import express, { Router } from 'express';
-
-const router: Router = express.Router();
-
-const messageRoutes = (): Router => {
-  router.get('/conversation/:senderUsername/:receiverUsername', conversation);
-  router.get('/conversations/:username', conversationList);
-  router.get('/:senderUsername/:receiverUsername', messages);
-  router.get('/:conversationId', userMessages);
-  router.post('/', message);
-  router.put('/offer', offer);
-  router.put('/mark-as-read', markSingleMessage);
-  router.put('/mark-multiple-as-read', markMultipleMessages);
-
-  return router;
-};
-
-export { messageRoutes };
-~~~
+## RabbitMQ connection
 
 - En chat-ms/src/queues/connection (RabbitMQ)
+- Chat-ms solo publica mensajes a notification-ms
+- No consume mensajes de ningún microservicio
 
 ~~~js
 import { config } from '@chat/config';
@@ -1264,6 +1328,8 @@ export class Update {
 }
 ~~~
 
+## Api-gateway messages.service
+
 - Y en api-gateway/src/services/messages.ts
 
 ~~~js
@@ -1272,7 +1338,7 @@ import { AxiosService } from '@gateway/services/axios';
 import { config } from '@gateway/config';
 import { IMessageDocument } from '@uzochukwueddie/jobber-shared';
 
-export let axiosMessageInstance: ReturnType<typeof axios.create>;
+export let axiosMessageInstance: ReturnType<typeof axios.create>; //lo pongo aqui para no inyectarlo
 
 class MessageService {
   constructor() {
@@ -1590,4 +1656,3 @@ class RedisConnection {
 export const redisConnection: RedisConnection = new RedisConnection();
 ~~~
 
-## Conversation model line 553
