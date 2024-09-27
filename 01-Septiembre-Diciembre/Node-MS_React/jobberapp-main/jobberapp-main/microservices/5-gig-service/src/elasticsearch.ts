@@ -48,11 +48,11 @@ async function createIndex(indexName: string): Promise<void> {
 const getDocumentCount = async (index: string): Promise<number> => {
   try {
     const result: CountResponse = await elasticSearchClient.count({ index });
-    return result.count;
+    return result.count; 
   } catch (error) {
     log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
     return 0;
-  }
+  }>
 };
 
 const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig> => {

@@ -1353,6 +1353,874 @@ const startQueues = async (): Promise<void> => {
 
 ## Create Reddis Connection
 
-- 
+- Creo la carpeta src/redis/redis.connection.ts
 
+~~~js
+import { config } from '@gig/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { createClient } from 'redis';
+import { Logger } from 'winston';
+
+type RedisClient = ReturnType<typeof createClient>;
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigRedisConnection', 'debug');
+//creo el cliente
+const client: RedisClient = createClient({ url: `${config.REDIS_HOST}`});
+
+const redisConnect = async (): Promise<void> => {
+  try {
+    await client.connect();
+    log.info(`GigService Redis Connection: ${await client.ping()}`);
+    cacheError();
+  } catch (error) {
+    log.log('error', 'GigService redisConnect() method error:', error);
+  }
+};
+
+const cacheError = (): void => {
+  client.on('error', (error: unknown) => {
+    log.error(error);
+  });
+};
+
+export { redisConnect, client };
+~~~
+
+- Llamo a la conexión en app.ts
+
+~~~js
+import { databaseConnection } from '@gig/database';
+import { config } from '@gig/config';
+import express, { Express } from 'express';
+import { start } from '@gig/server';
+import { redisConnect } from '@gig/redis/redis.connection';
+
+const initilize = (): void => {
+  config.cloudinaryConfig();
+  databaseConnection();
+  const app: Express = express();
+  start(app);
+  redisConnect();
+};
+
+initilize();
+~~~
+-----
+
+## Get category from redis cache method
+
+- Cuando el cliente del frontend haga clic en un producto, queremos guardar la categoría de ese producto
+- Usaremos esa categoría para buscar 5 gigs en base a esa categoría y mostrarlo en el frontend
+- Si clica en otro gig de otra categoría, reemplazará la anterior
+- El método para añadir a redis lo haremos desde el api-gateway
+- Los servicios solo se conectarán a esta instancia de redis pra obtener la data
+- gig-ms/src/redis/connection.redis 
+
+~~~js
+import { config } from '@gig/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { client } from '@gig/redis/redis.connection';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigCache', 'debug');
+
+const getUserSelectedGigCategory = async (key: string): Promise<string> => {
+  try {
+    if (!client.isOpen) {//si no hay conexión
+      await client.connect(); //conecto con redis
+    }
+    const response: string = await client.GET(key) as string;//obtengo el valor almacenado
+    return response;
+  } catch (error) {
+    log.log('error', 'GigService GigCache getUserSelectedGigCategory() method error:', error);
+    return '';
+  }
+};
+
+export { getUserSelectedGigCategory };
+~~~
+
+- Creo la carpeta en api-gateway con el mismo fichero de conexión y añado api-gateway/src/redis/gateway.cache.ts
+
+~~~js
+import { config } from '@gateway/config';
+import { winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+import { createClient } from 'redis';
+
+type RedisClient = ReturnType<typeof createClient>;
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewayCache', 'debug');
+
+export class GatewayCache {
+  client: RedisClient;
+
+  constructor() {             //creo una instancia de redis, le paso la url del host
+    this.client = createClient({ url: `${config.REDIS_HOST}`});
+  }
+
+  public async saveUserSelectedCategory(key: string, value: string): Promise<void> {
+    try {
+      if (!this.client.isOpen) {
+        await this.client.connect();
+      }
+      await this.client.SET(key, value);
+    } catch (error) {
+      log.log('error', 'GatewayService Cache saveUserSelectedCategory() method error:', error);
+    }
+  }
+
+  public async saveLoggedInUserToCache(key: string, value: string): Promise<string[]> {
+    try {
+      if (!this.client.isOpen) {
+        await this.client.connect();
+      }
+      const index: number | null = await this.client.LPOS(key, value);
+      if (index === null) {
+        await this.client.LPUSH(key, value);
+        log.info(`User ${value} added`);
+      }
+      const response: string[] = await this.client.LRANGE(key, 0, -1);
+      return response;
+    } catch (error) {
+      log.log('error', 'GatewayService Cache saveLoggedInUserToCache() method error:', error);
+      return [];
+    }
+  }
+
+  public async getLoggedInUsersFromCache(key: string): Promise<string[]> {
+    try {
+      if (!this.client.isOpen) {
+        await this.client.connect();
+      }
+      const response: string[] = await this.client.LRANGE(key, 0, -1);
+      return response;
+    } catch (error) {
+      log.log('error', 'GatewayService Cache getLoggedInUsersFromCache() method error:', error);
+      return [];
+    }
+  }
+
+  public async removeLoggedInUserFromCache(key: string, value: string): Promise<string[]> {
+    try {
+      if (!this.client.isOpen) {
+        await this.client.connect();
+      }
+      await this.client.LREM(key, 1, value);
+      log.info(`User ${value} removed`);
+      const response: string[] = await this.client.LRANGE(key, 0, -1);
+      return response;
+    } catch (error) {
+      log.log('error', 'GatewayService Cache removeLoggedInUserFromCache() method error:', error);
+      return [];
+    }
+  }
+}
+~~~
+
+- Para el controller de método create de gig-ms
+
+~~~js
+import { getDocumentCount } from '@gig/elasticsearch';
+import { gigCreateSchema } from '@gig/schemes/gig';
+import { createGig } from '@gig/services/gig.service';
+import { BadRequestError, ISellerGig, uploads } from '@uzochukwueddie/jobber-shared';
+import { UploadApiResponse } from 'cloudinary';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gigCreate = async (req: Request, res: Response): Promise<void> => {
+  const { error } = await Promise.resolve(gigCreateSchema.validate(req.body));
+  if (error?.details) {    //si hay un error en la validación devuelve este string
+    throw new BadRequestError(error.details[0].message, 'Create gig() method');
+  }
+                                          //jobber-shared, dejaremos que cloudinary cree el id
+  const result: UploadApiResponse = await uploads(req.body.coverImage) as UploadApiResponse;
+  if (!result.public_id) {
+    throw new BadRequestError('File upload error. Try again.', 'Create gig() method');
+  }
+                                //de elasticsearch
+  const count: number = await getDocumentCount('gigs');
+  const gig: ISellerGig = {
+    sellerId: req.body.sellerId,
+    username: req.currentUser!.username,
+    email: req.currentUser!.email,
+    profilePicture: req.body.profilePicture,
+    title: req.body.title,
+    description: req.body.description,
+    categories: req.body.categories,
+    subCategories: req.body.subCategories,
+    tags: req.body.tags,
+    price: req.body.price,
+    expectedDelivery: req.body.expectedDelivery,
+    basicTitle: req.body.basicTitle,
+    basicDescription: req.body.basicDescription,
+    coverImage: `${result?.secure_url}`,
+    sortId: count + 1 //añado aqui el count de getDocumentCount (mirar más abajo!)
+  };                                    //gig.service
+  const createdGig: ISellerGig = await createGig(gig);
+  res.status(StatusCodes.CREATED).json({ message: 'Gig created successfully.', gig: createdGig });
+};
+
+export { gigCreate };
+~~~
+
+- El método uploads de cloudinary
+
+~~~js
+export function uploads(
+  file: string,
+  public_id?: string,
+  overwrite?: boolean,
+  invalidate?: boolean
+): Promise<UploadApiResponse | UploadApiErrorResponse | undefined> {
+  return new Promise((resolve) => {
+    cloudinary.v2.uploader.upload(
+      file,
+      {
+        public_id,
+        overwrite,
+        invalidate,
+        resource_type: 'auto' // zip, images
+      },
+      (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
+        if (error) resolve(error);
+        resolve(result);
+      }
+    );
+  });
+}
+~~~
+
+- Necesitamos la propiedad (que pongo yo) sortId para usarla con elasticSearch
+- El método getDocumentCount de elasticSearch usando CountRequest (mirar interfaz en types.d.ts)
+- Devolverá el número de documento en la lista
+
+~~~js
+const getDocumentCount = async (index: string): Promise<number> => {
+  try {
+    const result: CountResponse = await elasticSearchClient.count({ index }); 
+    return result.count; //uso el valor de count
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
+    return 0;
+  }
+};
+~~~
+
+- Tiene diferentes propiedades CountRequest
+
+- El método createdGig de gig.service
+
+~~~js
+const createGig = async (gig: ISellerGig): Promise<ISellerGig> => {
+  const createdGig: ISellerGig = await GigModel.create(gig);
+  if (createdGig) {
+    const data: ISellerGig = createdGig.toJSON?.() as ISellerGig;
+    await publishDirectMessage(
+      gigChannel,
+      'jobber-seller-update',
+      'user-seller',
+      JSON.stringify({ type: 'update-gig-count', gigSellerId: `${data.sellerId}`, count: 1 }),
+      'Details sent to users service.'
+    );
+    await addDataToIndex('gigs', `${createdGig._id}`, data);
+  }
+  return createdGig;
+};
+~~~
+
+- gig-ms update controller
+- Uso el gigUpdateSchema
+
+~~~js
+import { gigUpdateSchema } from '@gig/schemes/gig';
+import { updateActiveGigProp, updateGig } from '@gig/services/gig.service';
+import { BadRequestError, ISellerGig, isDataURL, uploads } from '@uzochukwueddie/jobber-shared';
+import { UploadApiResponse } from 'cloudinary';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gigUpdate = async (req: Request, res: Response): Promise<void> => {
+  const { error } = await Promise.resolve(gigUpdateSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Update gig() method');
+  }               //jobber-shared
+      //si es true quiere decir que el user está queriendo subir una nueva imagen
+  const isDataUrl = isDataURL(req.body.coverImage);//compruebo si es en base 64
+  let coverImage = '';
+  if (isDataUrl) {                          //uso uploads de elasticSearch
+    const result: UploadApiResponse = await uploads(req.body.coverImage) as UploadApiResponse;
+    if (!result.public_id) {
+      throw new BadRequestError('File upload error. Try again.', 'Update gig() method');
+    }
+    coverImage = result?.secure_url;
+  } else {
+    coverImage = req.body.coverImage;
+  }
+  const gig: ISellerGig = {
+    title: req.body.title,
+    description: req.body.description,
+    categories: req.body.categories,
+    subCategories: req.body.subCategories,
+    tags: req.body.tags,
+    price: req.body.price,
+    expectedDelivery: req.body.expectedDelivery,
+    basicTitle: req.body.basicTitle,
+    basicDescription: req.body.basicDescription,
+    coverImage
+  };
+  const updatedGig: ISellerGig = await updateGig(req.params.gigId, gig); //le paso el id y el gig
+  res.status(StatusCodes.OK).json({ message: 'Gig updated successfully.', gig: updatedGig });
+};
+
+const gigUpdateActive = async (req: Request, res: Response): Promise<void> => {
+  const updatedGig: ISellerGig = await updateActiveGigProp(req.params.gigId, req.body.active);
+  res.status(StatusCodes.OK).json({ message: 'Gig updated successfully.', gig: updatedGig });
+};
+
+export { gigUpdate, gigUpdateActive };
+~~~
+
+- isDataURL method
+
+~~~js
+export function isDataURL(value: string): boolean {
+  const dataUrlRegex =
+  /^\s*data:([a-z]+\/[a-z0-9-+.]+(;[a-z-]+=[a-z0-9-]+)?)?(;base64)?,([a-z0-9!$&',()*+;=\-._~:@\\/?%\s]*)\s*$/i;
+  return dataUrlRegex.test(value);
+}
+~~~
+
+- Los métodos del servicio
+
+~~~js
+const updateGig = async (gigId: string, gigData: ISellerGig): Promise<ISellerGig> => {
+  const document: ISellerGig = await GigModel.findOneAndUpdate(
+    { _id: gigId },
+    {
+      $set: {
+        title: gigData.title,
+        description: gigData.description,
+        categories: gigData.categories,
+        subCategories: gigData.subCategories,
+        tags: gigData.tags,
+        price: gigData.price,
+        coverImage: gigData.coverImage,
+        expectedDelivery: gigData.expectedDelivery,
+        basicTitle: gigData.basicTitle,
+        basicDescription: gigData.basicDescription
+      }
+    },
+    { new: true }
+  ).exec() as ISellerGig;
+  if (document) {
+    const data: ISellerGig = document.toJSON?.() as ISellerGig;
+    await updateIndexedData('gigs', `${document._id}`, data);
+  }
+  return document;
+};
+
+//
+const updateActiveGigProp = async (gigId: string, gigActive: boolean): Promise<ISellerGig> => {
+  const document: ISellerGig = await GigModel.findOneAndUpdate(
+    { _id: gigId },
+    {
+      $set: {
+        active: gigActive
+      }
+    },
+    { new: true }
+  ).exec() as ISellerGig;
+  if (document) {
+    const data: ISellerGig = document.toJSON?.() as ISellerGig;
+    await updateIndexedData('gigs', `${document._id}`, data);
+  }
+  return document;
+};
+~~~
+
+- El controller de gig-ms delete
+
+~~~js
+import { deleteGig } from '@gig/services/gig.service';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gigDelete = async (req: Request, res: Response): Promise<void> => {
+  await deleteGig(req.params.gigId, req.params.sellerId);
+  res.status(StatusCodes.OK).json({ message: 'Gig deleted successfully.' });
+};
+
+export { gigDelete };
+~~~
+
+- controller gig get methods
+
+~~~js
+import { getUserSelectedGigCategory } from '@gig/redis/gig.cache';
+import { getGigById, getSellerGigs, getSellerPausedGigs } from '@gig/services/gig.service';
+import { getMoreGigsLikeThis, getTopRatedGigsByCategory, gigsSearchByCategory } from '@gig/services/search.service';
+import { ISearchResult, ISellerGig } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gigById = async (req: Request, res: Response): Promise<void> => {
+  const gig: ISellerGig = await getGigById(req.params.gigId);
+  res.status(StatusCodes.OK).json({ message: 'Get gig by id', gig });
+};
+
+const sellerGigs = async (req: Request, res: Response): Promise<void> => {
+  const gigs: ISellerGig[] = await getSellerGigs(req.params.sellerId);
+  res.status(StatusCodes.OK).json({ message: 'Seller gigs', gigs });
+};
+
+const sellerInactiveGigs = async (req: Request, res: Response): Promise<void> => {
+  const gigs: ISellerGig[] = await getSellerPausedGigs(req.params.sellerId);
+  res.status(StatusCodes.OK).json({ message: 'Seller gigs', gigs });
+};
+
+const topRatedGigsByCategory = async (req: Request, res: Response): Promise<void> => {
+  const category = await getUserSelectedGigCategory(`selectedCategories:${req.params.username}`);
+  const resultHits: ISellerGig[] = [];
+  const gigs: ISearchResult = await getTopRatedGigsByCategory(`${category}`);
+  for(const item of gigs.hits) {
+    resultHits.push(item._source as ISellerGig);
+  }
+  res.status(StatusCodes.OK).json({ message: 'Search top gigs results', total: gigs.total, gigs: resultHits });
+};
+
+const gigsByCategory = async (req: Request, res: Response): Promise<void> => {
+  const category = await getUserSelectedGigCategory(`selectedCategories:${req.params.username}`);
+  const resultHits: ISellerGig[] = [];
+  const gigs: ISearchResult = await gigsSearchByCategory(`${category}`);
+  for(const item of gigs.hits) {
+    resultHits.push(item._source as ISellerGig);
+  }
+  res.status(StatusCodes.OK).json({ message: 'Search gigs category results', total: gigs.total, gigs: resultHits });
+};
+
+
+const moreLikeThis = async (req: Request, res: Response): Promise<void> => {
+  const resultHits: ISellerGig[] = [];
+  const gigs: ISearchResult = await getMoreGigsLikeThis(req.params.gigId);
+  for(const item of gigs.hits) {
+    resultHits.push(item._source as ISellerGig);
+  }
+  res.status(StatusCodes.OK).json({ message: 'More gigs like this result', total: gigs.total, gigs: resultHits });
+};
+
+export { gigById, sellerGigs, sellerInactiveGigs, topRatedGigsByCategory, gigsByCategory, moreLikeThis };
+~~~
+
+- Hay varios métodfos del gig-ms/src/services/gig.service.ts
+
+~~~js
+import { addDataToIndex, deleteIndexedData, getIndexedData, updateIndexedData } from '@gig/elasticsearch';
+import { IRatingTypes, IReviewMessageDetails, ISellerDocument, ISellerGig } from '@uzochukwueddie/jobber-shared';
+import { gigsSearchBySellerId } from '@gig/services/search.service';
+import { GigModel } from '@gig/models/gig.schema';
+import { publishDirectMessage } from '@gig/queues/gig.producer';
+import { gigChannel } from '@gig/server';
+import { faker } from '@faker-js/faker';
+import { sample } from 'lodash';
+
+const getGigById = async (gigId: string): Promise<ISellerGig> => {
+  const gig: ISellerGig = await getIndexedData('gigs', gigId);
+  return gig;
+};
+
+const getSellerGigs = async (sellerId: string): Promise<ISellerGig[]> => {
+  const resultsHits: ISellerGig[] = [];
+  const gigs = await gigsSearchBySellerId(sellerId, true);
+  for(const item of gigs.hits) {
+    resultsHits.push(item._source as ISellerGig);
+  }
+  return resultsHits;
+};
+
+const getSellerPausedGigs = async (sellerId: string): Promise<ISellerGig[]> => {
+  const resultsHits: ISellerGig[] = [];
+  const gigs = await gigsSearchBySellerId(sellerId, false);
+  for(const item of gigs.hits) {
+    resultsHits.push(item._source as ISellerGig);
+  }
+  return resultsHits;
+};
+~~~
+
+- Hay métodos del src/elasticSearch.ts
+
+~~~js
+import { Client } from '@elastic/elasticsearch';
+import { ClusterHealthResponse, CountResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
+import { config } from '@gig/config';
+import { ISellerGig, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigElasticSearchServer', 'debug');
+
+const elasticSearchClient = new Client({
+  node: `${config.ELASTIC_SEARCH_URL}`
+});
+
+const checkConnection = async (): Promise<void> => {
+  let isConnected = false;
+  while (!isConnected) {
+    try {
+      const health: ClusterHealthResponse = await elasticSearchClient.cluster.health({});
+      log.info(`GigService Elasticsearch health status - ${health.status}`);
+      isConnected = true;
+    } catch (error) {
+      log.error('Connection to Elasticsearch failed. Retrying...');
+      log.log('error', 'GigService checkConnection() method:', error);
+    }
+  }
+};
+
+async function checkIfIndexExist(indexName: string): Promise<boolean> {
+  const result: boolean = await elasticSearchClient.indices.exists({ index: indexName });
+  return result;
+}
+
+async function createIndex(indexName: string): Promise<void> {
+  try {
+    const result: boolean = await checkIfIndexExist(indexName);
+    if (result) {
+      log.info(`Index "${indexName}" already exist.`);
+    } else {
+      await elasticSearchClient.indices.create({ index: indexName });
+      await elasticSearchClient.indices.refresh({ index: indexName });
+      log.info(`Created index ${indexName}`);
+    }
+  } catch (error) {
+    log.error(`An error occurred while creating the index ${indexName}`);
+    log.log('error', 'GigService createIndex() method error:', error);
+  }
+}
+
+const getDocumentCount = async (index: string): Promise<number> => {
+  try {
+    const result: CountResponse = await elasticSearchClient.count({ index });
+    return result.count; 
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getDocumentCount() method error:', error);
+    return 0;
+  }>
+};
+
+const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig> => {
+  try {
+    const result: GetResponse = await elasticSearchClient.get({ index, id: itemId });
+    return result._source as ISellerGig;
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getIndexedData() method error:', error);
+    return {} as ISellerGig;
+  }
+};
+
+const addDataToIndex = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
+  try {
+    await elasticSearchClient.index({
+      index,
+      id: itemId,
+      document: gigDocument
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch addDataToIndex() method error:', error);
+  }
+};
+
+const updateIndexedData = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
+  try {
+    await elasticSearchClient.update({
+      index,
+      id: itemId,
+      doc: gigDocument
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch updateIndexedData() method error:', error);
+  }
+};
+
+const deleteIndexedData = async (index: string, itemId: string): Promise<void> => {
+  try {
+    await elasticSearchClient.delete({
+      index,
+      id: itemId
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch deleteIndexedData() method error:', error);
+  }
+};
+
+export {
+  elasticSearchClient,
+  checkConnection,
+  createIndex,
+  getDocumentCount,
+  getIndexedData,
+  addDataToIndex,
+  updateIndexedData,
+  deleteIndexedData
+};
+~~~
+
+- También hay métodos del gig-ms/src/services/search.service
+
+~~~js
+import { SearchResponse } from '@elastic/elasticsearch/lib/api/types';
+import { elasticSearchClient } from '@gig/elasticsearch';
+import { IHitsTotal, IPaginateProps, IQueryList, ISearchResult } from '@uzochukwueddie/jobber-shared';
+
+const gigsSearchBySellerId = async (searchQuery: string, active: boolean): Promise<ISearchResult> => {
+  const queryList: IQueryList[] = [
+    {
+      query_string: {
+        fields: ['sellerId'],
+        query: `*${searchQuery}*`
+      }
+    },
+    {
+      term: {
+        active
+      }
+    }
+  ];
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    query: {
+      bool: {
+        must: [...queryList]
+      }
+    }
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+const gigsSearch = async (
+  searchQuery: string,
+  paginate: IPaginateProps,
+  deliveryTime?: string,
+  min?: number,
+  max?: number
+): Promise<ISearchResult> => {
+  const { from, size, type } = paginate;
+  const queryList: IQueryList[] = [
+    {
+      query_string: {
+        fields: ['username', 'title', 'description', 'basicDescription', 'basicTitle', 'categories', 'subCategories', 'tags'],
+        query: `*${searchQuery}*`
+      }
+    },
+    {
+      term: {
+        active: true
+      }
+    }
+  ];
+
+  if (deliveryTime !== 'undefined') {
+    queryList.push({
+      query_string: {
+        fields: ['expectedDelivery'],
+        query: `*${deliveryTime}*`
+      }
+    });
+  }
+
+  if (!isNaN(parseInt(`${min}`)) && !isNaN(parseInt(`${max}`))) {
+    queryList.push({
+      range: {
+        price: {
+          gte: min,
+          lte: max
+        }
+      }
+    });
+  }
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    size,
+    query: {
+      bool: {
+        must: [...queryList]
+      }
+    },
+    sort: [
+      {
+        sortId: type === 'forward' ? 'asc' : 'desc'
+      }
+    ],
+    ...(from !== '0' && { search_after: [from] })
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+const gigsSearchByCategory = async (searchQuery: string): Promise<ISearchResult> => {
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    size: 10,
+    query: {
+      bool: {
+        must: [
+          {
+            query_string: {
+              fields: ['categories'],
+              query: `*${searchQuery}*`
+            }
+          },
+          {
+            term: {
+              active: true
+            }
+          }
+        ]
+      }
+    },
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+const getMoreGigsLikeThis = async (gigId: string): Promise<ISearchResult> => {
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    size: 5,
+    query: {
+      more_like_this: {
+        fields: ['username', 'title', 'description', 'basicDescription', 'basicTitle', 'categories', 'subCategories', 'tags'],
+        like: [
+          {
+            _index: 'gigs',
+            _id: gigId
+          }
+        ]
+      }
+    }
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+const getTopRatedGigsByCategory = async (searchQuery: string): Promise<ISearchResult> => {
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    size: 10,
+    query: {
+      bool: {
+        filter: {
+          script: {
+            script: {
+              source: 'doc[\'ratingSum\'].value != 0 && (doc[\'ratingSum\'].value / doc[\'ratingsCount\'].value == params[\'threshold\'])',
+              lang: 'painless',
+              params: {
+                threshold: 5
+              }
+            }
+          }
+        },
+        must: [
+          {
+            query_string: {
+              fields: ['categories'],
+              query: `*${searchQuery}*`
+            }
+          }
+        ]
+      }
+    }
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+export {
+  gigsSearchBySellerId,
+  gigsSearch,
+  gigsSearchByCategory,
+  getMoreGigsLikeThis,
+  getTopRatedGigsByCategory
+};
+~~~
+
+- El gig-ms/controller/search.controller
+
+~~~js
+
+import { gigsSearch } from '@gig/services/search.service';
+import { IPaginateProps, ISearchResult, ISellerGig } from '@uzochukwueddie/jobber-shared';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import { sortBy } from 'lodash';
+
+const gigs = async (req: Request, res: Response): Promise<void> => {
+  const { from, size, type } = req.params;
+  let resultHits: ISellerGig[] = [];
+  const paginate: IPaginateProps = { from, size: parseInt(`${size}`), type };
+  const gigs: ISearchResult = await gigsSearch(
+    `${req.query.query}`,
+    paginate,
+    `${req.query.delivery_time}`,
+    parseInt(`${req.query.minprice}`),
+    parseInt(`${req.query.maxprice}`),
+  );
+  for(const item of gigs.hits) {
+    resultHits.push(item._source as ISellerGig);
+  }
+  if (type === 'backward') {
+    resultHits = sortBy(resultHits, ['sortId']);
+  }
+  res.status(StatusCodes.OK).json({ message: 'Search gigs results', total: gigs.total, gigs: resultHits });
+};
+
+export { gigs };
+~~~
+
+- En gig/search-service
+
+~~~js
+~~~
+
+- El gig-ms/src/controller/seed.controller
+
+~~~js
+import { publishDirectMessage } from '@gig/queues/gig.producer';
+import { gigChannel } from '@gig/server';
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+
+const gig = async (req: Request, res: Response): Promise<void> => {
+  const { count } = req.params;
+  await publishDirectMessage(
+    gigChannel,
+    'jobber-gig',
+    'get-sellers',
+    JSON.stringify({ type: 'getSellers', count }),
+    'Gig seed message sent to user service.'
+  );
+  res.status(StatusCodes.CREATED).json({ message: 'Gig created successfully'});
+};
+
+export { gig };
+~~~
+----
+
+## Gig search methods
 
