@@ -216,7 +216,7 @@ import { Server } from 'socket.io';
 const SERVER_PORT = 4005;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'chatServer', 'debug');
 let chatChannel: Channel; //creo el channel
-let socketIOChatObject: Server; //de tipo Server de socket.io
+let socketIOChatObject: Server; //de tipo Server de socket.io, lo uso en startServer(app)
 
 const start = (app: Application): void => {
   securityMiddleware(app);
@@ -282,7 +282,7 @@ const startServer = async (app: Application): Promise<void> => {
   try {
     //Instancio el http.server
     const httpServer: http.Server = new http.Server(app);
-    //le paso la instancia al método createSocketIO de aqui abajo (un Server con cors configurado)
+    //le paso la instancia al método createSocketIO de aqui abajo (un htp.Server con cors configurado)
     const socketIO: Server = await createSocketIO(httpServer);
     startHttpServer(httpServer); //inicio el httpServer poniéndolo a escuchar
 
@@ -318,7 +318,130 @@ const startHttpServer = (httpServer: http.Server): void => {
 export { start, chatChannel, socketIOChatObject };
 ~~~
 
-- chat-ms/src/app.ts
+- En api-gateway/src/sockets/socket.ts tengo el método listen que establece la conexión
+- Para configurarlo tambien como cliente debo instalar el client
+- Para el lado del servidor usaré io.on y escuchare por io.on("**connection**")
+- Para el lado del cliente usaré chatSocketClient.on("**connect**") y ""**disconnect**"
+- **connection** para el server, **connect** para el cliente
+
+> npm i socket.io-client
+
+~~~js
+import { config } from '@gateway/config';
+import { GatewayCache } from '@gateway/redis/gateway.cache';
+import { IMessageDocument, IOrderDocument, IOrderNotifcation, winstonLogger } from '@uzochukwueddie/jobber-shared';
+import { Server, Socket } from 'socket.io';
+import { io, Socket as SocketClient } from 'socket.io-client'; //de la librería extraigo io i SocketClient
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewaySocket', 'debug');
+let chatSocketClient: SocketClient; //desde socket.io-client
+let orderSocketClient: SocketClient;
+
+export class SocketIOAppHandler {
+  private io: Server; //de tipo Server de socket.io
+  private gatewayCache: GatewayCache;
+
+  constructor(io: Server) {
+    this.io = io;
+    this.gatewayCache = new GatewayCache(); //creo una instancia de GetwayCache para usar sus métodos con REDIS
+    this.chatSocketServiceIOConnections();//llamo al método de crear el cliente socket.io de api-gateway en el constructor
+    this.orderSocketServiceIOConnections();
+  }
+
+  //tengo la conexión 
+  public listen(): void {
+
+    //llamo a los dos métodos
+    this.chatSocketServiceIOConnections();
+    this.orderSocketServiceIOConnections();
+
+  //con el método on le paso connection (paar el server) y el callback del que obtengo el socket
+    this.io.on('connection', async (socket: Socket) => {
+      //actúa de server con el frontend
+      socket.on('getLoggedInUsers', async () => {
+        const response: string[] = await this.gatewayCache.getLoggedInUsersFromCache('loggedInUsers');
+        this.io.emit('online', response);
+      });
+
+      socket.on('loggedInUsers', async (username: string) => {
+        const response: string[] = await this.gatewayCache.saveLoggedInUserToCache('loggedInUsers', username);
+        this.io.emit('online', response);
+      });
+
+      socket.on('removeLoggedInUser', async (username: string) => {
+        const response: string[] = await this.gatewayCache.removeLoggedInUserFromCache('loggedInUsers', username);
+        this.io.emit('online', response);
+      });
+
+      socket.on('category', async (category: string, username: string) => {
+        await this.gatewayCache.saveUserSelectedCategory(`selectedCategories:${username}`, category);
+      });
+    });
+  }
+
+  //lo configuro como cliente para comunicarse con chat-ms
+  private chatSocketServiceIOConnections(): void {
+    
+    //para crear el cliente uso la variable de entorno localhost:4005
+    chatSocketClient = io(`${config.MESSAGE_BASE_URL}`, {
+      transports: ['websocket', 'polling'], //si websocket no está disponible que use polling
+      secure: true 
+    });
+    //le paso connect (para el cliente)
+    chatSocketClient.on('connect', () => {
+      log.info('ChatService socket connected');
+    });
+                                        //le paso reason
+    chatSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+      log.log('error', 'ChatSocket disconnect reason:', reason); //imprimo el motivo
+      chatSocketClient.connect(); //trato conectar de nuevo si pierdo la conexión
+    });
+                        //escucho otros eventos
+    chatSocketClient.on('connect_error', (error: Error) => { 
+      log.log('error', 'ChatService socket connection error:', error);
+      chatSocketClient.connect();
+    });
+
+    // custom events
+    chatSocketClient.on('message received', (data: IMessageDocument) => {
+      this.io.emit('message received', data);
+    });
+
+    chatSocketClient.on('message updated', (data: IMessageDocument) => {
+      this.io.emit('message updated', data);
+    });
+  }
+
+  private orderSocketServiceIOConnections(): void {
+    orderSocketClient = io(`${config.ORDER_BASE_URL}`, {
+      transports: ['websocket', 'polling'],
+      secure: true
+    });
+
+    orderSocketClient.on('connect', () => {
+      log.info('OrderService socket connected');
+    });
+
+    orderSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+      log.log('error', 'OrderSocket disconnect reason:', reason);
+      orderSocketClient.connect();
+    });
+
+    orderSocketClient.on('connect_error', (error: Error) => {
+      log.log('error', 'OrderService socket connection error:', error);
+      orderSocketClient.connect();
+    });
+
+    // custom event
+    orderSocketClient.on('order notification', (order: IOrderDocument, notification: IOrderNotifcation) => {
+      this.io.emit('order notification', order, notification);
+    });
+  }
+};
+~~~
+
+- chat-ms/src/app.ts igual que el resto de archivos app en los otros microservicios, lo mismo con el archivo elasticSearch
 
 ~~~js
 import { databaseConnection } from '@chat/database';
@@ -334,40 +457,6 @@ const initilize = (): void => {
 };
 
 initilize();
-~~~
-
-- La conexión a chat-ms/src/elasticSearch
-
-~~~js
-import { Client } from '@elastic/elasticsearch';
-import { ClusterHealthResponse } from '@elastic/elasticsearch/lib/api/types';
-import { config } from '@chat/config';
-import { winstonLogger } from '@uzochukwueddie/jobber-shared';
-import { Logger } from 'winston';
-
-const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'chatElasticSearchServer', 'debug');
-
-const elasticSearchClient = new Client({
-  node: `${config.ELASTIC_SEARCH_URL}`
-});
-
-const checkConnection = async (): Promise<void> => {
-  let isConnected = false;
-  while (!isConnected) {
-    try {
-      const health: ClusterHealthResponse = await elasticSearchClient.cluster.health({});
-      log.info(`ChatService Elasticsearch health status - ${health.status}`);
-      isConnected = true;
-    } catch (error) {
-      log.error('Connection to Elasticsearch failed. Retrying...');
-      log.log('error', 'ChatService checkConnection() method:', error);
-    }
-  }
-};
-
-export {
-  checkConnection
-};
 ~~~
 
 - El src/routes/messages.routes.ts
@@ -460,6 +549,8 @@ export function verifyGatewayRequest(req: Request, _res: Response, next: NextFun
   next();
 }
 ~~~
+
+## Conversation Model
 
 - Enchat-ms/src/models tengo conversation.schema y message.schema
 - chat-ms/src/models/conversation.schema
@@ -1498,3 +1589,5 @@ class RedisConnection {
 
 export const redisConnection: RedisConnection = new RedisConnection();
 ~~~
+
+## Conversation model line 553
