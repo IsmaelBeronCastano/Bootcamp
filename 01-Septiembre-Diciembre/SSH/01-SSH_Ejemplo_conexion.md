@@ -1,6 +1,4 @@
-# 01 SSH 
-
-## Ejemplo de conexión
+# 01 SSH - EJEMPLO DE CONEXION
 
 - Instalaremos la suite OpneSSH
 - Puedo elegir entre instalar cliente (openssh-client), servidor (openssh-server) o las dos cosas (ssh)
@@ -59,10 +57,6 @@
 - Los archivos con key.pub son las claves que permiten el acceso sin autenticación
 - En ssh_host_ecdsa_key.pub puedo ver el fingerprint
 - Hemos agregado esa clave publica al cliente asociada a la ip del servidor 
-----
 
-## Archivos de configuración
-
-- 
 
 
