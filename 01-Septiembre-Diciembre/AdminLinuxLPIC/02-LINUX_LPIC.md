@@ -185,3 +185,231 @@ Si el directorio contiene uso
 ----
 
 ## Redirección de salida standard y error
+
+- Para ver todos los procesos corriendo en el equipo
+
+> ps fax
+
+- En linux todo son archivos
+- Me muestra un número de PID (primera columna izquierda)
+- Elijo el mismo ps fax que he ejecutado en la terminal bash
+- Si busco ese número de PID en /proc me devuelve varios archivos abiertos por ese proceso
+- Veo que todos apuntan a otro archivo virtual en este caso /dev/pts/8
+
+> ls /proc/29762/
+> ls /proc/29762/fd -l
+
+- Esto me devuelve 0, 1, 2, 255
+  - 0 es el flujo de trabajo o file descriptor de la entrada standard
+  - 1 es la salida standard
+  - 2 es la salida de error
+- Al lado se ve -> directorio
+- En este caso todos apuntan a /dev/pts/8
+- Si yo escribo tty en consola veré que es mi terminal
+
+> tty 
+
+- devuelve /dev/pts/8
+- En el modo gráfico vamos a ver emuladoras de terminal corriendo en pseudoterminales pts
+- Si quiero almacenar la salida de ip a en un archivo de texto podría hacerlo asi
+
+> ip a > /tmp/salida_ip.txt
+
+- Si quisera guardar el error del comando podría hacerlo asi (donde homesss no existe y devuelve error)
+
+> ls /homessss 2> archivo_errores.txt
+
+- Así redirecciono la salida
+- Puedo redireccionar la salida standar y la salida de error en un mismo comando
+- El 1 lo puedo omitir
+
+> ls /home/ 1> /tmp/salida 2>&1
+
+- De esta manera, si el comando se ejecuta bien, el archivo salida contendrá la respuesta y si se ejecuta mal también
+- De esta manera se sobreescribe el archivo si vuelvo a ejecutar el comando
+- Para hacer un append uso >>
+
+> ip a >> /tmp/salida  
+
+- De esta manera irá agregando la salida en el archivo al final de la salida anterior 
+- Puedo redireccionar la entrada con < 
+
+> cat << FIN
+
+- Con este comando redirecciono la entrada  yvoy a poder escribir en consola hasta que escriba FIN
+- Escrito FIN me muestra el texto que he escrito anteriormente
+- En lugar de mostrarlo por pantalla lo redirecciono a una salida
+
+> cat << FIN > /tmp/archivo
+------
+
+## Más comandos básicos
+
+- Enviar el listado a un archivo
+
+> ls /home/migue/ > /tmp/listado.txt
+
+- para mostrarlo de forma paginada uso un pipe con more, redireccionando el resultado a more
+
+> cat listado.txt | more
+
+- Tambien me vale less (que tiene más funcionalidades)
+
+> cat listado.txt | less
+
+- Con q salgo
+- Puedo usarlos directamente
+
+> more listado.txt
+
+- Para ver las primeras (10) lineas del archivo
+
+> head listado.txt
+
+- Puedoindicar las lineas con -n. Para mostrar las primeras 5 lineas
+
+> head -n5 listado.txt
+
+- Para mostrar las 5 ultimas
+
+> tail -n5 listado.txt
+
+- Con tail -f muestra las últimas 10 lineas del archivo y queda a la escucha de modificaciones
+- Para añadir desde otra terminal contenido al archivo puedo usar echo
+
+> exho "texto a agregar" >> /tmp/listado.txt
+> tail -f listado.txt
+
+- wc da información del archivo: La cantidad de lineas, cantidad de palabras y cantidad de caracteres
+
+> wc listado.txt
+
+- Para ver la cantidad de lineas
+
+> wc -l listado.txt
+
+- con -w muestra las palabras, -c muestra caracteres
+- Para ubicar binarios o archivos con ciertos comandos un comando es which
+- ls es un binario, pero imaginemos que no sabemos donde se encuentra ubicado
+
+> which ls
+
+- En general los comandos están en /usr/bin/
+
+- whereis tambien nos muestra informacion de la página de manual, biblioteca
+
+> whereis ls
+-----
+
+## El comando find
+
+- find sirve para buscar archivos dentro del disco. Es un comando muy potente
+- Tiene varios patrones de búsqueda y opciones que hacer con los resultados
+- Uso . para indicar que busque en el mismo directorio en el que estoy
+- Busco por nombre, todos los archivos que empiecen por arc
+
+> find . -name 'arc*' 
+
+- Por extension
+
+> find /tmp/ -name '*.ts'
+
+- Para omitir mayúsculas y minúsculas uso el modificador i
+
+> find / -iname '*.Ts'
+
+- Podemos buscar por tipo, por directorio por ejemplo
+
+> find /tmp/ -type d
+
+- f para archivos, l para enlaces simbólicos, b para dispositivos de bloques(almacenamiento), c para dispositivos de caracter, p para pipes
+- -size para buscar por tamaño
+- Para buscar aquellos que tengan más de 2048Kilobytes, b para bytes, M para megas, G para gigas
+
+> find . -size +2048k
+
+Puedo combinar resultados y buscar archivos que tengan entre 500 megas y 1 giga
+
+> find . -size +500M -size -size -1g 
+
+- exec me permite ejecutar un comando tras la busqueda con find
+- Para que muestre el nombre en el archivo uso {} siempre seguido de \;
+
+> find . -size 500k -exec echo "Econtrado {}" \; 
+
+- En lugar de echo puedo usar cualquier otro comando, rm para remover, gzip para comprimir, etc
+- Puedo buscar por archivos modificados los ultimos 40 días, por permisos, patrones, **find es muy potente**
+------
+
+## grep
+
+- Filtrar con grep. Para filtrar por palabras o patrones (con egrep)
+- Para filtrar por la palabra root
+
+> cat listado.txt | grep root
+
+- También se puede usar directamente
+
+> grep root listado.txt
+
+- Para contar la cantidad de lineas que tienen la palabra root uso -c.
+- Puedo usar -i para que omita mayúsuclas y minúsculas
+
+> grep -c -i  listado.txt
+
+- -H imprimirá el nombre del archivo en el que encontró la palabra en cuestión -r para buscar recursivamente
+
+> grep -c -i -H -r /tmp/
+
+- Para filtrar por procesos
+
+> ps fax | grep ssh
+
+- Para que omita las filas que contengan la palabra grep
+
+> ps fax | grep ssh| grep -v grep
+------
+
+## AWK
+
+- Herramienta compleja que facilita tareas de filtrado y otras operaciones matemáticas
+- Podemos incorporar variables, incluso lógica de programación con bucles y condicionales
+- Para imprimir la primera fila del resultado del listado
+
+> ls -l | awk '{print $1}'
+
+- Puedo usar un delimitador para separar las columnas por : uso -F
+
+> ls -l | awk -F':' '{print $1}'
+
+- Para mostrar varias columnas
+
+> ls -l | awk '{print $1, $5}'
+
+- Pongamos que hago un ls -l sin la h y quiero dividir la fila $5 de tamaño por 1024 para tenerlo en kylobytes
+
+>ls -l / | awk '{print %5/1024}'
+
+- Puedo añadirle una leyenda
+
+> ls -l / | awk '{print "Tamaño: " %5/1024 "KiB"} '
+
+- $0 es la primera columna $NF nos da el último elemento de una lista
+
+> echo "hola, mundo. que tal" | awk '{print $NF}'  //devuelve tal
+
+- Con $0 muestra la cadena completa, con $1 la primera palabra
+
+> echo "11 22 33" | awk '{total=0; for (i=1; i < =NF, i++) total=+=$i; print total}' //devuelve 66
+
+- Para calcular el promedio
+
+> echo "11 22 33" | awk '{total=0; for (i=1; i < =NF, i++) total=+=$i; print total/NF}' //devuelve 66
+
+- Para mostrar el resultado con un encabezado usamos BEGIN
+
+> ls -l / |  awk 'BEGIN {print "Tamaños de buffer"} {print $9, $5}'
+
+- Para mostrar un footer usar END
+
+> ls -l / |  awk 'BEGIN {print "Tamaños de buffer"} {print $9, $5} END {print "Esto es todo!}'
