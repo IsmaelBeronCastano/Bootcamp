@@ -1,4 +1,4 @@
-# 03 LINUX - Gestión de procesos
+# 03 LINUX LPIC - Gestión de procesos
 
 - Los programascuando se ejecutan se instancian en un proceso
 - Cuando ejecutamos un programa, se carga, se crea un mapa en la  memoria RAM y se ejecuta; el nucleo del SO, a través de su planificador le da cierto tiempo de ejecución a ese proceso dentro del procesador ye l procesador hace intrucción por instrucción ejecutando ese binario
