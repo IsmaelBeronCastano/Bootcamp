@@ -58,5 +58,52 @@
 - En ssh_host_ecdsa_key.pub puedo ver el fingerprint
 - Hemos agregado esa clave publica al cliente asociada a la ip del servidor 
 
+-----
+## Archivos de configuración
 
+- Directorio general: /etc/ssh/
+- Claves y conf. de usuario: ~/.ssh/
+- Claves de host: /etc/ssh/ssh_host_*
+- Conf.servidor: /etc/ssh/sshd_config
+- Conf.cliente: /etc/ssh/ssh_config
+- Grupos DH: etc/ssh/moduli
 
+- Al establecer el tunel cifrado de ssh los equipos se autentican con claves únicas alojadas en /etc/ssh
+- Son claves asimñetricas, tenemos la publica y la privadas
+- Con **ss -npltu** nos muestra los puertos abiertos en el pc 
+
+-----
+# Ejecucion de comandos remotos
+
+- Primero debo identificar bien los equipos
+
+> ip a
+
+- El cliente tiene .13 y el server .8
+- Para conectarme desde el cliente uso ssh con el usuario del server seguido de una arroba y la ip del server
+
+> ssh migue@192.168.1.8
+
+- Puedo poner a ejecutar un comando directamente en la instrucción de conexión
+
+> ssh migue@192.168.1.8 ip a
+
+- Para pasar un script pasándolo de entrada 
+
+> nano /tmp/script.sh
+
+~~~sh
+#!/bin/bash
+
+free -h
+dfc
+~~~
+
+- Le doy permisos de ejecución
+
+> chmod +x /tmp/script.sh
+> ssh migue@192.168.1.8 < /tmp/script.sh 
+
+- Puedo redireccionar la salida a un archivo
+
+> ssh migue@192.168.1.8 < /tmp/script.sh > /tmp/salida

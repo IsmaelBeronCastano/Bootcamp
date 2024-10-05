@@ -144,7 +144,7 @@ export class MongoDBConnection{
 
     }
 }
-~~~-
+~~~
 
 - Debo definir mongoUrl y dbName en las .env
 
