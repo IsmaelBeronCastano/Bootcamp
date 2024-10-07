@@ -117,4 +117,18 @@
 
 ## Modificando la validez de las cuentas (passwd)
 
-- 
+- En /etc/shadow tengo
+    - Username 
+    - Password
+    - Ultimo cambio de password
+    - Edad minima del password  passwd -n | --mindays
+    - Edad máxima del password  passwd -x | --maxdays
+    - Periodo de advertencia   passwd -w | --warndays
+    - Periodo de inactividad   passwd -i | --innactive
+    - Fecha de expiración      usermod -e yyyy-mm-dd
+    - Reservado para uso futuro 
+- passwd -l (lock) -u (unlock) bloqueo y desbloqueo de una cuenta
+- passwd -S permite ver el status de una cuenta
+----
+
+## Tipos de archivos y permisos
