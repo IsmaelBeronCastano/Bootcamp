@@ -69,4 +69,52 @@
 
 ## Creando usuario con useradd
 
--
+- A useradd hay que pasarle todos los parámetros
+- La ventaja que tiene es que puedo automatizarlo con scripts
+- Creo un grupo
+
+> sudo groupadd juancito
+
+- -m para que cree el home (si no habrá que crearlo a mano y darle los permisos)
+- -u para el id. -g para el grupo (1004 es el grupo juancito)
+- Agregamos el usuario a otros grupos con -G. 
+- -s para la shell -d para decirle el home directory
+- -c para info adicional
+- Le indico el nombre de usuario juancito
+> sudo useradd -m -u 1100 -g 1004 -G audio,video -s /bin/bash -d /home/juancito -c "cuenta de juancito" juancito
+
+- juancito no tiene contraseña por lo que no puede loggearse
+- No conviene usar -p en la linea de comandos porque queda en el history
+
+> sudo passwd juancito
+
+----
+
+## Modificando usuarios (usermod)
+
+- Con su ingreso a la cuenta que quiero (con el password)
+
+> su juancito
+
+- ls -ln para ver los id's de usuario y grupo
+- Podemos modificar algunos datos. El home directory, el shell usando los mismos argumentos con usermod
+----
+
+## Creando y modificando grupos
+
+> sudo groupadd nuevos_usuarios
+
+- Está en /etc/group
+- Para ver info usar
+> id juancito
+
+- Para agregar a un usuario al grupo
+> gpasswd -a juancito nuevos_usuarios  
+
+- Para hacer que el grupo primario sea otro uso usermod
+> sudo usermod juancito -g nuevos_usuarios
+------
+
+## Modificando la validez de las cuentas (passwd)
+
+- 
