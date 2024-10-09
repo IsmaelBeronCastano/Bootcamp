@@ -144,5 +144,66 @@ sniff(filter="arp", prn=handle_packet)
 - Lo estamos utilizando con -sS (TCP/SYNC)
 - Hay más opciones como la fragmentación de paquetes
 ----
+-D
+## Escaneo utilizando señuelos nmap
 
-## Fragmentación de paquetes con nmap
+- -D (decoy scan)
+- Nmap hará una especie de spoofing en la máquina desde donde se origina el scaneo
+- Mi objetivo es para que no identifiquen que el scaneo es desde mi máquina, enviaré paquetes modificando mi ip
+- De esta manera no sabrá cual es la máquina atacante
+- Uso con -D ips que estén activas en la red, pongo ME para decir que esta IP es la mia (pero es fake)
+- Le paso la ip a atacar
+
+> sudo nmap -sS -n -D 192.168.56.1,ME 192.168.56.106
+
+- Snort lo detecta como desde la .1 y no mi ip. Obtengo los puertos abiertos
+- Al venir del .1 lia un poco la troca, se piensa que es un error para los analistas
+-----
+
+## Spoofing de la máquina atacante
+
+- Bastante parecida a la anterior
+- No enviaremos pauqtes adicionales, si no los que comprenden al escaneo
+- Usaremos -S con la ip falsa seguida de la ip objetivo
+- Debo agregar la interfaz de red y con -Pn (no escaneo de hosts)
+
+> sudo namp -S 192.168.56.1 -n 192.168.56.105
+
+- Error repotrtado de la versión 7 de nmap
+- Útil Cuando tenemos firewalls o listas de control de acceso ip (el caso anterior también)
+- A veces el firewall también restringe el puerto de la_direccion_mac_original_que_vi_en_wireshar
+- Puedo añadirlo usando --source-port 80 y especificarle el puerto que quiero escanear con -p 21
+
+> sudo namp -S 192.168.56.1 --source-port 80 -p21 -n 192.168.56.105 
+
+- Puedo usar estas opciones con la técnica anterior
+
+> sudo nmap -sS -n -D 192.168.56.1,ME 192.168.56.106 --source-port 80 -p 21
+------
+
+## Control de la velocidad de escaneo con nmap
+
+- Una de las técnicas por excelencia para evadir firewalls, IDS e IPS
+- Podemos controlar el tiempo de envio de paquetes en paralelo, el tiempo que queremos que espere...
+- El tiempo que va a tardar en el envio de paquetes es lo que nos interesa
+- -T permite un numero del 0 al 5, 0 paranoico (escaneo cada mucho tiempo), 3 normal, 4 agresivo
+- Con --scan-delay podemos indicarle cuantos segundos queremos que espere entre paquete y paquete
+- Aún así metiédole delays de 10 segundos Snort es capaz de detectarlo
+- Aún con el scan paranoico (que tarda minutos) podriamos ser detectados
+- Conviene (si acaso) elegir un número reducido de puertos
+- Se pueden programar bash scripts sencillitos, para que escanee puertos de 2 en 2
+- Los IDS siguen los patrones de Nmap para detectarlo
+- Por ejemplo hacer un for del 0 al 30 de 2 en 2, y que tarde 30 segundos en iniciar un nuevo escaneo de dos puertos
+
+~~~bash
+for i in {0..30..2}; do; sudo nmap -sS -p$(($i+1))-$((i+2)) -n 192.168.56.105; sleep 30; done;
+~~~
+
+## ipv6
+
+- 
+----
+
+## Escaneo de servicios avanzado
+
+
