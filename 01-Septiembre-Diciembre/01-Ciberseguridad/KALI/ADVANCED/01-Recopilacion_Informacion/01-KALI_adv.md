@@ -206,4 +206,46 @@ for i in {0..30..2}; do; sudo nmap -sS -p$(($i+1))-$((i+2)) -n 192.168.56.105; s
 
 ## Escaneo de servicios avanzado
 
+- Una vez se que hosts hay levantados y qué puertos hay abiertos, me interesa saber que servicios corren para buscar vulnerabilidades
+- Con -sV a secas saltarán las alarmas, Snort lo identificará
+- Usaré -sV con los puertos que sé que están abiertos y no contra todos ellos
+- Uso -sV para los servicios, -n para que no haga resolucion inversa de dns, - D para spoofear la ip origen -p para los puertos
 
+> sudo nmap -sV -n -D 192.168.56.1 -p 21,22,80 192.168.56.105 (el windows atacado) 
+
+- Lo mismo ocurre para averiguar el SO con -o
+- Si lo hago directo salta la alarmas
+- Mi reconocimiento de SO lo haré en el puerto 20,21,80
+- Si uso el señuelo .1 Snort lo detectará como tráfico anormal
+- Si en el señuelo con -D Snort no lo detecta
+
+>sudo nmap -O -n -p 21,22,80  192,168.56.105
+
+- Puedo añadir un --scan-delay 5 para pausar los paquetes, pero buscando solo 1 puerto, 2, 3 como mucho Snort no salta
+-----
+
+## Escaneo de puertos ultrarápido
+
+- Escanear el mayor número de nodos en el menor tiempo posible con Masscan
+- Está en kali. Puede scanera todos los nodos de internet en 5 minutos
+- Será detectado inmediato
+- Masscan funciona en modo NAT (de la virtual box)
+- Escaneo básico (se usa para escanear muchas máquinas de una red grande de forma rápida)
+
+> sudo masscan 192.168.56.0/24 -p 80 --interface eth0
+
+- Genera un montón de tráfico
+- Puedo indicar un rango de puertos con -p 1-10000
+- Con ctrl +C se pausa y guarda toda la info en paused.conf en el directorio actual y puedo retomarlo
+
+> sudo masscan --resume paused.conf
+
+- La versión 1.3.2 da fallo (hay que reinstalarla con la última versión)
+
+> sudo apt-remove masscan
+> git clone link de github
+- (seguir las instrucciones de instalación de su github)
+
+- Puedo  indicar a masscan los puertos top con --top-ports 100 
+- Le indico con --rate 10000 que envie 10000 paquetes por segundos
+- Podría escanear un número mayor de hosts cambiando a 192.168.0.0/16
