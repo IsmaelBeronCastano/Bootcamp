@@ -84,3 +84,52 @@
 - **Database files**: La información del directorio se almacena en un único fichero de base de datos. Adicionalmente utiliza ficheros de log para transacciones que no terminan adecuadamente
 - No es lo que más nos interesa pero es interesante saber que hay varias capas antes de acceder a la db y siguen unos protocolos
 - Para llegar al database-file hay que pasar por varias puertas
+-----
+
+## Características de AD
+
+- La mayor parte del tiempo como administrador de Active Directory se estará en Herramientas/Usuarios y equipos de active directory
+- Aparecen todos los dominios a la izquierda
+- Si despliego el dominio tengo varias carpetas
+- Las carpetas vacías son directorios lógicos que se usan en la interfaz gráfica para agrupar objetos dentro de AD
+  - Son meros agrupadores de objetos
+- Las carpetas que tienen un cuadradito son OUs
+- En computers aparecen las computadoras adheridas al servidor
+- Tenemos Users con todos los usuarios
+- Un admin creará los usuarios desde esta pantalla con clic derecho, nuevo, crear usuario
+- Puedo crear una nueva OU con el icono de la carpeta que dice "crear un nuevo departamento en el contenedor actual"
+- Se usa para dividir departamentos, creo TestDept 
+- Arrastro el empleado1 a la OU TestDeptpara que forme parte
+- Puedo agregar usuarios al grupo con clic derecho propiedades /Miembro
+- Con Miembro de puedo agregar al grupo a otros grupos para compartir directivas
+- Suele haber relaciones entre grupos y objetos mal configuradas que conllevan problemas de seguridad 
+- ¿Donde están los privilegios los objetos (empleado1)? En Ver/Caracteristicas avanzadas
+- Ahora clici derecho sobre el user/propiedades/seguridad
+- En propiedades avanzadas están las listas de control de acceso (se verá más adelante)
+----
+
+## Administración de directivas de grupo
+
+- En el win server2022, active directory manager, en herramientas/administracion de directivas de grupo
+- Aqui estan las GPOS las politicas que aplicamos sobre determinados objetos
+- Si despliego el bosuqe (a la izq) Dominios/corp.local hay varias cosas
+- Domain Controller (nuestras OUs)
+- Default Domain Policy
+- El grupo Testdept
+- Filtros WMI
+- GPO de inicio
+- Objetos de directiva de grupo: contiene las GPO 
+  - Vienen dos por defecto
+    - Default Domain Controller Policy
+    - Default Domain Policy
+  - Para crear una politica por ejemplo, en TestDept, clic derecho sobre la carpeta y crera un GPO en este dominio y vincularlo aqui
+- Voy a hacer que las personas que pertenezcan a este departamento inicien sesión que ejecute un script
+- Clic derecho sobre la política/editar
+- Una política puede aplicara  nivel de equipo o a nivel de usuario
+- Si realizo la política en el directorio usuarios (de edición de la política en cuestión) va a aplicar a los usuario de esa OU (Unidad organizativa)
+- Si lo hago en configuración de equipo aplicará a los equipos dentro de la OU pero no a los usuarios
+- Hay dos carpetas en ambas
+  - Directivas
+  - Preferencias
+- Las directivas van a ir actualizándose cda 90 minutos, el server chequea si hay nuevas y las aplicaciones
+Lección 30 --> 4:37

@@ -132,3 +132,38 @@
 ----
 
 ## Tipos de archivos y permisos
+
+- Hago un ls -l
+- Empezando por la izquierda, la primera letra indica si es un directorio con una d, l enlace simbólico, c para dispositivo de almacenamiento de caracteres, una s para los sockets, etc
+- Luego están los permisos de propietario-mismo grupo propietario-demás usuarios
+- Escribir-leer-ejecutar
+- Lugo tenemos hard links
+- Dueño del recurso
+- Grupo al que pertenece
+- Tamaño en bytes
+- Fecha de la última edición
+- Nombre del recurso
+- Para saber el tipo de archivo usar el comando **file**
+
+### Permisos
+
+- rwx, read write execute
+- En el ls tengo dueño, grupod el dueño, demás usuarios
+- Para cambiar los permisos uso chmod permisos objeto
+- Hay dos formas: mediante letras o mediante numeros
+- Con estructuras de letras u \ g \ o + - r \ w \ x
+- A través de la umask
+- Para añadir permisos de escritura al grupo 
+
+> chmod g+w archivo.txt
+
+- Usando numeracion octal tengo 4 para read, 2 para write, 1 para execute
+- Por lo tanto un permiso de 777 es que el dueño, el grupo y el resto tienen todos los permiso
+- Este archivo va a ser del user1 y va a pertenecer al grupo user1
+> sudo chown user1:user1 file.txt
+
+## Permisos especiales SetUID, SetGID y Sticky Bit
+
+- SUID da permisos de ejecución, ejecuta con privilegios del usuario dueño
+- SetGID: permios de ejecución,€jeuta con privilegios de grupo
+- Sticky: recursos editables solo por el dueño
